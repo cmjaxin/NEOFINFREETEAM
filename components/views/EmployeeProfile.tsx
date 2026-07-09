@@ -116,7 +116,8 @@ export default function EmployeeProfile() {
   async function uploadHeadshot(file: File) {
     const ext = file.name.split('.').pop()
     const path = `${e.id}.${ext}`
-    await supabase.storage.from('headshots').upload(path, file, { upsert: true })
+    const { error: uploadErr } = await supabase.storage.from('headshots').upload(path, file, { upsert: true })
+    if (uploadErr) { alert(`Upload failed: ${uploadErr.message}`); return }
     const { data } = supabase.storage.from('headshots').getPublicUrl(path)
     await update({ headshot_url: data.publicUrl + `?t=${Date.now()}` })
   }
@@ -170,9 +171,11 @@ export default function EmployeeProfile() {
           <div style={{
             width: 80, height: 80, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontWeight: 800, fontSize: 24, overflow: 'hidden', flexShrink: 0,
-            ...(e.headshot_url ? { backgroundImage: `url(${e.headshot_url})`, backgroundSize: 'cover', backgroundPosition: 'center' } : { background: rm.bg, color: rm.fg }),
+            background: rm.bg, color: rm.fg,
           }}>
-            {!e.headshot_url && initials}
+            {e.headshot_url
+              ? <img src={e.headshot_url} alt="" onError={ev => { (ev.currentTarget as HTMLImageElement).style.display = 'none' }} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+              : initials}
           </div>
           <div style={{ position: 'absolute', bottom: -2, right: -2, background: '#0A2540', color: '#fff', borderRadius: 8, fontSize: 10.5, fontWeight: 600, padding: '3px 7px', border: '2px solid #fff' }}>Edit</div>
           <input ref={fileRef} type="file" accept="image/*" onChange={ev => { if (ev.target.files?.[0]) uploadHeadshot(ev.target.files[0]) }} style={{ display: 'none' }} />
