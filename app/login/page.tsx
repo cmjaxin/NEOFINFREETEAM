@@ -29,10 +29,11 @@ export default function LoginPage() {
     const supabase = createClient()
     try {
       if (mode === 'login') {
-        const { error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        const { data: signInData, error: authErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
         if (authErr) { setError('Incorrect email or password.'); return }
-        // Check approval
-        const { data: profile } = await supabase.from('profiles').select('status').eq('email', email.trim().toLowerCase()).single()
+        // Check approval by user ID (more reliable with RLS)
+        const userId = signInData.user?.id
+        const { data: profile } = await supabase.from('profiles').select('status').eq('id', userId).single()
         if (!profile || profile.status !== 'approved') {
           await supabase.auth.signOut()
           setError('Your account is awaiting administrator approval.')
