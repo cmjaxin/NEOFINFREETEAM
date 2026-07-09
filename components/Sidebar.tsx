@@ -5,7 +5,7 @@ import { initials } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { profile, view, setView, setShowSettings, pendingProfiles } = useApp()
   const router = useRouter()
 
@@ -28,8 +28,13 @@ export default function Sidebar() {
 
   const inits = initials(profile?.full_name ?? '')
 
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates') {
+    setView(id)
+    onClose()
+  }
+
   return (
-    <aside style={{ width: 250, flexShrink: 0, background: '#0A2540', height: '100vh', display: 'flex', flexDirection: 'column', padding: '22px 20px' }}>
+    <aside className={`sidebar${isOpen ? ' sidebar--open' : ''}`} style={{ width: 250, flexShrink: 0, background: '#0A2540', height: '100vh', display: 'flex', flexDirection: 'column', padding: '22px 20px' }}>
       <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Image src="/neo-logo.png" alt="NEO Home Loans" width={150} height={50} style={{ width: '100%', maxWidth: 150, height: 'auto' }} priority />
       </div>
@@ -43,7 +48,7 @@ export default function Sidebar() {
           { id: 'terminated', label: 'Terminated' },
           { id: 'templates', label: 'Templates' },
         ] as const).map(({ id, label }) => (
-          <button key={id} onClick={() => setView(id)} style={navStyle(view === id)}>
+          <button key={id} onClick={() => handleNav(id)} style={navStyle(view === id)}>
             <span style={{ width: 7, height: 7, borderRadius: 2, background: 'currentColor', opacity: .75, flexShrink: 0 }} />
             {label}
           </button>
