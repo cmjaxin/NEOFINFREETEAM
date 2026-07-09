@@ -193,17 +193,19 @@ export default function EmployeeProfile() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — hide Onboarding tab once employee is active or terminated */}
       <div style={{ display: 'flex', gap: 6, margin: '22px 0 20px', borderBottom: '1px solid #E4E8EC' }}>
         <button onClick={() => setProfileTab('profile')} style={tabStyle(profileTab === 'profile')}>Profile</button>
-        <button onClick={() => setProfileTab('onboarding')} style={tabStyle(profileTab === 'onboarding')}>Onboarding</button>
+        {e.status === 'onboarding' && (
+          <button onClick={() => setProfileTab('onboarding')} style={tabStyle(profileTab === 'onboarding')}>Onboarding</button>
+        )}
       </div>
 
-      {profileTab === 'profile' && (
+      {(profileTab === 'profile' || e.status !== 'onboarding') && (
         <ProfileTab emp={e} kids={kids} coachList={coachList} winList={winList} update={update} kidDraft={kidDraft} setKidDraft={setKidDraft} addKid={addKid} deleteKid={deleteKid} coachDraft={coachDraft} setCoachDraft={setCoachDraft} addCoach={addCoach} deleteCoach={deleteCoach} winDraft={winDraft} setWinDraft={setWinDraft} addWin={addWin} deleteWin={deleteWin} />
       )}
 
-      {profileTab === 'onboarding' && (
+      {profileTab === 'onboarding' && e.status === 'onboarding' && (
         <OnboardingTab emp={e} sections={sections} doneIds={doneIds} compList={compList} done={done} total={total} pct={pct} di={di} toggleCheck={toggleCheck} sendGptEmail={sendGptEmail} sendWelcomeEmail={sendWelcomeEmail} update={update} />
       )}
     </div>
