@@ -116,9 +116,9 @@ export default function EmployeeProfile() {
   async function uploadHeadshot(file: File) {
     const ext = file.name.split('.').pop()
     const path = `${e.id}.${ext}`
-    const { error: uploadErr } = await supabase.storage.from('headshots').upload(path, file, { upsert: true })
+    const { error: uploadErr } = await supabase.storage.from('Headshots').upload(path, file, { upsert: true })
     if (uploadErr) { alert(`Upload failed: ${uploadErr.message}`); return }
-    const { data } = supabase.storage.from('headshots').getPublicUrl(path)
+    const { data } = supabase.storage.from('Headshots').getPublicUrl(path)
     await update({ headshot_url: data.publicUrl + `?t=${Date.now()}` })
   }
 
