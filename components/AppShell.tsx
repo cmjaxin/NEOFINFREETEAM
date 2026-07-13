@@ -6,6 +6,7 @@ import OnboardingDashboard from '@/components/views/OnboardingDashboard'
 import TeamDirectory from '@/components/views/TeamDirectory'
 import Terminated from '@/components/views/Terminated'
 import Templates from '@/components/views/Templates'
+import Production from '@/components/views/Production'
 import EmployeeProfile from '@/components/views/EmployeeProfile'
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal'
 import SettingsModal from '@/components/modals/SettingsModal'
@@ -48,6 +49,7 @@ function Shell() {
           {view === 'directory' && <TeamDirectory />}
           {view === 'terminated' && <Terminated />}
           {view === 'templates' && <Templates />}
+          {view === 'production' && <Production />}
           {view === 'profile' && <EmployeeProfile />}
         </div>
       </main>
