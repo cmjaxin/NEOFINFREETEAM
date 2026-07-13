@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NEO FinFree Division Scoreboard</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080d18;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;font-size:14px}
+:root{--gold:#22c55e;--teal:#22c55e;--border:#1f2a45;--card:#111520;--surface:#0d1220;--text:#e2e8f0;--text-dim:#b0baca;--muted:#6b7a99;--green:#22c55e;--red:#f05252;--blue:#4bc8f2;--amber:#f0b429}
+.header{background:linear-gradient(135deg,#050d1a,#0a1628);border-bottom:2px solid var(--gold);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-family:Impact,'Arial Narrow',sans-serif;font-size:1.7rem;letter-spacing:3px;color:var(--gold)}
+.sub{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-top:2px}
+.badge{font-family:Consolas,monospace;font-size:12px;color:var(--text-dim);background:#1f2a45;padding:6px 14px;border-radius:20px}
+.nav{background:#0d1220;border-bottom:1px solid var(--border);padding:0 28px;display:flex;overflow-x:auto}
+.nav-tab{padding:13px 18px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.main{padding:24px 28px}
+.page{display:none}.page.active{display:block}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
+.card-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-family:Impact,'Arial Narrow',sans-serif;font-size:.95rem;letter-spacing:2px;color:var(--gold)}
+.card-body{padding:18px}
+.stat-tile{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative;overflow:hidden}
+.stat-tile::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
+.stat-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px}
+.stat-value{font-family:Impact,'Arial Narrow',sans-serif;font-size:2.2rem;line-height:1;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text-dim);margin-top:5px}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)}
+.tbl td{padding:9px 12px;font-size:13px;border-bottom:1px solid rgba(31,42,69,0.4)}
+.tbl tr:last-child td{border-bottom:none}
+.mono{font-family:Consolas,monospace;font-size:12px}
+.right{text-align:right}
+.toggle-group{display:flex;background:var(--border);border-radius:5px;padding:2px;gap:2px}
+.toggle-btn{padding:4px 12px;font-size:10px;font-weight:700;border-radius:3px;cursor:pointer;color:var(--text-dim);letter-spacing:.5px}
+.toggle-btn.active{background:var(--card);color:var(--text)}
+.mb{margin-bottom:18px}
+/* Sub-nav inside Production */
+.prod-subnav{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:22px;background:var(--surface);border-radius:10px 10px 0 0;overflow:hidden}
+.prod-subnav-tab{padding:10px 22px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:color .12s,border-color .12s}
+.prod-subnav-tab.active{color:var(--green);border-bottom-color:var(--green);background:rgba(34,197,94,0.05)}
+.prod-subpage{display:none}.prod-subpage.active{display:block}
+/* Production tab extras */
+.prod-rank-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid rgba(31,42,69,0.4);transition:background .12s}
+.prod-rank-row:last-child{border-bottom:none}
+.prod-rank-row:hover{background:rgba(255,255,255,0.025)}
+.prod-badge{display:inline-flex;align-items:center;font-size:10px;font-weight:700;letter-spacing:.4px;border-radius:4px;padding:2px 7px;margin-left:6px}
+.prod-badge-hot{background:rgba(240,180,41,0.15);color:var(--amber)}
+.prod-badge-up{background:rgba(34,197,94,0.12);color:var(--green)}
+.prod-badge-down{background:rgba(240,82,82,0.1);color:var(--red)}
+.prod-badge-leader{background:rgba(34,197,94,0.18);color:var(--green)}
+.mom-card{background:rgba(255,255,255,0.025);border:1px solid rgba(31,42,69,0.7);border-radius:8px;padding:13px 15px}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.upload-zone:hover{border-color:var(--gold);background:rgba(34,197,94,0.03)}
+/* WoW compare */
+.wow-side{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:16px}
+.wow-side-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.delta-chip{display:inline-flex;align-items:center;gap:3px;font-family:Consolas,monospace;font-size:11px;font-weight:700;border-radius:4px;padding:2px 8px}
+.delta-up{background:rgba(34,197,94,0.12);color:var(--green)}
+.delta-down{background:rgba(240,82,82,0.1);color:var(--red)}
+.delta-flat{background:rgba(107,122,153,0.12);color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="header">
+  <div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div>
+        <div class="logo">FINFREE DIVISION</div>
+        <div class="sub">Weekly Scoreboard — NEO Home Loans</div>
+      </div>
+    </div>
+  </div>
+  <div class="badge">July 10, 2026 &nbsp;·&nbsp; Rank #3 of 7</div>
+</header>
+<nav class="nav" id="main-nav">
+  <div class="nav-tab active" onclick="showPage('overview')">Overview</div>
+  <div class="nav-tab" onclick="showPage('production')">Production</div>
+  <div class="nav-tab" onclick="showPage('leaderboard')">MA Leaderboard</div>
+  <div class="nav-tab" onclick="showPage('applications')">Applications</div>
+  <div class="nav-tab" onclick="showPage('creations')">Loan Creations</div>
+  <div class="nav-tab" onclick="showPage('division')">Division Standing</div>
+</nav>
+<main class="main">
+
+<!-- OVERVIEW -->
+<section class="page active" id="page-overview">
+  <div class="grid-4 mb">
+    <div class="stat-tile">
+      <div class="stat-label">YTD Families Served</div>
+      <div class="stat-value" style="color:var(--gold);">312</div>
+      <div class="stat-sub">Rank #3 company</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">YTD Funded Volume</div>
+      <div class="stat-value" style="color:var(--gold);" id="ov-vol"></div>
+      <div class="stat-sub">2026 year to date</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">MTD Families (June)</div>
+      <div class="stat-value" id="ov-mtd-fam">—</div>
+      <div class="stat-sub">Funded this month</div>
+    </div>
+    <div class="stat-tile">
+      <div class="stat-label">MTD Volume (June)</div>
+      <div class="stat-value" id="ov-mtd-vol">—</div>
+      <div class="stat-sub">Funded this month</div>
+    </div>
+  </div>
+  <div class="card mb" id="goals-card">
+    <div class="card-header">
+      <div class="card-title" id="goals-title">Q2 2026 Division Goals</div>
+      <div style="display:flex;gap:6px;">
+        <div class="toggle-btn active" style="padding:4px 12px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:var(--gold);color:#000;" data-q="q2" onclick="setGoalQ(this.dataset.q,this)">Q2</div>
+        <div class="toggle-btn" style="padding:4px 12px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;background:var(--border);color:var(--text-dim);" data-q="q3" onclick="setGoalQ(this.dataset.q,this)">Q3</div>
+      </div>
+    </div>
+    <div class="card-body" id="goals-body"></div>
+  </div>
+  <div class="card mb">
+    <div class="card-header"><div class="card-title">Monthly Families Served — 2026</div></div>
+    <div class="card-body" id="overview-trend"></div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Top by Volume — YTD</div></div>
+      <div class="card-body" id="ov-top-vol"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Top by Families — YTD</div></div>
+      <div class="card-body" id="ov-top-fam"></div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTION -->
+<section class="page" id="page-production">
+  <!-- Sub-nav -->
+  <div class="prod-subnav">
+    <div class="prod-subnav-tab active" onclick="showProdSub('total',this)">Total Production</div>
+    <div class="prod-subnav-tab" onclick="showProdSub('apps',this)">Applications</div>
+  </div>
+
+  <!-- ── SUB-PAGE: TOTAL PRODUCTION ── -->
+  <div class="prod-subpage active" id="prod-sub-total">
+    <!-- Hero KPI tiles -->
+    <div class="grid-4 mb">
+      <div class="stat-tile">
+        <div class="stat-label">🏆 Top Producer — YTD Vol</div>
+        <div class="stat-value" id="prod-hero-name" style="font-size:1.35rem;color:var(--gold);line-height:1.2;margin-top:4px;">—</div>
+        <div class="stat-sub" id="prod-hero-vol">—</div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-label">Avg Families / Active MA</div>
+        <div class="stat-value" id="prod-avg-fam" style="color:var(--gold);">—</div>
+        <div class="stat-sub" id="prod-avg-fam-sub">YTD average</div>
+      </div>
+      <div class="stat-tile" style="position:relative;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--amber);"></div>
+        <div class="stat-label">🔥 Top MoM Gainer</div>
+        <div class="stat-value" id="prod-hot-name" style="font-size:1.35rem;color:var(--amber);line-height:1.2;margin-top:4px;">—</div>
+        <div class="stat-sub" id="prod-hot-delta">May → Jun creations</div>
+      </div>
+      <div class="stat-tile" style="position:relative;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--blue);"></div>
+        <div class="stat-label">Team Lock Conv Rate</div>
+        <div class="stat-value" id="prod-conv-rate" style="color:var(--blue);">—</div>
+        <div class="stat-sub">Apps → Locks YTD avg</div>
+      </div>
+    </div>
+    <!-- Scoreboard -->
+    <div class="card mb">
+      <div class="card-header" style="flex-wrap:wrap;gap:10px;">
+        <div class="card-title">PRODUCTION SCOREBOARD</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="toggle-group" id="prod-period-toggle">
+            <div class="toggle-btn active" data-p="ytd" onclick="setProdPeriod('ytd',this)">YTD</div>
+            <div class="toggle-btn" data-p="mtd" onclick="setProdPeriod('mtd',this)">MTD Jun</div>
+          </div>
+          <div class="toggle-group" id="prod-metric-toggle">
+            <div class="toggle-btn active" data-m="volume" onclick="setProdMetric('volume',this)">Volume</div>
+            <div class="toggle-btn" data-m="families" onclick="setProdMetric('families',this)">Families</div>
+            <div class="toggle-btn" data-m="creations" onclick="setProdMetric('creations',this)">Creations</div>
+          </div>
+        </div>
+      </div>
+      <div id="prod-scoreboard" style="padding:0;"></div>
+    </div>
+    <!-- Monthly team charts -->
+    <div class="grid-2 mb">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header"><div class="card-title">Monthly Families — 2026</div></div>
+        <div class="card-body" id="prod-chart-fam"></div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header"><div class="card-title">Monthly Volume — 2026</div></div>
+        <div class="card-body" id="prod-chart-vol"></div>
+      </div>
+    </div>
+    <!-- MoM Momentum -->
+    <div class="card mb">
+      <div class="card-header">
+        <div class="card-title">MAY → JUNE MOMENTUM</div>
+        <div style="font-size:11px;color:var(--muted);">Loan creations · Jun is partial</div>
+      </div>
+      <div class="card-body" id="prod-momentum"></div>
+    </div>
+    <!-- Individual monthly creations table -->
+    <div class="card mb">
+      <div class="card-header">
+        <div class="card-title">INDIVIDUAL MONTHLY CREATIONS</div>
+        <div style="font-size:11px;color:var(--muted);">Sorted by YTD · peak month in green · Jun* partial</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl" style="width:100%;table-layout:fixed;">
+          <thead><tr>
+            <th style="width:160px;">Adviser</th>
+            <th class="right" style="width:46px;">Jan</th><th class="right" style="width:46px;">Feb</th>
+            <th class="right" style="width:46px;">Mar</th><th class="right" style="width:46px;">Apr</th>
+            <th class="right" style="width:46px;">May</th><th class="right" style="width:46px;">Jun*</th>
+            <th class="right" style="width:58px;">YTD</th>
+            <th class="right" style="width:80px;">Peak</th>
+            <th class="right" style="width:72px;">MoM</th>
+          </tr></thead>
+          <tbody id="prod-creations-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Excel Import -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">IMPORT PRODUCTION DATA</div>
+        <div style="font-size:11px;color:var(--muted);">Excel upload · existing records auto-skipped</div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div>
+            <div class="upload-zone" id="prod-drop-zone"
+                 onclick="document.getElementById('prod-file-input').click()"
+                 ondragover="event.preventDefault();document.getElementById('prod-drop-zone').style.borderColor='var(--gold)'"
+                 ondragleave="document.getElementById('prod-drop-zone').style.borderColor=''"
+                 ondrop="handleProdDrop(event)">
+              <div style="font-size:2.2rem;margin-bottom:10px;">📊</div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Drop Excel file here</div>
+              <div style="font-size:12px;color:var(--muted);">or click to browse &nbsp;·&nbsp; .xlsx / .xls</div>
+              <input type="file" id="prod-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleProdFile(this.files[0])">
+            </div>
+            <div id="prod-upload-msg" style="margin-top:12px;font-size:12px;color:var(--text-dim);min-height:18px;"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Required Excel Format — Row 1 is header</div>
+            <table class="tbl" style="font-size:11px;margin-bottom:14px;">
+              <thead><tr>
+                <th>A · MA Name</th><th class="right">B · Month</th><th class="right">C · Year</th>
+                <th class="right">D · Families</th><th class="right">E · Volume ($)</th><th class="right">F · Creations</th>
+              </tr></thead>
+              <tbody>
+                <tr><td>Katrinka Condie</td><td class="mono right">1</td><td class="mono right">2026</td><td class="mono right">8</td><td class="mono right">4500000</td><td class="mono right">46</td></tr>
+              </tbody>
+            </table>
+            <div style="font-size:11px;color:var(--muted);line-height:1.8;">
+              · Month = number 1–12<br>
+              · Volume = raw dollars (e.g. 4500000)<br>
+              · Existing MA + Month + Year combos are skipped
+            </div>
+          </div>
+        </div>
+        <div id="prod-import-preview" style="display:none;margin-top:20px;border-top:1px solid var(--border);padding-top:18px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Import Preview</div>
+          <div id="prod-import-preview-body" style="overflow-x:auto;margin-bottom:14px;"></div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="confirmProdImport()" style="background:var(--gold);color:#000;border:none;border-radius:7px;padding:9px 22px;font-weight:700;font-size:13px;cursor:pointer;">✓ Confirm Import</button>
+            <button onclick="cancelProdImport()" style="background:var(--border);color:var(--text);border:none;border-radius:7px;padding:9px 22px;font-weight:700;font-size:13px;cursor:pointer;">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end prod-sub-total -->
+
+  <!-- ── SUB-PAGE: APPLICATIONS ── -->
+  <div class="prod-subpage" id="prod-sub-apps">
+
+    <!-- Period toggle + alert -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+      <div style="background:rgba(240,82,82,0.08);border:1px solid rgba(240,82,82,0.25);border-radius:9px;padding:11px 16px;flex:1;min-width:260px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--red);margin-bottom:5px;">⚠ Weekly Alert — Jul 4–10</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.6;">RESPA pulled back: <strong style="color:var(--text);">15 families / $8.3M</strong> — down from 27/$12.3M last week (<span style="color:var(--red);">−44% fam · −32% vol</span>). Initial Apps hit <strong style="color:var(--text);">60</strong>, the lowest of the 9-week window — breaking below the 68–81 plateau.</div>
+      </div>
+      <div class="toggle-group" id="apps-period-toggle" style="align-self:flex-start;flex-shrink:0;">
+        <div class="toggle-btn active" data-ap="week" onclick="setAppsPeriod('week',this)">Weekly</div>
+        <div class="toggle-btn" data-ap="roll4" onclick="setAppsPeriod('roll4',this)">4-Wk Rolling</div>
+        <div class="toggle-btn" data-ap="ytd" onclick="setAppsPeriod('ytd',this)">YTD</div>
+      </div>
+    </div>
+
+    <!-- Hero KPI tiles -->
+    <div class="grid-4 mb" id="apps-kpi-tiles"></div>
+
+    <!-- WoW Comparison -->
+    <div class="card mb" id="apps-wow-card">
+      <div class="card-header">
+        <div class="card-title" id="apps-wow-title">WEEK-OVER-WEEK COMPARISON</div>
+      </div>
+      <div class="card-body" id="apps-wow-body"></div>
+    </div>
+
+    <!-- Trend charts -->
+    <div class="grid-2 mb">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header"><div class="card-title">WEEKLY RESPA FAMILIES</div></div>
+        <div class="card-body" id="apps-chart-fam"></div>
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-header"><div class="card-title">WEEKLY INITIAL APPS</div></div>
+        <div class="card-body" id="apps-chart-apps"></div>
+      </div>
+    </div>
+
+    <!-- Self Gen vs Better Leads stacked breakdown -->
+    <div class="card mb">
+      <div class="card-header">
+        <div class="card-title">SELF GEN vs BETTER LEADS — WEEKLY SPLIT</div>
+        <div style="font-size:11px;color:var(--muted);">Families funded · 9 weeks</div>
+      </div>
+      <div class="card-body" id="apps-split-chart"></div>
+    </div>
+
+    <!-- Branch breakdown current week -->
+    <div class="card mb">
+      <div class="card-header">
+        <div class="card-title" id="apps-branch-title">BRANCH BREAKDOWN — CURRENT WEEK</div>
+        <div class="toggle-group" id="apps-branch-toggle">
+          <div class="toggle-btn active" data-ab="respa" onclick="setAppsBranchView('respa',this)">RESPA Funded</div>
+          <div class="toggle-btn" data-ab="apps" onclick="setAppsBranchView('apps',this)">Initial Apps</div>
+        </div>
+      </div>
+      <div class="card-body" id="apps-branch-body"></div>
+    </div>
+
+    <!-- 9-week history table -->
+    <div class="card mb">
+      <div class="card-header">
+        <div class="card-title">9-WEEK HISTORY</div>
+        <div style="font-size:11px;color:var(--muted);">All weeks · newest first</div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl" style="min-width:680px;">
+          <thead><tr>
+            <th style="white-space:nowrap;">Week</th>
+            <th class="right">Fam</th>
+            <th class="right">Volume</th>
+            <th class="right">SG Fam</th>
+            <th class="right">BL Fam</th>
+            <th class="right">Apps</th>
+            <th class="right">SG Apps</th>
+            <th class="right">BL Apps</th>
+            <th class="right">WoW Fam</th>
+            <th class="right">WoW Apps</th>
+          </tr></thead>
+          <tbody id="apps-history-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Excel upload for weekly data -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">UPLOAD WEEKLY DATA</div>
+        <div style="font-size:11px;color:var(--muted);">Week key = label · duplicates auto-skipped</div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div>
+            <div class="upload-zone" id="apps-drop-zone"
+                 onclick="document.getElementById('apps-file-input').click()"
+                 ondragover="event.preventDefault();document.getElementById('apps-drop-zone').style.borderColor='var(--gold)'"
+                 ondragleave="document.getElementById('apps-drop-zone').style.borderColor=''"
+                 ondrop="handleAppsDrop(event)">
+              <div style="font-size:2.2rem;margin-bottom:10px;">📅</div>
+              <div style="font-weight:700;font-size:14px;margin-bottom:6px;">Drop weekly Excel here</div>
+              <div style="font-size:12px;color:var(--muted);">or click to browse</div>
+              <input type="file" id="apps-file-input" accept=".xlsx,.xls" style="display:none;" onchange="handleAppsFile(this.files[0])">
+            </div>
+            <div id="apps-upload-msg" style="margin-top:12px;font-size:12px;color:var(--text-dim);min-height:18px;"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Required Excel Format</div>
+            <table class="tbl" style="font-size:11px;margin-bottom:14px;">
+              <thead><tr>
+                <th>A · Week Label</th><th class="right">B · Families</th><th class="right">C · Volume ($)</th>
+                <th class="right">D · SG Fam</th><th class="right">E · BL Fam</th>
+                <th class="right">F · Apps</th><th class="right">G · SG Apps</th><th class="right">H · BL Apps</th>
+              </tr></thead>
+              <tbody>
+                <tr><td style="font-size:10px;white-space:nowrap;">Jul 11–17</td><td class="mono right">22</td><td class="mono right">11000000</td><td class="mono right">17</td><td class="mono right">5</td><td class="mono right">75</td><td class="mono right">50</td><td class="mono right">25</td></tr>
+              </tbody>
+            </table>
+            <div style="font-size:11px;color:var(--muted);line-height:1.8;">
+              · Week Label must be unique — used as dedup key<br>
+              · Volume = raw dollars<br>
+              · Branch detail rows optional (not imported via spreadsheet — edit source data)
+            </div>
+          </div>
+        </div>
+        <div id="apps-import-preview" style="display:none;margin-top:20px;border-top:1px solid var(--border);padding-top:18px;">
+          <div id="apps-import-preview-body" style="overflow-x:auto;margin-bottom:14px;"></div>
+          <div style="display:flex;gap:10px;">
+            <button onclick="confirmAppsImport()" style="background:var(--gold);color:#000;border:none;border-radius:7px;padding:9px 22px;font-weight:700;font-size:13px;cursor:pointer;">✓ Confirm Import</button>
+            <button onclick="cancelAppsImport()" style="background:var(--border);color:var(--text);border:none;border-radius:7px;padding:9px 22px;font-weight:700;font-size:13px;cursor:pointer;">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end prod-sub-apps -->
+</section>
+
+<!-- MA LEADERBOARD -->
+<section class="page" id="page-leaderboard">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">MA Funded Ranking</div>
+      <div class="toggle-group" id="lb-toggle">
+        <div class="toggle-btn active" data-p="ytd" onclick="setLB(this.dataset.p,this)">YTD</div>
+        <div class="toggle-btn" data-p="mtd" onclick="setLB(this.dataset.p,this)">MTD June</div>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0;" id="lb-body"></div>
+  </div>
+</section>
+
+<!-- APPLICATIONS -->
+<section class="page" id="page-applications">
+  <div class="card">
+    <div class="card-header"><div class="card-title">2026 YTD Applications</div></div>
+    <div style="overflow:auto;">
+      <table class="tbl" style="width:100%;">
+        <thead><tr>
+          <th>Adviser</th><th class="right">Apps</th><th class="right">Locks</th>
+          <th class="right">Lock Conv %</th><th class="right">Signal</th>
+        </tr></thead>
+        <tbody id="apps-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- LOAN CREATIONS -->
+<section class="page" id="page-creations">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">2026 YTD Loan Creations</div>
+      <div style="font-size:11px;color:var(--text-dim);">Peak month highlighted · *Jun partial</div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="tbl" style="width:100%;table-layout:fixed;">
+        <thead><tr>
+          <th style="width:160px;">Adviser</th>
+          <th class="right" style="width:44px;">Jan</th><th class="right" style="width:44px;">Feb</th>
+          <th class="right" style="width:44px;">Mar</th><th class="right" style="width:44px;">Apr</th>
+          <th class="right" style="width:44px;">May</th><th class="right" style="width:44px;">Jun*</th>
+          <th class="right" style="width:52px;">YTD</th>
+          <th style="width:200px;text-align:right;">Apr→May Trend</th>
+        </tr></thead>
+        <tbody id="creations-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- DIVISION STANDING -->
+<section class="page" id="page-division">
+  <div class="card mb">
+    <div class="card-header">
+      <div class="card-title">Company Division Ranking — YTD Families</div>
+      <div class="toggle-group" id="div-toggle">
+        <div class="toggle-btn active" data-m="families" onclick="setDivMetric(this.dataset.m,this)">Families</div>
+        <div class="toggle-btn" data-m="volume" onclick="setDivMetric(this.dataset.m,this)">Volume</div>
+      </div>
+    </div>
+    <div class="card-body" id="div-lb"></div>
+  </div>
+</section>
+
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+function fmtVol(n){
+  if(n>=1e9) return '$'+(n/1e9).toFixed(2)+'B';
+  if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M';
+  if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K';
+  return '$'+n;
+}
+function fmtPct(a,b){
+  if(!b) return null;
+  var d = (a-b)/b*100;
+  return {val:d, str:(d>0?'+':'')+d.toFixed(0)+'%', up:d>0, flat:Math.abs(d)<1};
+}
+function deltaChip(a,b){
+  var p=fmtPct(a,b);
+  if(!p) return '';
+  var cls=p.flat?'delta-flat':p.up?'delta-up':'delta-down';
+  return '<span class="delta-chip '+cls+'">'+(p.up?'▲':p.flat?'—':'▼')+' '+p.str+'</span>';
+}
+
+/* ─── PAGE NAV ─── */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.nav-tab').forEach(function(t){t.classList.remove('active');});
+  var pg=document.getElementById('page-'+id); if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(function(t){
+    if(t.getAttribute('onclick')&&t.getAttribute('onclick').indexOf("'"+id+"'")!==-1) t.classList.add('active');
+  });
+  if(id==='overview') renderGoals('q2');
+  if(id==='leaderboard') renderLB('ytd');
+  if(id==='applications') renderApps();
+  if(id==='creations') renderCreations();
+  if(id==='division') renderDivLB('families');
+  if(id==='production') renderProduction();
+}
+function showProdSub(id, btn) {
+  document.querySelectorAll('.prod-subpage').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.prod-subnav-tab').forEach(function(t){t.classList.remove('active');});
+  document.getElementById('prod-sub-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='apps') renderAppsTab(_appsPeriod||'week');
+}
+
+/* ─── CORE DATA ─── */
+var D = {
+  color: "#22c55e",
+  div_name: "FinFree",
+  totals: {families:312, volume:158485524},
+  monthly_families: [46,51,78,61,58,18],
+  monthly_volume: [20579996,21620160,42597472,33844363,32601720,7241813],
+  funded_ytd: [
+    {MA:"Katrinka Condie",Families:44,Volume:30366881},
+    {MA:"Jason Drobeck",Families:31,Volume:21451809},
+    {MA:"Skyler Ford",Families:32,Volume:16319453},
+    {MA:"Ross Zimmerman",Families:27,Volume:14565888},
+    {MA:"Drake Bloebaum",Families:29,Volume:14534409},
+    {MA:"Aaron Thomas",Families:25,Volume:12014868},
+    {MA:"Matthew Smith",Families:21,Volume:11611180},
+    {MA:"Benjamin Kyle",Families:22,Volume:8619143},
+    {MA:"Michael Jones",Families:15,Volume:7260969},
+    {MA:"Scott Breen",Families:14,Volume:6725337},
+    {MA:"Greg Allen",Families:26,Volume:6043079},
+    {MA:"Kaytlin Collins",Families:14,Volume:4244852},
+    {MA:"David Nelson",Families:8,Volume:3169319},
+  ],
+  funded_mtd: [
+    {MA:"Drake Bloebaum",Families:5,Volume:2740960},
+    {MA:"Ross Zimmerman",Families:4,Volume:1518267},
+    {MA:"Skyler Ford",Families:3,Volume:1382205},
+    {MA:"Scott Breen",Families:2,Volume:984279},
+    {MA:"Jason Drobeck",Families:2,Volume:822000},
+    {MA:"Aaron Thomas",Families:2,Volume:816000},
+    {MA:"Michael Jones",Families:2,Volume:775925},
+    {MA:"Katrinka Condie",Families:2,Volume:744467},
+    {MA:"Benjamin Kyle",Families:1,Volume:234643},
+    {MA:"Kaytlin Collins",Families:1,Volume:208000},
+    {MA:"Greg Allen",Families:1,Volume:112000},
+  ],
+  apps: [
+    {ma:"Ross Zimmerman",apps:87,locks:29,conv:33.3},
+    {ma:"Jason Drobeck",apps:83,locks:41,conv:49.4},
+    {ma:"Greg Allen",apps:73,locks:35,conv:47.9},
+    {ma:"Katrinka Condie",apps:68,locks:52,conv:76.5},
+    {ma:"Drake Bloebaum",apps:66,locks:34,conv:51.5},
+    {ma:"Skyler Ford",apps:60,locks:39,conv:65.0},
+    {ma:"Aaron Thomas",apps:55,locks:28,conv:50.9},
+    {ma:"Matthew Smith",apps:50,locks:25,conv:50.0},
+    {ma:"Benjamin Kyle",apps:40,locks:10,conv:25.0},
+    {ma:"David Nelson",apps:39,locks:11,conv:28.2},
+    {ma:"Michael Jones",apps:39,locks:15,conv:38.5},
+    {ma:"Kaytlin Collins",apps:36,locks:19,conv:52.8},
+    {ma:"Scott Breen",apps:21,locks:8,conv:38.1},
+  ],
+  creations: [
+    {ma:"Ross Zimmerman",monthly:[58,47,44,80,55,3],ytd:287},
+    {ma:"Katrinka Condie",monthly:[46,37,27,24,14,8],ytd:156},
+    {ma:"Drake Bloebaum",monthly:[42,49,54,37,32,4],ytd:218},
+    {ma:"Matthew Smith",monthly:[40,44,72,81,27,3],ytd:267},
+    {ma:"Michael Jones",monthly:[41,33,83,42,25,2],ytd:226},
+    {ma:"Greg Allen",monthly:[51,64,62,70,75,26],ytd:348},
+    {ma:"David Nelson",monthly:[38,34,77,59,63,4],ytd:275},
+    {ma:"Skyler Ford",monthly:[46,34,62,46,52,14],ytd:254},
+    {ma:"Benjamin Kyle",monthly:[18,50,32,41,58,4],ytd:203},
+    {ma:"Jason Drobeck",monthly:[41,45,38,38,23,12],ytd:197},
+    {ma:"Aaron Thomas",monthly:[21,35,36,32,25,1],ytd:150},
+    {ma:"Scott Breen",monthly:[9,12,9,7,13,1],ytd:51},
+    {ma:"Kaytlin Collins",monthly:[16,19,45,32,27,10],ytd:149},
+    {ma:"Dustin Schaff",monthly:[0,0,0,0,0,0],ytd:0},
+    {ma:"Cory Bedinghaus",monthly:[0,0,0,0,0,0],ytd:0},
+  ],
+  goals: {q2_actual_fam:145,q2_actual_vol:76,q2_actual_apps:351,q2_goal_fam:193,q2_goal_vol:93,q2_goal_apps:422,q3_goal_fam:213,q3_goal_vol:103,q3_goal_apps:465,q3_actual_fam:0,q3_actual_vol:0,q3_actual_apps:0},
+  context: [
+    {div:"Honor",color:"#a78bfa",families:773,volume:258598305,is_this:false},
+    {div:"Aspire",color:"#f0b429",families:390,volume:164053018,is_this:false},
+    {div:"FinFree",color:"#22c55e",families:320,volume:161776109,is_this:true},
+    {div:"Impact",color:"#4bc8f2",families:261,volume:145080224,is_this:false},
+    {div:"Innovation",color:"#f97316",families:251,volume:113771687,is_this:false},
+    {div:"Empower",color:"#94a3b8",families:267,volume:97732780,is_this:false},
+    {div:"Prosperity",color:"#ec4899",families:226,volume:95179708,is_this:false},
+  ],
+};
+
+/* ─── APPLICATIONS WEEKLY DATA ─── */
+// weeks ordered oldest → newest; index 8 = current (Jul 4-10)
+var APPS_WEEKS = [
+  {
+    label:'May 9–15', families:31, volume:17932399, sgFam:21, blFam:10, sgVol:13264674, blVol:4667725,
+    totalApps:132, sgApps:50, blApps:82,
+    sgBranches:[{name:'Mettle',fam:16,vol:8670732},{name:'Drobeck',fam:2,vol:3258000},{name:'Thomas',fam:2,vol:816000},{name:'Condie',fam:1,vol:519942}],
+    blBranches:[{name:'Mettle',fam:4,vol:2051916},{name:'Allen',fam:4,vol:1048479},{name:'Thomas',fam:2,vol:1567330}],
+    sgAppBranches:[{name:'Mettle',apps:32},{name:'Thomas',apps:5},{name:'Drobeck',apps:5},{name:'Condie',apps:4},{name:'Allen',apps:4}],
+    blAppBranches:[{name:'Mettle',apps:54},{name:'Thomas',apps:16},{name:'Allen',apps:9},{name:'Drobeck',apps:3}]
+  },
+  {
+    label:'May 16–22', families:24, volume:11021334, sgFam:16, blFam:8, sgVol:7543922, blVol:3477412,
+    totalApps:121, sgApps:43, blApps:78,
+    sgBranches:[{name:'Mettle',fam:12,vol:6196834},{name:'Drobeck',fam:1,vol:500000},{name:'Thomas',fam:1,vol:375000},{name:'Condie',fam:1,vol:347088},{name:'Allen',fam:1,vol:125000}],
+    blBranches:[{name:'Mettle',fam:3,vol:1549925},{name:'Allen',fam:3,vol:649250},{name:'Thomas',fam:2,vol:1278237}],
+    sgAppBranches:[{name:'Mettle',apps:28},{name:'Thomas',apps:5},{name:'Allen',apps:5},{name:'Condie',apps:4},{name:'Drobeck',apps:1}],
+    blAppBranches:[{name:'Mettle',apps:49},{name:'Allen',apps:16},{name:'Thomas',apps:9},{name:'Drobeck',apps:4}]
+  },
+  {
+    label:'May 23–29', families:28, volume:14261312, sgFam:20, blFam:8, sgVol:10803295, blVol:3458017,
+    totalApps:87, sgApps:39, blApps:48,
+    sgBranches:[{name:'Mettle',fam:12,vol:6717695},{name:'Thomas',fam:3,vol:1277850},{name:'Drobeck',fam:2,vol:1652750},{name:'Condie',fam:2,vol:947000},{name:'Allen',fam:1,vol:208000}],
+    blBranches:[{name:'Mettle',fam:2,vol:1060000},{name:'Thomas',fam:3,vol:1313185},{name:'Allen',fam:3,vol:479200}],
+    sgAppBranches:[{name:'Mettle',apps:28},{name:'Drobeck',apps:4},{name:'Thomas',apps:3},{name:'Allen',apps:2},{name:'Condie',apps:1}],
+    blAppBranches:[{name:'Mettle',apps:21},{name:'Allen',apps:15},{name:'Thomas',apps:10},{name:'Drobeck',apps:2}]
+  },
+  {
+    label:'May 30–Jun 5', families:32, volume:19037937, sgFam:27, blFam:5, sgVol:17108800, blVol:1929137,
+    totalApps:78, sgApps:42, blApps:36,
+    sgBranches:[{name:'Mettle',fam:14,vol:11046466},{name:'Thomas',fam:5,vol:1900317},{name:'Drobeck',fam:3,vol:1862444},{name:'Allen',fam:3,vol:1213705},{name:'Condie',fam:2,vol:1085868}],
+    blBranches:[{name:'Thomas',fam:3,vol:727137},{name:'Allen',fam:2,vol:1202000}],
+    sgAppBranches:[{name:'Mettle',apps:17},{name:'Drobeck',apps:6},{name:'Allen',apps:6},{name:'Thomas',apps:5},{name:'Condie',apps:8}],
+    blAppBranches:[{name:'Mettle',apps:15},{name:'Allen',apps:14},{name:'Thomas',apps:4},{name:'Drobeck',apps:3}]
+  },
+  {
+    label:'Jun 6–12', families:26, volume:16585994, sgFam:20, blFam:6, sgVol:14127544, blVol:2458450,
+    totalApps:81, sgApps:38, blApps:43,
+    sgBranches:[{name:'Mettle',fam:8,vol:5501364},{name:'Condie',fam:8,vol:5291930},{name:'Drobeck',fam:3,vol:3055250},{name:'Thomas',fam:1,vol:279000}],
+    blBranches:[{name:'Mettle',fam:3,vol:685450},{name:'Thomas',fam:1,vol:170000},{name:'Drobeck',fam:2,vol:1603000}],
+    sgAppBranches:[{name:'Mettle',apps:22},{name:'Condie',apps:6},{name:'Thomas',apps:5},{name:'Allen',apps:3},{name:'Drobeck',apps:2}],
+    blAppBranches:[{name:'Mettle',apps:19},{name:'Allen',apps:14},{name:'Thomas',apps:6},{name:'Drobeck',apps:4}]
+  },
+  {
+    label:'Jun 13–19', families:19, volume:13505427, sgFam:18, blFam:1, sgVol:12894427, blVol:611000,
+    totalApps:81, sgApps:39, blApps:42,
+    sgBranches:[{name:'Mettle',fam:9,vol:6712711},{name:'Thomas',fam:5,vol:1883616},{name:'Condie',fam:3,vol:3862100},{name:'Drobeck',fam:1,vol:436000}],
+    blBranches:[{name:'Drobeck',fam:1,vol:611000}],
+    sgAppBranches:[{name:'Mettle',apps:29},{name:'Condie',apps:4},{name:'Thomas',apps:3},{name:'Drobeck',apps:2},{name:'Allen',apps:1}],
+    blAppBranches:[{name:'Mettle',apps:18},{name:'Allen',apps:9},{name:'Drobeck',apps:9},{name:'Thomas',apps:6}]
+  },
+  {
+    label:'Jun 20–26', families:14, volume:4874589, sgFam:9, blFam:5, sgVol:3298844, blVol:1575745,
+    totalApps:68, sgApps:33, blApps:35,
+    sgBranches:[{name:'Mettle',fam:3,vol:929788},{name:'Thomas',fam:2,vol:432176},{name:'Condie',fam:3,vol:1936880}],
+    blBranches:[{name:'Mettle',fam:1,vol:220000},{name:'Thomas',fam:2,vol:877745},{name:'Allen',fam:2,vol:478000}],
+    sgAppBranches:[{name:'Mettle',apps:23},{name:'Thomas',apps:4},{name:'Condie',apps:5},{name:'Drobeck',apps:1}],
+    blAppBranches:[{name:'Mettle',apps:30},{name:'Thomas',apps:1},{name:'Allen',apps:4}]
+  },
+  {
+    label:'Jun 27–Jul 3', families:27, volume:12290220, sgFam:20, blFam:7, sgVol:8935812, blVol:3354408,
+    totalApps:81, sgApps:42, blApps:39,
+    sgBranches:[{name:'Mettle',fam:14,vol:7339481},{name:'Condie',fam:3,vol:862500},{name:'Allen',fam:2,vol:185581},{name:'Drobeck',fam:1,vol:548250}],
+    blBranches:[{name:'Mettle',fam:2,vol:596300},{name:'Thomas',fam:2,vol:439200},{name:'Allen',fam:2,vol:398908},{name:'Drobeck',fam:1,vol:1920000}],
+    sgAppBranches:[{name:'Mettle',apps:27},{name:'Thomas',apps:5},{name:'Condie',apps:4},{name:'Allen',apps:4},{name:'Drobeck',apps:2}],
+    blAppBranches:[{name:'Mettle',apps:21},{name:'Allen',apps:9},{name:'Drobeck',apps:5},{name:'Thomas',apps:4}]
+  },
+  {
+    label:'Jul 4–10', families:15, volume:8342088, sgFam:14, blFam:1, sgVol:7679314, blVol:662774,
+    totalApps:60, sgApps:45, blApps:15,
+    sgBranches:[{name:'Mettle',fam:6,vol:4217712},{name:'Thomas',fam:3,vol:1100051},{name:'Drobeck',fam:2,vol:1129597},{name:'Condie',fam:2,vol:579954},{name:'Padron',fam:1,vol:652000}],
+    blBranches:[{name:'Drobeck',fam:1,vol:662774}],
+    sgAppBranches:[{name:'Mettle',apps:18},{name:'DiGrigorio/Balentine',apps:9},{name:'Condie',apps:7},{name:'Padron',apps:4},{name:'Drobeck',apps:3},{name:'Thomas',apps:2},{name:'Allen',apps:2}],
+    blAppBranches:[{name:'Mettle',apps:8},{name:'Thomas',apps:4},{name:'Allen',apps:2},{name:'Drobeck',apps:1}]
+  },
+];
+var APPS_KEY = 'finfree_apps_weeks_v1';
+var _appsPeriod = 'week';
+var _appsBranchView = 'respa';
+var _pendingAppsImport = [];
+
+function getExtraAppsWeeks(){
+  try{var s=localStorage.getItem(APPS_KEY);return s?JSON.parse(s):[];}catch(e){return[];}
+}
+function saveExtraAppsWeeks(r){localStorage.setItem(APPS_KEY,JSON.stringify(r));}
+function allAppsWeeks(){
+  var base=APPS_WEEKS.slice();
+  var extra=getExtraAppsWeeks();
+  var existLabels={};
+  base.forEach(function(w){existLabels[w.label]=1;});
+  extra.forEach(function(w){if(!existLabels[w.label])base.push(w);});
+  return base;
+}
+
+function setAppsPeriod(p,btn){
+  _appsPeriod=p;
+  document.querySelectorAll('#apps-period-toggle .toggle-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderAppsTab(p);
+}
+function setAppsBranchView(v,btn){
+  _appsBranchView=v;
+  document.querySelectorAll('#apps-branch-toggle .toggle-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderAppsBranch(allAppsWeeks(),v);
+}
+
+function renderAppsTab(period){
+  var weeks=allAppsWeeks();
+  var cur, prev, label;
+  if(period==='week'){
+    cur=weeks[weeks.length-1]; prev=weeks[weeks.length-2];
+    label='WEEK-OVER-WEEK COMPARISON';
+  } else if(period==='roll4'){
+    // Sum last 4 weeks
+    var last4=weeks.slice(-4);
+    cur={families:0,volume:0,sgFam:0,blFam:0,totalApps:0,sgApps:0,blApps:0};
+    last4.forEach(function(w){cur.families+=w.families;cur.volume+=w.volume;cur.sgFam+=w.sgFam;cur.blFam+=w.blFam;cur.totalApps+=w.totalApps;cur.sgApps+=w.sgApps;cur.blApps+=w.blApps;});
+    var prev4=weeks.slice(-8,-4);
+    prev={families:0,volume:0,sgFam:0,blFam:0,totalApps:0,sgApps:0,blApps:0};
+    prev4.forEach(function(w){prev.families+=w.families;prev.volume+=w.volume;prev.sgFam+=w.sgFam;prev.blFam+=w.blFam;prev.totalApps+=w.totalApps;prev.sgApps+=w.sgApps;prev.blApps+=w.blApps;});
+    label='4-WEEK ROLLING vs PRIOR 4 WEEKS';
+  } else {
+    cur={families:0,volume:0,sgFam:0,blFam:0,totalApps:0,sgApps:0,blApps:0};
+    weeks.forEach(function(w){cur.families+=w.families;cur.volume+=w.volume;cur.sgFam+=w.sgFam;cur.blFam+=w.blFam;cur.totalApps+=w.totalApps;cur.sgApps+=w.sgApps;cur.blApps+=w.blApps;});
+    prev=null;
+    label='YTD TOTALS';
+  }
+  document.getElementById('apps-wow-title').textContent=label;
+  renderAppsKPI(cur,prev,period);
+  renderAppsWoW(cur,prev,period);
+  renderAppsTrendCharts(weeks);
+  renderAppsSplitChart(weeks);
+  renderAppsBranch(weeks,_appsBranchView);
+  renderAppsHistory(weeks);
+}
+
+function renderAppsKPI(cur,prev,period){
+  var sgPct = cur.families>0?(cur.sgFam/cur.families*100).toFixed(0)+'% of funded':'—';
+  var blPct = cur.families>0?(cur.blFam/cur.families*100).toFixed(0)+'% of funded':'—';
+  var blAppPct = cur.totalApps>0?(cur.blApps/cur.totalApps*100).toFixed(0)+'% of apps':'—';
+  var tiles=[
+    {label:'RESPA Families Funded',value:cur.families,sub:fmtVol(cur.volume),accentTop:'var(--green)',accentVal:'var(--green)',delta:prev?deltaChip(cur.families,prev.families):''},
+    {label:'Self Gen',value:cur.sgFam+' fam',sub:sgPct+' · '+fmtVol(cur.sgVol||cur.sgFam),accentTop:'var(--blue)',accentVal:'var(--blue)',delta:prev?deltaChip(cur.sgFam,prev.sgFam):''},
+    {label:'Better Leads',value:cur.blFam+' fam',sub:blPct+' · '+fmtVol(cur.blVol||cur.blFam),accentTop:'var(--amber)',accentVal:'var(--amber)',delta:prev?deltaChip(cur.blFam,prev.blFam):''},
+    {label:'Initial Apps',value:cur.totalApps,sub:'SG: '+cur.sgApps+' · BL: '+cur.blApps,accentTop:'var(--muted)',accentVal:'var(--text)',delta:prev?deltaChip(cur.totalApps,prev.totalApps):''},
+  ];
+  var out='';
+  tiles.forEach(function(t){
+    out+='<div class="stat-tile" style="position:relative;">'
+      +'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+t.accentTop+';border-radius:10px 10px 0 0;"></div>'
+      +'<div class="stat-label">'+t.label+'</div>'
+      +'<div style="display:flex;align-items:baseline;gap:8px;">'
+        +'<div class="stat-value" style="color:'+t.accentVal+';">'+t.value+'</div>'
+        +(t.delta?'<div>'+t.delta+'</div>':'')
+      +'</div>'
+      +'<div class="stat-sub">'+t.sub+'</div>'
+    +'</div>';
+  });
+  document.getElementById('apps-kpi-tiles').innerHTML=out;
+}
+
+function renderAppsWoW(cur,prev,period){
+  if(!prev){
+    document.getElementById('apps-wow-body').innerHTML='<div style="color:var(--muted);font-size:12px;">YTD totals — no prior period comparison.</div>';
+    return;
+  }
+  var rows=[
+    {label:'Total Families Funded',cur:cur.families,prev:prev.families,fmt:function(v){return v+' fam';}},
+    {label:'Total Volume',cur:cur.volume,prev:prev.volume,fmt:fmtVol},
+    {label:'Self Gen Families',cur:cur.sgFam,prev:prev.sgFam,fmt:function(v){return v+' fam';}},
+    {label:'Better Leads Families',cur:cur.blFam,prev:prev.blFam,fmt:function(v){return v+' fam';}},
+    {label:'Initial Apps Total',cur:cur.totalApps,prev:prev.totalApps,fmt:function(v){return v+' apps';}},
+    {label:'Self Gen Apps',cur:cur.sgApps,prev:prev.sgApps,fmt:function(v){return v+' apps';}},
+    {label:'Better Leads Apps',cur:cur.blApps,prev:prev.blApps,fmt:function(v){return v+' apps';}},
+  ];
+  var curLabel=period==='week'?APPS_WEEKS[APPS_WEEKS.length-1].label:'Current';
+  var prevLabel=period==='week'?APPS_WEEKS[APPS_WEEKS.length-2].label:'Prior';
+  var out='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">'
+    +'<div class="wow-side"><div class="wow-side-label">← Prior · '+prevLabel+'</div>'
+    +rows.map(function(r){return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(31,42,69,0.4);"><span style="font-size:12px;color:var(--muted);">'+r.label+'</span><span class="mono" style="color:var(--text-dim);">'+r.fmt(r.prev)+'</span></div>';}).join('')
+    +'</div>'
+    +'<div class="wow-side"><div class="wow-side-label">Current · '+curLabel+' →</div>'
+    +rows.map(function(r){
+      var p=fmtPct(r.cur,r.prev);
+      var col=!p?'var(--text)':p.flat?'var(--text)':p.up?'var(--green)':'var(--red)';
+      var chip=p?deltaChip(r.cur,r.prev):'';
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(31,42,69,0.4);">'
+        +'<span style="font-size:12px;color:var(--muted);">'+r.label+'</span>'
+        +'<div style="display:flex;align-items:center;gap:6px;">'
+          +'<span class="mono" style="color:'+col+';font-weight:700;">'+r.fmt(r.cur)+'</span>'
+          +chip
+        +'</div>'
+      +'</div>';
+    }).join('')
+    +'</div></div>';
+  document.getElementById('apps-wow-body').innerHTML=out;
+}
+
+function renderAppsTrendCharts(weeks){
+  var labels=weeks.map(function(w){return w.label.replace(/\w+ /,'').replace('–','–');});
+  function miniChart(values,color,fmtFn,elId,highlight){
+    var maxV=Math.max.apply(null,values)||1;
+    var n=values.length;
+    var html='<div style="display:flex;align-items:flex-end;gap:5px;height:100px;">';
+    values.forEach(function(v,i){
+      var h=Math.max(Math.round(v/maxV*80),v>0?4:0);
+      var isCur=i===n-1;
+      var isPeak=v===maxV&&v>0;
+      var col=isCur?color:isPeak?color+'99':color+'44';
+      var shortL=labels[i].split('–')[0];
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
+        +'<div style="font-family:Consolas,monospace;font-size:9px;color:'+(isCur?color:'var(--muted)')+';margin-bottom:2px;">'+(isCur?fmtFn(v):(isPeak?fmtFn(v):''))+'</div>'
+        +'<div style="width:100%;height:'+h+'px;background:'+col+';border-radius:3px 3px 0 0;'+(isCur?'box-shadow:0 0 8px '+color+'66;':'')+'"></div>'
+        +'<div style="font-size:9px;color:var(--muted);margin-top:4px;writing-mode:vertical-rl;transform:rotate(180deg);height:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+shortL+'</div>'
+      +'</div>';
+    });
+    html+='</div>';
+    // annotation
+    var prev=values[n-2],cur=values[n-1];
+    if(prev){
+      var d=cur-prev,pct=Math.abs(((cur-prev)/prev*100)).toFixed(0);
+      var col=d>0?'var(--green)':d<0?'var(--red)':'var(--muted)';
+      html+='<div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px;color:var(--muted);">'
+        +'<span>Peak: '+fmtFn(Math.max.apply(null,values))+'</span>'
+        +'<span>WoW: <strong style="color:'+col+';">'+(d>0?'+':'')+(typeof fmtFn(d)==='string'&&fmtFn===fmtVol?fmtVol(Math.abs(d)):(d>0?'+':'')+d)+' ('+pct+'%)</strong></span>'
+      +'</div>';
+    }
+    document.getElementById(elId).innerHTML=html;
+  }
+  miniChart(weeks.map(function(w){return w.families;}), 'var(--green)', function(v){return v;}, 'apps-chart-fam');
+  miniChart(weeks.map(function(w){return w.totalApps;}), 'var(--blue)', function(v){return v;}, 'apps-chart-apps');
+}
+
+function renderAppsSplitChart(weeks){
+  var maxV=Math.max.apply(null,weeks.map(function(w){return w.families;}))||1;
+  var labels=weeks.map(function(w){return w.label.split('–')[0];});
+  var out='<div style="display:flex;align-items:flex-end;gap:6px;height:100px;">';
+  weeks.forEach(function(w,i){
+    var isCur=i===weeks.length-1;
+    var sgH=Math.max(Math.round(w.sgFam/maxV*85),w.sgFam>0?3:0);
+    var blH=Math.max(Math.round(w.blFam/maxV*85),w.blFam>0?3:0);
+    out+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
+      +(isCur?'<div style="font-family:Consolas,monospace;font-size:9px;color:var(--green);margin-bottom:2px;">'+w.families+'</div>':'<div style="height:14px;"></div>')
+      +'<div style="width:100%;display:flex;flex-direction:column;gap:1px;">'
+        +'<div style="width:100%;height:'+sgH+'px;background:var(--green);opacity:'+(isCur?'1':'0.55')+';border-radius:2px 2px 0 0;" title="SG: '+w.sgFam+'"></div>'
+        +'<div style="width:100%;height:'+blH+'px;background:var(--amber);opacity:'+(isCur?'1':'0.55')+';border-radius:0 0 2px 2px;" title="BL: '+w.blFam+'"></div>'
+      +'</div>'
+      +'<div style="font-size:9px;color:var(--muted);margin-top:4px;writing-mode:vertical-rl;transform:rotate(180deg);height:36px;overflow:hidden;">'+labels[i]+'</div>'
+    +'</div>';
+  });
+  out+='</div>'
+    +'<div style="display:flex;gap:16px;margin-top:12px;font-size:11px;">'
+      +'<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;background:var(--green);border-radius:2px;display:inline-block;"></span>Self Gen RESPA</span>'
+      +'<span style="display:flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;background:var(--amber);border-radius:2px;display:inline-block;"></span>Better Leads</span>'
+    +'</div>';
+  document.getElementById('apps-split-chart').innerHTML=out;
+}
+
+function renderAppsBranch(weeks,view){
+  var cur=weeks[weeks.length-1];
+  var out='<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">';
+  function branchBars(branches,colorSG,title,keyName){
+    var max=Math.max.apply(null,branches.map(function(b){return b[keyName]||0;}))||1;
+    var html='<div><div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">'+title+'</div>';
+    branches.filter(function(b){return (b[keyName]||0)>0;}).forEach(function(b){
+      var pct=((b[keyName]||0)/max*100).toFixed(1);
+      var val=view==='respa'?b.fam+' fam · '+fmtVol(b.vol||0):b.apps+' apps';
+      html+='<div style="margin-bottom:10px;">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;">'
+          +'<span>'+b.name+'</span><span class="mono" style="color:'+colorSG+';">'+val+'</span>'
+        +'</div>'
+        +'<div style="height:5px;background:var(--border);border-radius:3px;">'
+          +'<div style="width:'+pct+'%;height:100%;background:'+colorSG+';border-radius:3px;"></div>'
+        +'</div>'
+      +'</div>';
+    });
+    html+='</div>';
+    return html;
+  }
+  if(view==='respa'){
+    out+=branchBars(cur.sgBranches,'var(--green)','Self Gen RESPA','fam');
+    out+=branchBars(cur.blBranches,'var(--amber)','Better Leads RESPA','fam');
+  } else {
+    out+=branchBars(cur.sgAppBranches,'var(--blue)','Self Gen Initial Apps','apps');
+    out+=branchBars(cur.blAppBranches,'var(--amber)','Better Leads Initial Apps','apps');
+  }
+  out+='</div>';
+  document.getElementById('apps-branch-body').innerHTML=out;
+}
+
+function renderAppsHistory(weeks){
+  var out='';
+  var reversed=weeks.slice().reverse();
+  reversed.forEach(function(w,ri){
+    var origIdx=weeks.length-1-ri;
+    var prev=origIdx>0?weeks[origIdx-1]:null;
+    var dFam=prev?deltaChip(w.families,prev.families):'';
+    var dApp=prev?deltaChip(w.totalApps,prev.totalApps):'';
+    var isCur=origIdx===weeks.length-1;
+    out+='<tr style="'+(isCur?'background:rgba(34,197,94,0.04);':'')+'">'
+      +'<td style="font-weight:'+(isCur?'700':'500')+';white-space:nowrap;font-size:12px;">'+(isCur?'★ ':'')+w.label+'</td>'
+      +'<td class="mono right" style="color:'+(isCur?'var(--green)':'var(--text)')+';font-weight:'+(isCur?'700':'400')+';">'+w.families+'</td>'
+      +'<td class="mono right">'+fmtVol(w.volume)+'</td>'
+      +'<td class="mono right">'+w.sgFam+'</td>'
+      +'<td class="mono right">'+w.blFam+'</td>'
+      +'<td class="mono right" style="color:'+(isCur?'var(--blue)':'var(--text)')+';font-weight:'+(isCur?'700':'400')+';">'+w.totalApps+'</td>'
+      +'<td class="mono right">'+w.sgApps+'</td>'
+      +'<td class="mono right">'+w.blApps+'</td>'
+      +'<td class="right" style="font-size:11px;">'+dFam+'</td>'
+      +'<td class="right" style="font-size:11px;">'+dApp+'</td>'
+    +'</tr>';
+  });
+  document.getElementById('apps-history-tbl').innerHTML=out;
+}
+
+/* ─── APPS EXCEL UPLOAD ─── */
+function handleAppsDrop(e){
+  e.preventDefault();
+  document.getElementById('apps-drop-zone').style.borderColor='';
+  var file=e.dataTransfer.files[0]; if(file) handleAppsFile(file);
+}
+function handleAppsFile(file){
+  if(!file) return;
+  if(!window.XLSX){document.getElementById('apps-upload-msg').innerHTML='<span style="color:var(--red);">⚠ SheetJS not loaded.</span>';return;}
+  document.getElementById('apps-upload-msg').textContent='Reading '+file.name+'…';
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var wb=XLSX.read(ev.target.result,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var dataRows=rows.slice(1).filter(function(r){return r[0];});
+      var existing=getExtraAppsWeeks();
+      var builtInLabels={};
+      APPS_WEEKS.forEach(function(w){builtInLabels[w.label]=1;});
+      existing.forEach(function(w){builtInLabels[w.label]=1;});
+      var newRows=[],dups=[];
+      dataRows.forEach(function(r){
+        var label=String(r[0]).trim();
+        if(!label) return;
+        if(builtInLabels[label]){dups.push(label);return;}
+        newRows.push({label:label,families:parseInt(r[1])||0,volume:parseFloat(r[2])||0,sgFam:parseInt(r[3])||0,blFam:parseInt(r[4])||0,totalApps:parseInt(r[5])||0,sgApps:parseInt(r[6])||0,blApps:parseInt(r[7])||0,sgBranches:[],blBranches:[],sgAppBranches:[],blAppBranches:[]});
+      });
+      _pendingAppsImport=newRows;
+      var msg='✅ Found <strong>'+newRows.length+'</strong> new week(s)';
+      if(dups.length) msg+=', <span style="color:var(--muted);">'+dups.length+' duplicate(s) skipped</span>';
+      document.getElementById('apps-upload-msg').innerHTML=msg;
+      if(newRows.length){
+        var prev='<table class="tbl" style="font-size:11px;"><thead><tr><th>Week</th><th class="right">Fam</th><th class="right">Vol</th><th class="right">Apps</th></tr></thead><tbody>';
+        newRows.slice(0,6).forEach(function(r){prev+='<tr><td>'+r.label+'</td><td class="mono right">'+r.families+'</td><td class="mono right">'+fmtVol(r.volume)+'</td><td class="mono right">'+r.totalApps+'</td></tr>';});
+        prev+='</tbody></table>';
+        document.getElementById('apps-import-preview-body').innerHTML=prev;
+        document.getElementById('apps-import-preview').style.display='block';
+      } else {
+        document.getElementById('apps-import-preview').style.display='none';
+        document.getElementById('apps-upload-msg').innerHTML+=' — nothing new.';
+      }
+    }catch(err){document.getElementById('apps-upload-msg').innerHTML='<span style="color:var(--red);">❌ '+err.message+'</span>';}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function confirmAppsImport(){
+  var existing=getExtraAppsWeeks();
+  saveExtraAppsWeeks(existing.concat(_pendingAppsImport));
+  _pendingAppsImport=[];
+  document.getElementById('apps-import-preview').style.display='none';
+  document.getElementById('apps-upload-msg').innerHTML='<span style="color:var(--green);">✅ Imported.</span>';
+  document.getElementById('apps-file-input').value='';
+  renderAppsTab(_appsPeriod);
+}
+function cancelAppsImport(){
+  _pendingAppsImport=[];
+  document.getElementById('apps-import-preview').style.display='none';
+  document.getElementById('apps-upload-msg').textContent='Cancelled.';
+}
+
+/* ─── PRODUCTION TOTAL ─── */
+var PROD_KEY='finfree_prod_v1';
+var _prodPeriod='ytd';
+var _prodMetric='volume';
+var _pendingImport=[];
+function getProdRecords(){try{var s=localStorage.getItem(PROD_KEY);return s?JSON.parse(s):[];}catch(e){return[];}}
+function saveProdRecords(r){localStorage.setItem(PROD_KEY,JSON.stringify(r));}
+function prodKey(ma,month,year){return (ma||'').toLowerCase().trim()+'_'+month+'_'+year;}
+function setProdPeriod(p,btn){_prodPeriod=p;document.querySelectorAll('#prod-period-toggle .toggle-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderProdScoreboard();}
+function setProdMetric(m,btn){_prodMetric=m;document.querySelectorAll('#prod-metric-toggle .toggle-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderProdScoreboard();}
+
+function renderProduction(){
+  renderProdHero();renderProdScoreboard();renderProdCharts();renderProdMomentum();renderProdCreationsTable();
+}
+function renderProdHero(){
+  var byVol=D.funded_ytd.slice().sort(function(a,b){return b.Volume-a.Volume;});
+  if(byVol[0]){document.getElementById('prod-hero-name').textContent=byVol[0].MA;document.getElementById('prod-hero-vol').textContent=fmtVol(byVol[0].Volume)+' funded YTD';}
+  var active=D.funded_ytd.filter(function(r){return r.Families>0;});
+  document.getElementById('prod-avg-fam').textContent=active.length?(D.totals.families/active.length).toFixed(1):'—';
+  document.getElementById('prod-avg-fam-sub').textContent=active.length+' active producers';
+  var deltas=D.creations.map(function(c){return{ma:c.ma,delta:c.monthly[5]-c.monthly[4],may:c.monthly[4],jun:c.monthly[5]};}).filter(function(c){return c.jun>0;}).sort(function(a,b){return b.delta-a.delta;});
+  if(deltas[0]){var hot=deltas[0];document.getElementById('prod-hot-name').textContent=hot.ma.split(' ').pop()+(hot.delta>0?' +'+hot.delta:'');document.getElementById('prod-hot-delta').textContent=hot.may+' → '+hot.jun+' creations (May → Jun)';}
+  var tApps=D.apps.reduce(function(s,r){return s+r.apps;},0);
+  var tLocks=D.apps.reduce(function(s,r){return s+r.locks;},0);
+  document.getElementById('prod-conv-rate').textContent=tApps?(tLocks/tApps*100).toFixed(1)+'%':'—';
+}
+function renderProdScoreboard(){
+  var src=[];
+  if(_prodPeriod==='ytd'){
+    if(_prodMetric==='creations'){src=D.creations.filter(function(c){return c.ytd>0;}).map(function(c){return{MA:c.ma,value:c.ytd};}).sort(function(a,b){return b.value-a.value;});}
+    else{var k=_prodMetric==='volume'?'Volume':'Families';src=D.funded_ytd.filter(function(r){return r[k]>0;}).slice().sort(function(a,b){return b[k]-a[k];}).map(function(r){return{MA:r.MA,value:r[k]};});}
+  } else {
+    if(_prodMetric==='creations'){src=D.creations.filter(function(c){return c.monthly[5]>0;}).map(function(c){return{MA:c.ma,value:c.monthly[5]};}).sort(function(a,b){return b.value-a.value;});}
+    else{var k2=_prodMetric==='volume'?'Volume':'Families';src=D.funded_mtd.filter(function(r){return r[k2]>0;}).slice().sort(function(a,b){return b[k2]-a[k2];}).map(function(r){return{MA:r.MA,value:r[k2]};});}
+  }
+  if(!src.length){document.getElementById('prod-scoreboard').innerHTML='<div style="padding:20px;color:var(--muted);">No data for this period.</div>';return;}
+  var maxVal=src[0].value||1;
+  var medals=['🥇','🥈','🥉'];
+  var momMap={};D.creations.forEach(function(c){momMap[c.ma.toLowerCase()]={delta:c.monthly[5]-c.monthly[4],jun:c.monthly[5]};});
+  var out='';
+  src.forEach(function(r,i){
+    var pct=(r.value/maxVal*100).toFixed(1);
+    var displayVal=_prodMetric==='volume'?fmtVol(r.value):r.value;
+    var rankLabel=i<3?medals[i]:'<span style="font-family:Impact,sans-serif;font-size:1.1rem;color:var(--muted);">'+(i+1)+'</span>';
+    var topBg=i===0?'rgba(34,197,94,0.05)':i===1?'rgba(34,197,94,0.025)':'transparent';
+    var barColor=i===0?'var(--green)':i===1?'rgba(34,197,94,.7)':i===2?'rgba(34,197,94,.5)':'rgba(34,197,94,.3)';
+    var maLower=r.MA.toLowerCase();
+    var mom=momMap[maLower];
+    var badge='';
+    if(mom){if(i===0)badge+='<span class="prod-badge prod-badge-leader">LEADER</span>';if(mom.delta>0)badge+='<span class="prod-badge prod-badge-hot">▲ +'+mom.delta+'</span>';else if(mom.delta<0)badge+='<span class="prod-badge prod-badge-down">▼ '+mom.delta+'</span>';}
+    out+='<div class="prod-rank-row" style="background:'+topBg+';">'
+      +'<div style="width:30px;text-align:center;flex-shrink:0;font-size:1.15rem;">'+rankLabel+'</div>'
+      +'<div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:4px;margin-bottom:5px;flex-wrap:wrap;"><span style="font-weight:700;font-size:13px;">'+r.MA+'</span>'+badge+'</div>'
+        +'<div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+barColor+';border-radius:3px;"></div></div>'
+      +'</div>'
+      +'<div style="font-family:Consolas,monospace;font-size:14px;font-weight:700;color:'+(i===0?'var(--green)':'var(--text)')+';white-space:nowrap;text-align:right;min-width:80px;">'+displayVal+'</div>'
+    +'</div>';
+  });
+  document.getElementById('prod-scoreboard').innerHTML=out;
+}
+function renderProdCharts(){
+  var months=['Jan','Feb','Mar','Apr','May','Jun*'];
+  function barChart(values,color,fmtFn,elId){
+    var max=Math.max.apply(null,values)||1;
+    var html='<div style="display:flex;align-items:flex-end;gap:6px;height:110px;">';
+    values.forEach(function(v,i){
+      var h=Math.max(Math.round(v/max*85),v>0?4:0);
+      var isJun=i===5,isPeak=v===max&&v>0;
+      html+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
+        +'<div style="font-family:Consolas,monospace;font-size:10px;color:'+(isPeak?color:'var(--muted)')+';margin-bottom:3px;">'+fmtFn(v)+'</div>'
+        +'<div style="width:100%;height:'+h+'px;background:'+color+';border-radius:3px 3px 0 0;opacity:'+(isJun?0.35:isPeak?1:0.65)+';"></div>'
+        +'<div style="font-size:10px;color:var(--text-dim);margin-top:4px;">'+months[i]+'</div>'
+      +'</div>';
+    });
+    html+='</div>';
+    var prev=values[4],cur=values[5];
+    if(prev>0){var chg=((cur-prev)/prev*100).toFixed(0);var col=cur>prev?'var(--green)':cur<prev?'var(--red)':'var(--muted)';var arr=cur>prev?'▲':cur<prev?'▼':'—';html+='<div style="display:flex;justify-content:flex-end;margin-top:8px;font-size:11px;color:var(--muted);">May → Jun*: <span style="font-family:Consolas,monospace;font-weight:700;color:'+col+';margin-left:4px;">'+arr+' '+Math.abs(chg)+'%</span></div>';}
+    document.getElementById(elId).innerHTML=html;
+  }
+  barChart(D.monthly_families,'var(--green)',function(v){return v;},'prod-chart-fam');
+  barChart(D.monthly_volume,'var(--blue)',fmtVol,'prod-chart-vol');
+}
+function renderProdMomentum(){
+  var deltas=D.creations.map(function(c){return{ma:c.ma,may:c.monthly[4],jun:c.monthly[5],delta:c.monthly[5]-c.monthly[4]};}).filter(function(c){return c.may>0||c.jun>0;}).sort(function(a,b){return b.delta-a.delta;});
+  var out='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px;">';
+  deltas.forEach(function(r){
+    var up=r.delta>0,flat=r.delta===0;
+    var color=up?'var(--green)':flat?'var(--muted)':'var(--red)';
+    var arrow=up?'▲':flat?'—':'▼';
+    var bg=up?'rgba(34,197,94,0.07)':flat?'rgba(255,255,255,0.02)':'rgba(240,82,82,0.06)';
+    var border=up?'rgba(34,197,94,0.2)':flat?'rgba(31,42,69,0.6)':'rgba(240,82,82,0.2)';
+    out+='<div class="mom-card" style="background:'+bg+';border-color:'+border+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">'
+        +'<span style="font-weight:700;font-size:12px;">'+r.ma+'</span>'
+        +'<span style="font-family:Consolas,monospace;font-size:13px;font-weight:700;color:'+color+';">'+arrow+' '+(r.delta>0?'+':'')+r.delta+'</span>'
+      +'</div>'
+      +'<div style="font-size:11px;color:var(--muted);">May: '+r.may+' &nbsp;→&nbsp; Jun*: '+r.jun+'</div>'
+    +'</div>';
+  });
+  out+='</div>';
+  document.getElementById('prod-momentum').innerHTML=out;
+}
+function renderProdCreationsTable(){
+  var sorted=D.creations.filter(function(c){return c.ytd>0;}).sort(function(a,b){return b.ytd-a.ytd;});
+  var out='';
+  sorted.forEach(function(r){
+    var vals5=r.monthly.slice(0,5);
+    var maxV=Math.max.apply(null,vals5)||0;
+    var peakIdx=maxV>0?vals5.indexOf(maxV):-1;
+    var peakName=['Jan','Feb','Mar','Apr','May'][peakIdx]||'—';
+    var delta=r.monthly[5]-r.monthly[4];
+    var tc=delta>0?'var(--green)':delta<0?'var(--red)':'var(--muted)';
+    var ta=delta>0?'▲':delta<0?'▼':'—';
+    var cols=r.monthly.map(function(v,i){var isPeak=i===peakIdx&&v>0;var isJun=i===5;var s=isPeak?'color:var(--green);font-weight:700;':isJun?'color:var(--muted);':'';return'<td class="mono right" style="'+s+'">'+(v||'—')+'</td>';}).join('');
+    out+='<tr><td style="font-weight:600;">'+r.ma+'</td>'+cols+'<td class="mono right" style="color:var(--amber);font-weight:700;">'+r.ytd+'</td><td class="mono right" style="font-size:11px;color:var(--text-dim);">'+peakName+'</td><td class="mono right" style="color:'+tc+';font-weight:700;">'+ta+(delta!==0?' '+Math.abs(delta):'')+'</td></tr>';
+  });
+  document.getElementById('prod-creations-tbl').innerHTML=out;
+}
+function handleProdDrop(e){e.preventDefault();document.getElementById('prod-drop-zone').style.borderColor='';var file=e.dataTransfer.files[0];if(file)handleProdFile(file);}
+function handleProdFile(file){
+  if(!file)return;if(!window.XLSX){document.getElementById('prod-upload-msg').innerHTML='<span style="color:var(--red);">⚠ SheetJS not loaded.</span>';return;}
+  document.getElementById('prod-upload-msg').textContent='Reading '+file.name+'…';
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      var wb=XLSX.read(ev.target.result,{type:'array'});var ws=wb.Sheets[wb.SheetNames[0]];var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      var dataRows=rows.slice(1).filter(function(r){return r[0]&&r[1]&&r[2];});
+      var existing=getProdRecords();var existKeys={};existing.forEach(function(r){existKeys[prodKey(r.ma,r.month,r.year)]=1;});
+      var newRows=[],dups=[];
+      dataRows.forEach(function(r){var ma=String(r[0]).trim(),month=parseInt(r[1]),year=parseInt(r[2]);if(!ma||isNaN(month)||isNaN(year))return;var k=prodKey(ma,month,year);if(existKeys[k])dups.push(k);else newRows.push({ma,month,year,families:parseInt(r[3])||0,volume:parseFloat(r[4])||0,creations:parseInt(r[5])||0});});
+      _pendingImport=newRows;
+      var msg='✅ <strong>'+newRows.length+'</strong> new record(s)'+(dups.length?', <span style="color:var(--muted);">'+dups.length+' dups skipped</span>':'');
+      document.getElementById('prod-upload-msg').innerHTML=msg;
+      if(newRows.length){
+        var prev='<table class="tbl" style="font-size:11px;"><thead><tr><th>MA</th><th class="right">Month</th><th class="right">Year</th><th class="right">Fam</th><th class="right">Vol</th></tr></thead><tbody>';
+        newRows.slice(0,6).forEach(function(r){prev+='<tr><td>'+r.ma+'</td><td class="mono right">'+r.month+'</td><td class="mono right">'+r.year+'</td><td class="mono right">'+r.families+'</td><td class="mono right">'+fmtVol(r.volume)+'</td></tr>';});
+        prev+='</tbody></table>';
+        document.getElementById('prod-import-preview-body').innerHTML=prev;
+        document.getElementById('prod-import-preview').style.display='block';
+      } else {document.getElementById('prod-import-preview').style.display='none';}
+    }catch(err){document.getElementById('prod-upload-msg').innerHTML='<span style="color:var(--red);">❌ '+err.message+'</span>';}
+  };
+  reader.readAsArrayBuffer(file);
+}
+function confirmProdImport(){saveProdRecords(getProdRecords().concat(_pendingImport));_pendingImport=[];document.getElementById('prod-import-preview').style.display='none';document.getElementById('prod-upload-msg').innerHTML='<span style="color:var(--green);">✅ Imported.</span>';document.getElementById('prod-file-input').value='';}
+function cancelProdImport(){_pendingImport=[];document.getElementById('prod-import-preview').style.display='none';}
+
+/* ─── LEADERBOARD ─── */
+function renderLB(period){
+  var src=period==='ytd'?D.funded_ytd.slice().sort(function(a,b){return b.Volume-a.Volume;}):D.funded_mtd.slice().sort(function(a,b){return b.Volume-a.Volume;});
+  var maxV=src[0]?src[0].Volume:1;var out='';
+  src.forEach(function(r,i){
+    if(r.Families===0&&period==='mtd')return;
+    var pct=(r.Volume/maxV*100).toFixed(1);
+    var rankCls=i===0?'color:#FFD700':i===1?'color:#C0C0C0':i===2?'color:#CD7F32':'color:var(--muted)';
+    out+='<div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid rgba(31,42,69,0.4);">'
+      +'<div style="width:22px;font-family:Impact,sans-serif;font-size:1.1rem;'+rankCls+';">'+(i+1)+'</div>'
+      +'<div style="flex:1;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:600;">'+r.MA+'</span><span style="font-family:Consolas,monospace;font-size:12px;color:var(--text-dim);">'+r.Families+' families</span></div>'
+        +'<div style="height:5px;background:var(--border);border-radius:3px;"><div style="width:'+pct+'%;height:100%;background:'+D.color+';border-radius:3px;"></div></div>'
+      +'</div>'
+      +'<div style="font-family:Consolas,monospace;font-size:13px;font-weight:700;color:'+D.color+';white-space:nowrap;">'+fmtVol(r.Volume)+'</div></div>';
+  });
+  if(!out)out='<div style="padding:20px;color:var(--text-dim);">No data yet</div>';
+  document.getElementById('lb-body').innerHTML=out;
+}
+function setLB(p,btn){document.querySelectorAll('#lb-toggle .toggle-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');renderLB(p);}
+
+/* ─── APPLICATIONS (MA tab) ─── */
+function renderApps(){
+  var avgApps=D.apps.reduce(function(s,r){return s+r.apps;},0)/(D.apps.length||1);var out='';
+  D.apps.forEach(function(r){
+    var convCls=r.conv>=65?'color:var(--green)':r.conv>=40?'color:#f0b429':'color:var(--red)';
+    var sig=r.conv<30?'🔴 Low Conv':r.conv<45?'🟡 Watch':r.apps<avgApps*0.55?'🟡 Low Vol':'🟢 On Track';
+    out+='<tr><td style="font-weight:600;">'+r.ma+'</td><td class="mono right">'+r.apps+'</td><td class="mono right">'+r.locks+'</td><td class="mono right" style="'+convCls+'">'+r.conv.toFixed(1)+'%</td><td class="mono right" style="font-size:12px;">'+sig+'</td></tr>';
+  });
+  document.getElementById('apps-body').innerHTML=out;
+}
+
+/* ─── CREATIONS ─── */
+function renderCreations(){
+  var sorted=D.creations.slice().sort(function(a,b){return b.ytd-a.ytd;});var out='';
+  sorted.forEach(function(r){
+    var apr=r.monthly[3],may=r.monthly[4],delta=may-apr;
+    var maxM=Math.max.apply(null,r.monthly.slice(0,5))||1;
+    var trendColor=delta>0?'var(--green)':delta<0?'var(--red)':'var(--muted)';
+    var trendArrow=delta>0?'▲':delta<0?'▼':'—';
+    var trendText=trendArrow+(delta!==0?' '+Math.abs(delta):' 0');
+    var months6=r.monthly.slice(0,6);var sparkMax=Math.max.apply(null,months6)||1;
+    var bars='<div style="display:flex;align-items:flex-end;gap:2px;height:22px;">';
+    months6.forEach(function(v,mi){var bh=Math.max(Math.round((v/sparkMax)*18),v>0?2:0);var col=mi===4?(delta>0?'#22c55e':delta<0?'#f05252':'#4bc8f2'):mi===3?'#4a5578':mi===5?'#2a3550':'#1f2a45';bars+='<div style="width:8px;height:'+bh+'px;background:'+col+';border-radius:1px;align-self:flex-end;"></div>';});
+    bars+='</div>';
+    var cols=r.monthly.map(function(v,i){var isPeak=(v===maxM&&v>0&&i<5);var s=isPeak?'style="color:'+D.color+';font-weight:700;"':i===5?'style="color:var(--text-dim);"':'';return'<td class="mono right" '+s+'>'+v+'</td>';}).join('');
+    out+='<tr><td style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.ma+'</td>'+cols+'<td class="mono right" style="color:#f0b429;font-weight:700;">'+r.ytd+'</td><td style="padding:4px 8px;"><div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;">'+bars+'<span style="font-family:Consolas,monospace;font-size:13px;font-weight:700;color:'+trendColor+';min-width:44px;text-align:right;">'+trendText+'</span></div></td></tr>';
+  });
+  document.getElementById('creations-body').innerHTML=out;
+}
+
+/* ─── DIVISION STANDING ─── */
+var _divMetric='families';
+function setDivMetric(m,btn){document.querySelectorAll('#div-toggle .toggle-btn').forEach(function(b){b.classList.remove('active');});btn.classList.add('active');_divMetric=m;renderDivLB(m);}
+function renderDivLB(metric){
+  var sorted=D.context.slice().sort(function(a,b){return b[metric]-a[metric];});var maxV=sorted[0][metric]||1;var out='';
+  sorted.forEach(function(r,i){
+    var pct=(r[metric]/maxV*100).toFixed(1);var val=metric==='volume'?fmtVol(r[metric]):r[metric];
+    out+='<div style="margin-bottom:14px;">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-weight:'+(r.is_this?'700':'500')+';font-size:13px;color:'+r.color+';">'+(i+1)+'. '+r.div+(r.is_this?' ⭐':'')+'</span><span style="font-family:Consolas,monospace;font-size:13px;font-weight:700;color:'+r.color+';">'+val+'</span></div>'
+      +'<div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+r.color+';border-radius:4px;opacity:'+(r.is_this?'1':'0.6')+'"></div></div>'
+    +'</div>';
+  });
+  document.getElementById('div-lb').innerHTML=out;
+}
+
+/* ─── GOALS ─── */
+function renderGoals(quarter){
+  var g=D.goals;var q=quarter||'q2';
+  document.getElementById('goals-title').textContent=q==='q2'?'Q2 2026 Division Goals':'Q3 2026 Division Goals';
+  var metrics=[
+    {label:'Families Served',actual:q==='q2'?g.q2_actual_fam:g.q3_actual_fam,goal:q==='q2'?g.q2_goal_fam:g.q3_goal_fam},
+    {label:'Funded Volume ($M)',actual:q==='q2'?g.q2_actual_vol:g.q3_actual_vol,goal:q==='q2'?g.q2_goal_vol:g.q3_goal_vol},
+    {label:'Applications',actual:q==='q2'?g.q2_actual_apps:g.q3_actual_apps,goal:q==='q2'?g.q2_goal_apps:g.q3_goal_apps},
+  ];
+  var out='';
+  metrics.forEach(function(m){
+    var pct=m.goal>0?Math.min(m.actual/m.goal,1.5):0;
+    var pctDisp=m.goal>0?(m.actual/m.goal*100).toFixed(0):'0';
+    var color=pct>=1?'var(--green)':pct>=0.7?'var(--gold)':'var(--red)';
+    var barW=Math.min(pct*100,100).toFixed(1);
+    var dispVal=m.label.includes('Volume')?'$'+m.actual+'M':(m.actual||'0');
+    var dispGoal=m.label.includes('Volume')?'$'+m.goal+'M':m.goal;
+    if(quarter==='q3'&&m.actual===0){color='var(--text-dim)';dispVal='0';}
+    out+='<div style="display:grid;grid-template-columns:160px 1fr 70px 70px;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="font-weight:600;font-size:13px;">'+m.label+'</div>'
+      +'<div style="position:relative;"><div style="height:8px;background:var(--border);border-radius:4px;"><div style="width:'+barW+'%;height:100%;border-radius:4px;background:'+color+';"></div></div><span style="position:absolute;right:-38px;top:-6px;font-family:Consolas,monospace;font-size:11px;font-weight:700;color:'+color+';">'+pctDisp+'%</span></div>'
+      +'<div style="font-family:Consolas,monospace;font-size:13px;font-weight:700;text-align:right;color:'+color+';">'+dispVal+'</div>'
+      +'<div style="font-family:Consolas,monospace;font-size:12px;color:var(--text-dim);text-align:right;">/ '+dispGoal+'</div>'
+    +'</div>';
+  });
+  document.getElementById('goals-body').innerHTML=out;
+}
+function setGoalQ(q,btn){
+  document.querySelectorAll('[data-q]').forEach(function(b){b.style.background=b.dataset.q===q?'var(--gold)':'var(--border)';b.style.color=b.dataset.q===q?'#000':'var(--text-dim)';});
+  renderGoals(q);
+}
+
+/* ─── OVERVIEW ─── */
+function renderOverview(){
+  document.getElementById('ov-vol').textContent=fmtVol(D.totals.volume);
+  var mtd_fam=D.funded_mtd.reduce(function(s,r){return s+r.Families;},0);
+  var mtd_vol=D.funded_mtd.reduce(function(s,r){return s+r.Volume;},0);
+  document.getElementById('ov-mtd-fam').textContent=mtd_fam||'—';
+  document.getElementById('ov-mtd-vol').textContent=mtd_vol>0?fmtVol(mtd_vol):'—';
+  var maxF=Math.max.apply(null,D.monthly_families)||1;
+  var months=['Jan','Feb','Mar','Apr','May','Jun*'];
+  var trendHtml='<div style="display:flex;align-items:flex-end;gap:8px;height:120px;padding-bottom:24px;">';
+  D.monthly_families.forEach(function(v,mi){
+    var h=Math.max(Math.round((v/maxF)*100),v>0?4:0);var isJun=mi===5;
+    trendHtml+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;">'
+      +'<div style="font-family:Consolas,monospace;font-size:11px;color:'+D.color+';margin-bottom:4px;">'+v+'</div>'
+      +'<div style="width:100%;height:'+h+'px;background:'+D.color+';border-radius:3px 3px 0 0;opacity:'+(isJun?'0.4':'1')+'"></div>'
+      +'<div style="font-size:10px;color:var(--text-dim);margin-top:6px;">'+months[mi]+'</div>'
+    +'</div>';
+  });
+  trendHtml+='</div>';
+  document.getElementById('overview-trend').innerHTML=trendHtml;
+  function topBars(arr,key,colorVar){
+    var max=arr[0]?arr[0][key]:1;var out='';
+    arr.slice(0,5).forEach(function(r,i){var pct=(r[key]/max*100).toFixed(1);var val=key==='Volume'?fmtVol(r[key]):r[key];
+      out+='<div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="font-weight:600;font-size:13px;">'+(i+1)+'. '+r.MA+'</span><span style="font-family:Consolas,monospace;font-size:13px;font-weight:700;color:'+colorVar+';">'+val+'</span></div><div style="height:5px;background:var(--border);border-radius:3px;"><div style="width:'+pct+'%;height:100%;background:'+colorVar+';border-radius:3px;"></div></div></div>';
+    });return out;
+  }
+  var byVol=D.funded_ytd.slice().sort(function(a,b){return b.Volume-a.Volume;});
+  var byFam=D.funded_ytd.slice().sort(function(a,b){return b.Families-a.Families;});
+  document.getElementById('ov-top-vol').innerHTML=topBars(byVol,'Volume',D.color);
+  document.getElementById('ov-top-fam').innerHTML=topBars(byFam,'Families',D.color);
+}
+
+function init(){
+  renderOverview();renderGoals('q2');renderLB('ytd');renderApps();renderCreations();renderDivLB('families');
+}
+init();
+</script>
+</body>
+</html>
