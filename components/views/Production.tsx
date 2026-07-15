@@ -2,42 +2,52 @@
 import { useState, useRef, useCallback } from 'react'
 import * as XLSX from 'xlsx'
 
-// ── Design tokens ─────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:         '#F4F6F8',
-  white:      '#fff',
-  navy:       '#0A2540',
-  border:     '#E4E8EC',
-  borderSoft: '#DCE1E6',
-  text:       '#26303B',
-  muted:      '#858889',
-  dim:        '#5C6570',
-  accent:     '#5BCBF5',
-  green:      '#16a34a',
-  greenBg:    'rgba(34,197,94,0.08)',
-  red:        '#dc2626',
-  amber:      '#d97706',
+  bg: '#F4F6F8', white: '#fff', navy: '#0A2540', border: '#E4E8EC',
+  borderSoft: '#DCE1E6', text: '#26303B', muted: '#858889', dim: '#5C6570',
+  accent: '#5BCBF5', green: '#16a34a', greenBg: 'rgba(34,197,94,0.08)',
+  red: '#dc2626', amber: '#d97706'
 }
 
-const MONTHS    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-const MONTH_IDX: Record<string,number> = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 }
+// ─── Branch config ────────────────────────────────────────────────────────────
+const BRANCH_CONFIG = [
+  { name: 'Mettle Branch',     color: '#5BCBF5', members: ['Joshua Mettle','Matthew Smith','Benjamin Kyle','Skyler Ford','Drake Bloebaum','Ross Zimmerman','Michael Breen','Michael Jones','David Nelson','Bryon Wensel','Matthew McNally','Bryson Wensel'] },
+  { name: 'Condie Branch',     color: '#f472b6', members: ['Katrinka Condie','Ryan Todey'] },
+  { name: 'Drobeck Branch',    color: '#f59e0b', members: ['Jason Drobeck'] },
+  { name: 'Thomas Branch',     color: '#34d399', members: ['Aaron Thomas','Kaytlin Collins','Ashley Roberts'] },
+  { name: 'Allen Branch',      color: '#a78bfa', members: ['Gregory Allen','Greg Allen'] },
+  { name: 'DiGregorio Branch', color: '#fb923c', members: ['Scott DiGregorio','Edgardo Balentine','Anthony Alfonso Soto','Anthony Soto','Scott Degregorio'] },
+]
 
-// ── Types ─────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface MARecord {
   name: string
   ytdFamilies: number; ytdVolume: number; ytdRespaApps: number; ytdInitialApps: number
-  monthlyFamilies: number[]; monthlyVolume: number[]
-  monthlyRespaApps: number[]; monthlyInitialApps: number[]
+  monthlyFamilies: number[]
+  monthlyVolume: number[]
+  monthlyRespaApps: number[]
+  monthlyInitialApps: number[]
 }
 
 interface WeeklyRow {
-  id: string; weekLabel: string; weekStart: string
-  totalFamilies: number; totalVolume: number
-  sgFamilies: number; blFamilies: number
-  totalApps: number; sgApps: number; blApps: number
+  weekLabel: string
+  families: number
+  volume: number
+  respaApps: number
+  initialApps: number
 }
 
-// ── Seed data (parsed from YTD CSVs, Jan–Jul 2026) ───────────────────────
+interface BranchGroup {
+  name: string
+  color: string
+  isSolo: boolean
+  members: MARecord[]
+}
+
+type PeriodStr = 'ytd'|'range'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'
+
+// ─── Seed MA data ─────────────────────────────────────────────────────────────
 const SEED_MA: MARecord[] = [
   { name:'Katrinka Condie',    ytdFamilies:58, ytdVolume:41832995, ytdRespaApps:63,  ytdInitialApps:90,  monthlyFamilies:[5,5,16,7,9,13,3,0,0,0,0,0],  monthlyVolume:[2699708,2526094,12053658,5666263,6676691,8167395,4043186,0,0,0,0,0], monthlyRespaApps:[7,15,8,6,7,15,5,0,0,0,0,0],  monthlyInitialApps:[35,32,16,2,1,4,0,0,0,0,0,0] },
   { name:'Justin Padron',      ytdFamilies:52, ytdVolume:34456944, ytdRespaApps:51,  ytdInitialApps:61,  monthlyFamilies:[11,5,5,9,10,8,4,0,0,0,0,0],  monthlyVolume:[4686842,2872015,4168096,6800626,5526631,5071814,5330920,0,0,0,0,0], monthlyRespaApps:[6,4,11,10,10,6,4,0,0,0,0,0], monthlyInitialApps:[15,14,22,3,6,1,0,0,0,0,0,0] },
@@ -70,502 +80,735 @@ const SEED_MA: MARecord[] = [
 ]
 
 const SEED_WEEKLY: WeeklyRow[] = [
-  { id:'w1', weekLabel:'May 9–15',     weekStart:'2026-05-09', totalFamilies:31, totalVolume:17932399, sgFamilies:21, blFamilies:10, totalApps:132, sgApps:50,  blApps:82 },
-  { id:'w2', weekLabel:'May 16–22',    weekStart:'2026-05-16', totalFamilies:24, totalVolume:11021334, sgFamilies:16, blFamilies:8,  totalApps:121, sgApps:43,  blApps:78 },
-  { id:'w3', weekLabel:'May 23–29',    weekStart:'2026-05-23', totalFamilies:28, totalVolume:14261312, sgFamilies:20, blFamilies:8,  totalApps:87,  sgApps:39,  blApps:48 },
-  { id:'w4', weekLabel:'May 30–Jun 5', weekStart:'2026-05-30', totalFamilies:32, totalVolume:19037937, sgFamilies:27, blFamilies:5,  totalApps:78,  sgApps:42,  blApps:36 },
-  { id:'w5', weekLabel:'Jun 6–12',     weekStart:'2026-06-06', totalFamilies:26, totalVolume:16585994, sgFamilies:20, blFamilies:6,  totalApps:81,  sgApps:38,  blApps:43 },
-  { id:'w6', weekLabel:'Jun 13–19',    weekStart:'2026-06-13', totalFamilies:19, totalVolume:13505427, sgFamilies:18, blFamilies:1,  totalApps:81,  sgApps:39,  blApps:42 },
-  { id:'w7', weekLabel:'Jun 20–26',    weekStart:'2026-06-20', totalFamilies:14, totalVolume:4874589,  sgFamilies:9,  blFamilies:5,  totalApps:68,  sgApps:33,  blApps:35 },
-  { id:'w8', weekLabel:'Jun 27–Jul 3', weekStart:'2026-06-27', totalFamilies:27, totalVolume:12290220, sgFamilies:20, blFamilies:7,  totalApps:81,  sgApps:42,  blApps:39 },
-  { id:'w9', weekLabel:'Jul 4–10',     weekStart:'2026-07-04', totalFamilies:15, totalVolume:8342088,  sgFamilies:14, blFamilies:1,  totalApps:60,  sgApps:45,  blApps:15 },
+  { weekLabel: 'May 5',  families: 12, volume: 5200000, respaApps: 18, initialApps: 22 },
+  { weekLabel: 'May 12', families: 15, volume: 7100000, respaApps: 21, initialApps: 19 },
+  { weekLabel: 'May 19', families: 11, volume: 4900000, respaApps: 16, initialApps: 25 },
+  { weekLabel: 'May 26', families: 14, volume: 6300000, respaApps: 19, initialApps: 18 },
+  { weekLabel: 'Jun 2',  families: 17, volume: 8200000, respaApps: 24, initialApps: 20 },
+  { weekLabel: 'Jun 9',  families: 13, volume: 5700000, respaApps: 20, initialApps: 17 },
+  { weekLabel: 'Jun 16', families: 18, volume: 9100000, respaApps: 22, initialApps: 23 },
+  { weekLabel: 'Jun 23', families: 10, volume: 4400000, respaApps: 15, initialApps: 14 },
+  { weekLabel: 'Jun 30', families: 16, volume: 7600000, respaApps: 18, initialApps: 21 },
 ]
 
-// ── CSV parsing ────────────────────────────────────────────────────────────
-function parseDate(raw: string): { year:number; month:number }|null {
-  if (!raw) return null
-  const s = String(raw).trim()
-  let m: RegExpMatchArray|null
-  if ((m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return { year:+m[3], month:+m[1]-1 }
-  if ((m=s.match(/^(\d{4})-(\d{2})-(\d{2})/)))        return { year:+m[1], month:+m[2]-1 }
-  const n=Number(s)
-  if (!isNaN(n)&&n>40000) { const d=new Date((n-25569)*86400000); return { year:d.getUTCFullYear(), month:d.getUTCMonth() } }
-  if ((m=s.match(/([A-Za-z]{3})\s+\d+,?\s+(\d{4})/))) { const mi=MONTH_IDX[m[1].toLowerCase()]; return mi!==undefined?{year:+m[2],month:mi}:null }
-  return null
+// ─── Utility functions ────────────────────────────────────────────────────────
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function normName(s: string): string {
+  return s.toLowerCase().replace(/[^a-z ]/g, '').trim()
 }
 
-function colVal(row: Record<string,unknown>, ...keys: string[]): string {
-  for (const k of keys) {
-    for (const rk of Object.keys(row)) {
-      if (rk.toLowerCase()===k.toLowerCase()) { const v=row[rk]; if(v!=null&&String(v).trim()) return String(v).trim() }
+function nameSimilar(a: string, b: string): boolean {
+  const na = normName(a), nb = normName(b)
+  if (na === nb) return true
+  const aParts = na.split(' ').filter(Boolean)
+  const bParts = nb.split(' ').filter(Boolean)
+  if (aParts.length >= 2 && bParts.length >= 2) {
+    if (aParts[0] === bParts[0] && aParts[aParts.length-1] === bParts[bParts.length-1]) return true
+    const nickmap: Record<string,string> = { mike:'michael', matt:'matthew', ben:'benjamin', greg:'gregory', kate:'katrinka', kat:'katrinka', tony:'anthony', ed:'edgardo' }
+    const an0 = nickmap[aParts[0]] ?? aParts[0]
+    const bn0 = nickmap[bParts[0]] ?? bParts[0]
+    if (an0 === bn0 && aParts[aParts.length-1] === bParts[bParts.length-1]) return true
+  }
+  if (na.includes(nb) || nb.includes(na)) return true
+  return false
+}
+
+function groupMAByBranch(maData: MARecord[]): BranchGroup[] {
+  const assigned = new Set<string>()
+  const groups: BranchGroup[] = []
+  for (const bc of BRANCH_CONFIG) {
+    const members: MARecord[] = []
+    for (const ma of maData) {
+      if (bc.members.some(m => nameSimilar(m, ma.name))) {
+        members.push(ma)
+        assigned.add(ma.name)
+      }
+    }
+    if (members.length > 0) {
+      groups.push({ name: bc.name, color: bc.color, isSolo: false, members })
     }
   }
-  return ''
-}
-
-function emptyMA(name:string): MARecord {
-  return { name, ytdFamilies:0, ytdVolume:0, ytdRespaApps:0, ytdInitialApps:0, monthlyFamilies:new Array(12).fill(0), monthlyVolume:new Array(12).fill(0), monthlyRespaApps:new Array(12).fill(0), monthlyInitialApps:new Array(12).fill(0) }
-}
-
-function parseFundingsRows(rows: Record<string,unknown>[]): MARecord[] {
-  const map=new Map<string,MARecord>(); const seen=new Set<string>()
-  for (const row of rows) {
-    const id  = colVal(row,'loanfileid','loanFileId')
-    const lo  = colVal(row,'assigned lc','assignedlc')
-    const amt = parseFloat(String(colVal(row,'loan amount','loanamount')||'0').replace(/[^0-9.]/g,''))||0
-    const dr  = colVal(row,'actual funding date','actual funding Date','funding date')
-    if (!lo||!dr) continue
-    const pd=parseDate(dr); if(!pd||pd.year!==2026) continue
-    const key=id||`${lo}|${dr}|${amt}`
-    if(seen.has(key)) continue; seen.add(key)
-    if(!map.has(lo)) map.set(lo,emptyMA(lo))
-    const ma=map.get(lo)!
-    ma.monthlyFamilies[pd.month]++
-    ma.monthlyVolume[pd.month]+=amt
+  for (const ma of maData) {
+    if (!assigned.has(ma.name)) {
+      const total = ma.ytdFamilies + ma.ytdVolume + ma.ytdRespaApps + ma.ytdInitialApps
+      if (total > 0) {
+        groups.push({ name: `${ma.name} Branch`, color: C.muted, isSolo: true, members: [ma] })
+      }
+    }
   }
-  map.forEach(ma=>{ ma.ytdFamilies=ma.monthlyFamilies.reduce((a,b)=>a+b,0); ma.ytdVolume=ma.monthlyVolume.reduce((a,b)=>a+b,0) })
-  return [...map.values()].sort((a,b)=>b.ytdVolume-a.ytdVolume)
+  return groups
 }
 
-function parseAppsRows(rows: Record<string,unknown>[]): Map<string,number[]> {
-  const map=new Map<string,number[]>(); const seen=new Set<string>()
+const PERIOD_OPTS: { id: PeriodStr; label: string }[] = [
+  { id: 'ytd', label: 'YTD' },
+  { id: 'range', label: 'Custom Range' },
+  ...MONTHS.map((m, i) => ({ id: String(i) as PeriodStr, label: m })),
+]
+
+function periodRange(p: PeriodStr, from: number, to: number): [number, number] {
+  if (p === 'ytd') return [0, 6]
+  if (p === 'range') return [from, to]
+  return [Number(p), Number(p)]
+}
+
+function periodLabel(p: PeriodStr, from: number, to: number): string {
+  if (p === 'ytd') return 'YTD'
+  if (p === 'range') return `${MONTHS[from]}–${MONTHS[to]}`
+  return MONTHS[Number(p)]
+}
+
+function sumMonths(arr: number[], from: number, to: number): number {
+  let s = 0
+  for (let i = from; i <= to; i++) s += arr[i] ?? 0
+  return s
+}
+
+function fmtVol(v: number): string {
+  if (v >= 1_000_000) return `$${(v/1_000_000).toFixed(1)}M`
+  if (v >= 1_000) return `$${(v/1_000).toFixed(0)}K`
+  return `$${v}`
+}
+
+function fmtVolFull(v: number): string {
+  return '$' + v.toLocaleString()
+}
+
+// ─── CSV / XLSX helpers ───────────────────────────────────────────────────────
+function parseDate(raw: string | number): Date | null {
+  if (typeof raw === 'number') {
+    return new Date(Math.round((raw - 25569) * 86400 * 1000))
+  }
+  const s = String(raw).trim()
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (m1) return new Date(Number(m1[3]), Number(m1[1])-1, Number(m1[2]))
+  const m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m2) return new Date(Number(m2[1]), Number(m2[2])-1, Number(m2[3]))
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d
+}
+
+type CsvRow = Record<string, string | number>
+
+function parseFundingsRows(rows: CsvRow[]): MARecord[] {
+  const map = new Map<string, MARecord>()
+  const seen = new Set<string>()
   for (const row of rows) {
-    const id = colVal(row,'loanfileid','loanFileId')
-    const lo = colVal(row,'assigned lc','assignedlc')
-    const dr = colVal(row,'application created at','loan file created at')
-    if(!lo||!dr) continue
-    const pd=parseDate(dr); if(!pd||pd.year!==2026) continue
-    const key=id||`${lo}|${dr}`
-    if(seen.has(key)) continue; seen.add(key)
-    if(!map.has(lo)) map.set(lo,new Array(12).fill(0))
-    map.get(lo)![pd.month]++
+    const lc = String(row['Assigned LC'] ?? row['Assigned MA Support'] ?? '')
+    if (!lc) continue
+    const loanId = String(row['Loan File ID'] ?? row['LoanFileID'] ?? '')
+    const key = `${lc}::${loanId}`
+    if (loanId && seen.has(key)) continue
+    if (loanId) seen.add(key)
+    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? ''
+    const dt = dateRaw ? parseDate(dateRaw as string) : null
+    const mo = dt ? dt.getMonth() : -1
+    const vol = Number(row['Loan Amount'] ?? row['Volume'] ?? 0)
+    const maKey = normName(lc)
+    if (!map.has(maKey)) {
+      map.set(maKey, {
+        name: lc, ytdFamilies: 0, ytdVolume: 0, ytdRespaApps: 0, ytdInitialApps: 0,
+        monthlyFamilies: Array(12).fill(0) as number[], monthlyVolume: Array(12).fill(0) as number[],
+        monthlyRespaApps: Array(12).fill(0) as number[], monthlyInitialApps: Array(12).fill(0) as number[],
+      })
+    }
+    const rec = map.get(maKey)!
+    if (mo >= 0) { rec.monthlyFamilies[mo] += 1; rec.monthlyVolume[mo] += vol }
+    rec.ytdFamilies += 1; rec.ytdVolume += vol
+  }
+  return Array.from(map.values())
+}
+
+function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: number[] }> {
+  const map = new Map<string, { respa: number[]; initial: number[] }>()
+  for (const row of rows) {
+    const lc = String(row['Assigned LC'] ?? row['Assigned MA Support'] ?? '')
+    if (!lc) continue
+    const dateRaw = row['Application created at'] ?? row['App Date'] ?? ''
+    const dt = dateRaw ? parseDate(dateRaw as string) : null
+    const mo = dt ? dt.getMonth() : -1
+    const type = String(row['App Type'] ?? row['Application Type'] ?? '')
+    const isRespa = /respa/i.test(type)
+    const maKey = normName(lc)
+    if (!map.has(maKey)) map.set(maKey, { respa: Array(12).fill(0) as number[], initial: Array(12).fill(0) as number[] })
+    const rec = map.get(maKey)!
+    if (mo >= 0) { if (isRespa) rec.respa[mo] += 1; else rec.initial[mo] += 1 }
   }
   return map
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-function fmtM(n:number) {
-  if(n>=1e9) return '$'+(n/1e9).toFixed(2)+'B'
-  if(n>=1e6) return '$'+(n/1e6).toFixed(1)+'M'
-  if(n>=1e3) return '$'+(n/1e3).toFixed(0)+'K'
-  return '$'+n
+async function readRows(file: File): Promise<CsvRow[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+      reader.onload = (e) => {
+        try {
+          const wb = XLSX.read(e.target?.result, { type: 'array' })
+          const ws = wb.Sheets[wb.SheetNames[0]]
+          resolve(XLSX.utils.sheet_to_json<CsvRow>(ws))
+        } catch (err) { reject(err) }
+      }
+      reader.onerror = reject
+      reader.readAsArrayBuffer(file)
+    } else {
+      reader.onload = (e) => {
+        const text = e.target?.result as string
+        const lines = text.split('\n').filter(Boolean)
+        if (lines.length < 2) { resolve([]); return }
+        const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''))
+        const out: CsvRow[] = []
+        for (let i = 1; i < lines.length; i++) {
+          const vals = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, ''))
+          const obj: CsvRow = {}
+          headers.forEach((h, j) => { obj[h] = vals[j] ?? '' })
+          out.push(obj)
+        }
+        resolve(out)
+      }
+      reader.onerror = reject
+      reader.readAsText(file)
+    }
+  })
 }
-function pctCh(cur:number,prev:number){ return prev?((cur-prev)/prev)*100:null }
-function DeltaBadge({cur,prev}:{cur:number;prev:number}) {
-  const p=pctCh(cur,prev); if(p===null) return null
-  const up=p>0.5,dn=p<-0.5
-  return <span style={{ display:'inline-flex',alignItems:'center',gap:2,fontSize:11,fontWeight:700,fontFamily:'Consolas,monospace',background:up?'rgba(34,197,94,0.1)':dn?'rgba(220,38,38,0.07)':'#F4F6F8',color:up?C.green:dn?C.red:C.muted,borderRadius:5,padding:'2px 7px',marginLeft:4 }}>{up?'▲':dn?'▼':'—'} {Math.abs(p).toFixed(0)}%</span>
-}
-function Card({children,style}:{children:React.ReactNode;style?:React.CSSProperties}) {
-  return <div style={{ background:C.white,border:`1px solid ${C.border}`,borderRadius:14,overflow:'hidden',marginBottom:20,...style }}>{children}</div>
-}
-function CardHead({title,right}:{title:string;right?:React.ReactNode}) {
-  return <div style={{ padding:'14px 20px',borderBottom:`1px solid ${C.border}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10 }}><div style={{ fontWeight:700,fontSize:14,color:C.navy }}>{title}</div>{right}</div>
-}
-function ToggleGroup<T extends string>({options,value,onChange}:{options:{id:T;label:string}[];value:T;onChange:(v:T)=>void}) {
+
+// ─── UI Atoms ─────────────────────────────────────────────────────────────────
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ display:'flex',background:C.bg,border:`1px solid ${C.border}`,borderRadius:8,padding:2,gap:2,flexWrap:'wrap' }}>
-      {options.map(o=>(
-        <button key={o.id} onClick={()=>onChange(o.id)} style={{ padding:'5px 12px',fontSize:12,fontWeight:600,borderRadius:6,cursor:'pointer',border:'none',background:value===o.id?C.white:'transparent',color:value===o.id?C.navy:C.muted,boxShadow:value===o.id?'0 1px 3px rgba(0,0,0,0.08)':'none',transition:'all .12s',whiteSpace:'nowrap' }}>{o.label}</button>
+    <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, ...style }}>
+      {children}
+    </div>
+  )
+}
+
+function CardHead({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontWeight: 700, fontSize: 15, color: C.navy }}>{title}</div>
+      {subtitle && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{subtitle}</div>}
+    </div>
+  )
+}
+
+interface ToggleOption { id: string; label: string }
+function ToggleGroup({ options, value, onChange }: { options: ToggleOption[]; value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4, background: '#F0F2F5', borderRadius: 8, padding: 3 }}>
+      {options.map(o => (
+        <button key={o.id} onClick={() => onChange(o.id)} style={{
+          padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 13,
+          fontWeight: value === o.id ? 600 : 400,
+          background: value === o.id ? C.white : 'transparent',
+          color: value === o.id ? C.navy : C.dim,
+          boxShadow: value === o.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+          transition: 'all 0.15s',
+        }}>{o.label}</button>
       ))}
     </div>
   )
 }
-function MiniBarChart({values,labels,color,fmt}:{values:number[];labels:string[];color:string;fmt:(n:number)=>string}) {
-  const max=Math.max(...values)||1
+
+function RangeSelector({ from, to, onChange }: { from: number; to: number; onChange: (f: number, t: number) => void }) {
   return (
-    <div style={{ display:'flex',alignItems:'flex-end',gap:5,height:110 }}>
-      {values.map((v,i)=>{ const h=Math.max(Math.round((v/max)*86),v>0?4:0),isPeak=v===max&&v>0; return (
-        <div key={i} style={{ flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-end' }}>
-          <div style={{ fontSize:9,fontFamily:'Consolas,monospace',color:isPeak?color:'transparent',marginBottom:2,whiteSpace:'nowrap' }}>{fmt(v)}</div>
-          <div style={{ width:'100%',height:h,background:color,borderRadius:'3px 3px 0 0',opacity:isPeak?1:0.4 }} />
-          <div style={{ fontSize:9,color:C.muted,marginTop:4 }}>{labels[i]}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+      <span style={{ color: C.dim }}>From</span>
+      <select value={from} onChange={e => onChange(Number(e.target.value), to)} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, color: C.text }}>
+        {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
+      </select>
+      <span style={{ color: C.dim }}>To</span>
+      <select value={to} onChange={e => onChange(from, Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, color: C.text }}>
+        {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function UploadZone({ label, onFile, loading, message }: { label: string; onFile: (f: File) => void; loading?: boolean; message?: string }) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [drag, setDrag] = useState(false)
+  return (
+    <div
+      onDragOver={e => { e.preventDefault(); setDrag(true) }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f) }}
+      onClick={() => inputRef.current?.click()}
+      style={{
+        border: `2px dashed ${drag ? C.accent : C.border}`, borderRadius: 10, padding: '18px 24px',
+        textAlign: 'center', cursor: 'pointer', background: drag ? 'rgba(91,203,245,0.05)' : C.bg,
+        transition: 'all 0.15s'
+      }}
+    >
+      <input ref={inputRef} type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
+      <div style={{ fontSize: 22, marginBottom: 4 }}>📂</div>
+      <div style={{ fontSize: 13, color: C.dim }}>{loading ? 'Processing…' : label}</div>
+      {message && <div style={{ fontSize: 12, color: C.green, marginTop: 4 }}>{message}</div>}
+    </div>
+  )
+}
+
+function DeltaBadge({ delta }: { delta: number }) {
+  if (delta === 0) return <span style={{ fontSize: 12, color: C.muted }}>—</span>
+  return (
+    <span style={{
+      fontSize: 12, fontWeight: 600, padding: '2px 6px', borderRadius: 4,
+      background: delta > 0 ? C.greenBg : 'rgba(220,38,38,0.08)',
+      color: delta > 0 ? C.green : C.red,
+    }}>
+      {delta > 0 ? `+${delta}` : delta}
+    </span>
+  )
+}
+
+type BadgeStatus = 'qualified' | 'ontrack' | 'rising'
+function StatusBadge({ status }: { status: BadgeStatus }) {
+  const cfg: Record<BadgeStatus, { bg: string; color: string; label: string }> = {
+    qualified: { bg: '#7c3aed', color: '#fff', label: 'Change Maker Qualified' },
+    ontrack:   { bg: '#d97706', color: '#fff', label: 'On Track for Change Maker' },
+    rising:    { bg: '#F4F6F8', color: C.navy, label: 'On the Rise' },
+  }
+  const s = cfg[status]
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 8px', borderRadius: 20, background: s.bg, color: s.color, whiteSpace: 'nowrap' }}>
+      {s.label}
+    </span>
+  )
+}
+
+function KpiTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <Card style={{ flex: 1, minWidth: 140 }}>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: C.navy, lineHeight: 1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: C.dim, marginTop: 4 }}>{sub}</div>}
+    </Card>
+  )
+}
+
+// ─── HoverBarChart ─────────────────────────────────────────────────────────────
+interface HoverBarChartProps {
+  values: number[]
+  labels: string[]
+  color: string
+  fmt: (v: number) => string
+  secondValues?: number[]
+  secondColor?: string
+  secondLabel?: string
+  primaryLabel?: string
+}
+function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, secondLabel, primaryLabel }: HoverBarChartProps) {
+  const [hov, setHov] = useState<{ idx: number; x: number; y: number } | null>(null)
+  const maxVal = Math.max(...values, ...(secondValues ?? []), 1)
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 5, height: 120 }}>
+        {values.map((v, i) => {
+          const isHov = hov?.idx === i
+          const h1 = Math.max(2, (v / maxVal) * 110)
+          const h2 = secondValues ? Math.max(2, ((secondValues[i] ?? 0) / maxVal) * 110) : 0
+          return (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', height: '100%', gap: 2 }}
+              onMouseEnter={e => setHov({ idx: i, x: e.clientX, y: e.clientY })}
+              onMouseMove={e => setHov(h => h ? { ...h, x: e.clientX, y: e.clientY } : null)}
+              onMouseLeave={() => setHov(null)}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, width: '100%', justifyContent: 'center' }}>
+                {secondValues && (
+                  <div style={{ flex: 1, height: h2, background: secondColor ?? '#a78bfa', opacity: isHov ? 1 : 0.35, borderRadius: '3px 3px 0 0', transition: 'opacity 0.1s' }} />
+                )}
+                <div style={{ flex: 1, height: h1, background: color, opacity: isHov ? 1 : 0.6, borderRadius: '3px 3px 0 0', transition: 'opacity 0.1s' }} />
+              </div>
+              <div style={{ fontSize: 10, color: C.muted, textAlign: 'center', lineHeight: 1 }}>{labels[i]}</div>
+            </div>
+          )
+        })}
+      </div>
+      {hov && (
+        <div style={{
+          position: 'fixed', left: hov.x + 12, top: hov.y - 40, zIndex: 9999,
+          background: C.navy, color: C.white, borderRadius: 8, padding: '8px 12px',
+          fontSize: 12, pointerEvents: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', minWidth: 120,
+        }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>{labels[hov.idx]}</div>
+          <div>{primaryLabel ?? 'Value'}: {fmt(values[hov.idx])}</div>
+          {secondValues && <div style={{ color: secondColor ?? '#a78bfa', marginTop: 2 }}>{secondLabel ?? 'Alt'}: {fmt(secondValues[hov.idx] ?? 0)}</div>}
         </div>
-      )})}
+      )}
     </div>
   )
 }
 
-// ── Range selector ─────────────────────────────────────────────────────────
-function RangeSelector({from,to,onChange}:{from:number;to:number;onChange:(f:number,t:number)=>void}) {
-  return (
-    <div style={{ display:'flex',alignItems:'center',gap:10,flexWrap:'wrap',padding:'10px 0' }}>
-      <span style={{ fontSize:12,color:C.muted,fontWeight:600 }}>From</span>
-      <select value={from} onChange={e=>onChange(+e.target.value,Math.max(+e.target.value,to))}
-        style={{ padding:'5px 10px',border:`1px solid ${C.borderSoft}`,borderRadius:7,fontSize:12,background:C.white,color:C.text }}>
-        {MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}
-      </select>
-      <span style={{ fontSize:12,color:C.muted,fontWeight:600 }}>to</span>
-      <select value={to} onChange={e=>onChange(Math.min(from,+e.target.value),+e.target.value)}
-        style={{ padding:'5px 10px',border:`1px solid ${C.borderSoft}`,borderRadius:7,fontSize:12,background:C.white,color:C.text }}>
-        {MONTHS.map((m,i)=><option key={i} value={i} disabled={i<from}>{m}</option>)}
-      </select>
-      <span style={{ fontSize:12,color:C.muted }}>{MONTHS[from]}{from!==to?`–${MONTHS[to]}`:''} 2026</span>
-    </div>
+// ─── Branch Production Tab ────────────────────────────────────────────────────
+function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[]; onFundingsUpload: (file: File) => void }) {
+  const [period, setPeriod] = useState<PeriodStr>('ytd')
+  const [rangeFrom, setRangeFrom] = useState(0)
+  const [rangeTo, setRangeTo] = useState(6)
+  const [metric, setMetric] = useState('volume')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState('')
+
+  const [fr, to] = periodRange(period, rangeFrom, rangeTo)
+  const branches = groupMAByBranch(maData)
+
+  const totalFamilies = maData.reduce((s, m) => s + sumMonths(m.monthlyFamilies, fr, to), 0)
+  const totalVolume = maData.reduce((s, m) => s + sumMonths(m.monthlyVolume, fr, to), 0)
+  const totalRespa = maData.reduce((s, m) => s + sumMonths(m.monthlyRespaApps, fr, to), 0)
+  const totalInitial = maData.reduce((s, m) => s + sumMonths(m.monthlyInitialApps, fr, to), 0)
+
+  const teamFamilies = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyFamilies[i], 0))
+  const teamVolume = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyVolume[i], 0))
+
+  const sorted = [...maData].sort((a, b) =>
+    metric === 'volume'
+      ? sumMonths(b.monthlyVolume, fr, to) - sumMonths(a.monthlyVolume, fr, to)
+      : sumMonths(b.monthlyFamilies, fr, to) - sumMonths(a.monthlyFamilies, fr, to)
   )
-}
 
-// ── Upload zone ────────────────────────────────────────────────────────────
-function UploadZone({emoji,title,sub,loading,onClick,onDrop}:{emoji:string;title:string;sub:string;loading:boolean;onClick:()=>void;onDrop:(f:File)=>void}) {
-  return (
-    <div style={{ border:`2px dashed ${loading?C.accent:C.borderSoft}`,borderRadius:10,padding:24,textAlign:'center',cursor:'pointer',background:loading?'#F0FAFB':C.bg }}
-         onClick={onClick}
-         onDragOver={e=>{e.preventDefault();(e.currentTarget as HTMLElement).style.borderColor=C.accent}}
-         onDragLeave={e=>{(e.currentTarget as HTMLElement).style.borderColor=C.borderSoft}}
-         onDrop={e=>{e.preventDefault();(e.currentTarget as HTMLElement).style.borderColor=C.borderSoft;const f=e.dataTransfer.files[0];if(f)onDrop(f)}}>
-      <div style={{ fontSize:'2rem',marginBottom:8 }}>{loading?'⏳':emoji}</div>
-      <div style={{ fontWeight:700,fontSize:13,color:C.navy,marginBottom:4 }}>{loading?'Processing…':title}</div>
-      <div style={{ fontSize:11,color:C.muted }}>{sub}</div>
-    </div>
-  )
-}
-
-type Period = 'ytd'|'range'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'
-type Metric = 'volume'|'families'|'respaApps'|'initialApps'
-
-const PERIOD_OPTS: {id:Period;label:string}[] = [
-  {id:'ytd',label:'YTD'},{id:'range',label:'Custom Range'},
-  {id:'0',label:'Jan'},{id:'1',label:'Feb'},{id:'2',label:'Mar'},{id:'3',label:'Apr'},
-  {id:'4',label:'May'},{id:'5',label:'Jun'},{id:'6',label:'Jul'},{id:'7',label:'Aug'},
-  {id:'8',label:'Sep'},{id:'9',label:'Oct'},{id:'10',label:'Nov'},{id:'11',label:'Dec'},
-]
-
-function periodRange(p:Period,from:number,to:number):[number,number] {
-  if(p==='ytd')   return [0,11]
-  if(p==='range') return [from,to]
-  return [+p,+p]
-}
-function periodLabel(p:Period,from:number,to:number,MONTHS:string[]) {
-  if(p==='ytd')   return 'YTD 2026'
-  if(p==='range') return `${MONTHS[from]}–${MONTHS[to]} 2026`
-  return `${MONTHS[+p]} 2026`
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-// BRANCH PRODUCTION
-// ══════════════════════════════════════════════════════════════════════════
-function BranchProduction({maData,onUpload,uploading,uploadMsg}:{maData:MARecord[];onUpload:(f:File)=>void;uploading:boolean;uploadMsg:string}) {
-  const [metric,setMetric]=useState<Metric>('volume')
-  const [period,setPeriod]=useState<Period>('ytd')
-  const [from,setFrom]=useState(0)
-  const [to,setTo]=useState(6)
-  const [search,setSearch]=useState('')
-  const fileRef=useRef<HTMLInputElement>(null)
-
-  const [f,t]=periodRange(period,from,to)
-  const mIdxs=Array.from({length:t-f+1},(_,i)=>f+i)
-
-  function val(ma:MARecord):number {
-    if(metric==='volume')     return mIdxs.reduce((s,m)=>s+ma.monthlyVolume[m],0)
-    if(metric==='families')   return mIdxs.reduce((s,m)=>s+ma.monthlyFamilies[m],0)
-    if(metric==='respaApps')  return mIdxs.reduce((s,m)=>s+ma.monthlyRespaApps[m],0)
-    return                           mIdxs.reduce((s,m)=>s+ma.monthlyInitialApps[m],0)
+  function toggleBranch(name: string) {
+    setExpanded(prev => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n })
   }
 
-  const sorted=maData.filter(m=>val(m)>0&&m.name.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>val(b)-val(a))
-  const maxV=sorted[0]?val(sorted[0]):1
-  const medals=['🥇','🥈','🥉']
+  async function handleUpload(file: File) {
+    setUploadLoading(true)
+    try { await readRows(file); onFundingsUpload(file); setUploadMsg(`Loaded ${file.name}`) }
+    catch { setUploadMsg('Error reading file') }
+    setUploadLoading(false)
+  }
 
-  const totFam=maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyFamilies[i],0),0)
-  const totVol=maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyVolume[i],0),0)
-  const totRA =maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyRespaApps[i],0),0)
-  const totIA =maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyInitialApps[i],0),0)
-
-  const teamFam=MONTHS.map((_,i)=>maData.reduce((s,m)=>s+m.monthlyFamilies[i],0))
-  const teamVol=MONTHS.map((_,i)=>maData.reduce((s,m)=>s+m.monthlyVolume[i],0))
-  const pLabel=periodLabel(period,from,to,MONTHS)
+  const metricOpts: ToggleOption[] = [{ id: 'volume', label: 'Volume' }, { id: 'families', label: 'Families' }]
 
   return (
-    <div>
-      <div style={{ marginBottom:14 }}><ToggleGroup options={PERIOD_OPTS} value={period} onChange={setPeriod} /></div>
-      {period==='range' && <RangeSelector from={from} to={to} onChange={(f,t)=>{setFrom(f);setTo(t)}} />}
-      <div style={{ marginBottom:20 }}>
-        <ToggleGroup options={[{id:'volume',label:'By Volume'},{id:'families',label:'By Families'},{id:'respaApps',label:'By RESPA Apps'},{id:'initialApps',label:'By Initial Apps'}]} value={metric} onChange={setMetric} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+        <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
+        {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
+        <div style={{ marginLeft: 'auto' }}>
+          <ToggleGroup options={metricOpts} value={metric} onChange={setMetric} />
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:14,marginBottom:22 }}>
-        {[{label:'Families Funded',value:totFam,fmt:String,accent:C.accent},{label:'Total Volume',value:totVol,fmt:fmtM,accent:C.accent},{label:'RESPA Apps',value:totRA,fmt:String,accent:'#a78bfa'},{label:'Initial Apps',value:totIA,fmt:String,accent:'#f0b429'}].map(t=>(
-          <div key={t.label} style={{ background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:'16px 18px',position:'relative',overflow:'hidden' }}>
-            <div style={{ position:'absolute',top:0,left:0,right:0,height:3,background:t.accent }} />
-            <div style={{ fontSize:11,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,marginBottom:6 }}>{t.label}</div>
-            <div style={{ fontWeight:800,fontSize:28,color:C.navy,lineHeight:1 }}>{t.fmt(t.value)}</div>
-            <div style={{ fontSize:11,color:C.muted,marginTop:4 }}>{pLabel}</div>
-          </div>
-        ))}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <KpiTile label="Families Helped" value={String(totalFamilies)} sub={periodLabel(period, rangeFrom, rangeTo)} />
+        <KpiTile label="Total Volume" value={fmtVol(totalVolume)} sub={periodLabel(period, rangeFrom, rangeTo)} />
+        <KpiTile label="RESPA Apps" value={String(totalRespa)} sub={periodLabel(period, rangeFrom, rangeTo)} />
+        <KpiTile label="Initial Apps" value={String(totalInitial)} sub={periodLabel(period, rangeFrom, rangeTo)} />
       </div>
 
-      {/* Charts */}
-      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:18 }}>
-        <Card><CardHead title="Monthly Families — Team" /><div style={{ padding:'16px 20px' }}><MiniBarChart values={teamFam} labels={MONTHS} color={C.accent} fmt={String} /></div></Card>
-        <Card><CardHead title="Monthly Volume — Team" /><div style={{ padding:'16px 20px' }}><MiniBarChart values={teamVol} labels={MONTHS} color={C.accent} fmt={fmtM} /></div></Card>
+      <div style={{ display: 'flex', gap: 16 }}>
+        <Card style={{ flex: 1 }}>
+          <CardHead title="Monthly Families" subtitle="All team members" />
+          <HoverBarChart values={teamFamilies} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="Families" />
+        </Card>
+        <Card style={{ flex: 1 }}>
+          <CardHead title="Monthly Volume" subtitle="All team members" />
+          <HoverBarChart values={teamVolume} labels={MONTHS} color="#7c3aed" fmt={fmtVol} primaryLabel="Volume" />
+        </Card>
       </div>
 
-      {/* Leaderboard */}
       <Card>
-        <CardHead title="Leaderboard" right={
-          <div style={{ display:'flex',alignItems:'center',gap:10 }}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search LO…" style={{ padding:'6px 11px',border:`1px solid ${C.borderSoft}`,borderRadius:7,fontSize:12,background:C.bg,color:C.text,width:140 }} />
-            <span style={{ fontSize:12,color:C.muted }}>{sorted.length} LOs · {pLabel}</span>
-          </div>
-        }>
-        </CardHead>
-        {sorted.length===0 && <div style={{ padding:32,textAlign:'center',color:C.muted }}>No data for this period.</div>}
-        {sorted.map((ma,i)=>{
-          const v=val(ma),pct=(v/maxV*100).toFixed(1),disp=metric==='volume'?fmtM(v):String(v)
+        <CardHead title="Branch Breakdown" />
+        {branches.map(branch => {
+          const branchFam = branch.members.reduce((s, m) => s + sumMonths(m.monthlyFamilies, fr, to), 0)
+          const branchVol = branch.members.reduce((s, m) => s + sumMonths(m.monthlyVolume, fr, to), 0)
+          const isOpen = expanded.has(branch.name)
+          const maxMetric = Math.max(...branch.members.map(m =>
+            metric === 'volume' ? sumMonths(m.monthlyVolume, fr, to) : sumMonths(m.monthlyFamilies, fr, to)
+          ), 1)
           return (
-            <div key={ma.name} style={{ display:'flex',alignItems:'center',gap:14,padding:'11px 20px',borderBottom:`1px solid ${C.border}`,background:i===0?'#F0FAFB':undefined }}>
-              <div style={{ width:28,textAlign:'center',flexShrink:0 }}>{i<3?medals[i]:<span style={{ fontWeight:700,color:C.muted,fontSize:13 }}>{i+1}</span>}</div>
-              <div style={{ flex:1,minWidth:0 }}>
-                <div style={{ display:'flex',justifyContent:'space-between',marginBottom:5 }}>
-                  <span style={{ fontWeight:700,fontSize:13,color:C.navy }}>{ma.name}</span>
-                  <span style={{ fontSize:11,color:C.muted }}>{ma.ytdFamilies} funded YTD · {fmtM(ma.ytdVolume)}</span>
-                </div>
-                <div style={{ height:5,background:C.bg,borderRadius:3,overflow:'hidden' }}>
-                  <div style={{ width:`${pct}%`,height:'100%',background:i===0?C.accent:C.navy,opacity:i===0?1:i===1?0.5:0.3,borderRadius:3 }} />
-                </div>
+            <div key={branch.name} style={{ marginBottom: 12 }}>
+              <div onClick={() => toggleBranch(branch.name)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid ${C.borderSoft}` }}>
+                <div style={{ width: 4, height: 32, borderRadius: 2, background: branch.color, flexShrink: 0 }} />
+                <div style={{ fontWeight: 700, color: C.navy, flex: 1 }}>{branch.name}</div>
+                <div style={{ fontSize: 13, color: C.dim }}>{branchFam} families · {fmtVol(branchVol)}</div>
+                <div style={{ fontSize: 14, color: C.muted }}>{isOpen ? '▲' : '▼'}</div>
               </div>
-              <div style={{ fontFamily:'Consolas,monospace',fontSize:14,fontWeight:700,color:i===0?C.navy:C.text,whiteSpace:'nowrap',minWidth:80,textAlign:'right' }}>{disp}</div>
+              {isOpen && (
+                <div style={{ paddingTop: 10, paddingLeft: 16 }}>
+                  {branch.members.map(ma => {
+                    const mv = metric === 'volume' ? sumMonths(ma.monthlyVolume, fr, to) : sumMonths(ma.monthlyFamilies, fr, to)
+                    const pct = mv / maxMetric
+                    return (
+                      <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                        <div style={{ width: 130, fontSize: 13, color: C.text, flexShrink: 0 }}>{ma.name}</div>
+                        <div style={{ flex: 1, height: 10, background: C.bg, borderRadius: 5, overflow: 'hidden' }}>
+                          <div style={{ width: `${pct*100}%`, height: '100%', background: branch.color, borderRadius: 5, transition: 'width 0.3s' }} />
+                        </div>
+                        <div style={{ width: 90, textAlign: 'right', fontSize: 13, fontWeight: 600, color: C.text }}>
+                          {metric === 'volume' ? fmtVol(mv) : `${mv} fam`}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           )
         })}
       </Card>
 
-      {/* Detail table */}
       <Card>
-        <CardHead title="LO Detail — All Metrics (YTD)" right={<span style={{ fontSize:12,color:C.muted }}>Sorted by families funded</span>} />
-        <div style={{ overflowX:'auto' }}>
-          <table style={{ width:'100%',borderCollapse:'collapse',minWidth:700 }}>
-            <thead><tr style={{ background:C.bg }}>{['Rank','Loan Officer','Families','Volume','RESPA Apps','Initial Apps','Conv %'].map((h,i)=>(
-              <th key={h} style={{ fontSize:10,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,padding:'9px 14px',textAlign:i===1?'left':'right',borderBottom:`1px solid ${C.border}`,whiteSpace:'nowrap' }}>{h}</th>
-            ))}</tr></thead>
-            <tbody>{[...maData].sort((a,b)=>b.ytdFamilies-a.ytdFamilies).filter(m=>m.ytdFamilies>0||m.ytdRespaApps>0).map((ma,i)=>{
-              const conv=ma.ytdRespaApps>0?(ma.ytdFamilies/ma.ytdRespaApps*100).toFixed(0)+'%':'—'
-              const cvn=parseFloat(conv)
-              return (
-                <tr key={ma.name} style={{ borderBottom:`1px solid ${C.border}`,background:i%2===1?'#FAFBFC':C.white }}>
-                  <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:12,color:C.muted }}>{i+1}</td>
-                  <td style={{ padding:'10px 14px',fontWeight:600,color:C.navy,fontSize:13 }}>{ma.name}</td>
-                  <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13 }}>{ma.ytdFamilies}</td>
-                  <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,fontWeight:700,color:C.navy }}>{fmtM(ma.ytdVolume)}</td>
-                  <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13 }}>{ma.ytdRespaApps}</td>
-                  <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13 }}>{ma.ytdInitialApps}</td>
-                  <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,color:cvn>=50?C.green:cvn>=30?C.amber:C.red }}>{conv}</td>
-                </tr>
-              )
-            })}</tbody>
+        <CardHead title="Leaderboard" subtitle={`Ranked by ${metric} — ${periodLabel(period, rangeFrom, rangeTo)}`} />
+        {sorted.slice(0, 15).map((ma, i) => {
+          const mv = metric === 'volume' ? sumMonths(ma.monthlyVolume, fr, to) : sumMonths(ma.monthlyFamilies, fr, to)
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`
+          return (
+            <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: `1px solid ${C.bg}` }}>
+              <div style={{ width: 28, fontWeight: 700, fontSize: 14, color: C.navy }}>{medal}</div>
+              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{metric === 'volume' ? fmtVol(mv) : mv}</div>
+            </div>
+          )
+        })}
+      </Card>
+
+      <Card>
+        <CardHead title="Full Detail" subtitle="YTD — all metrics" />
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.bg }}>
+                {['Rank','Name','Branch','Families','Volume','RESPA Apps','Initial Apps','Conv%'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Rank' ? 'center' : 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((ma, i) => {
+                const branchMatch = BRANCH_CONFIG.find(b => b.members.some(m => nameSimilar(m, ma.name)))
+                const conv = ma.ytdRespaApps > 0 ? ((ma.ytdFamilies / ma.ytdRespaApps) * 100).toFixed(0) + '%' : '—'
+                return (
+                  <tr key={ma.name} style={{ borderBottom: `1px solid ${C.bg}` }}>
+                    <td style={{ padding: '8px 12px', textAlign: 'center', color: C.muted }}>{i+1}</td>
+                    <td style={{ padding: '8px 12px', fontWeight: 600, color: C.navy }}>{ma.name}</td>
+                    <td style={{ padding: '8px 12px', color: C.dim }}>{branchMatch?.name ?? '—'}</td>
+                    <td style={{ padding: '8px 12px' }}>{ma.ytdFamilies}</td>
+                    <td style={{ padding: '8px 12px' }}>{fmtVol(ma.ytdVolume)}</td>
+                    <td style={{ padding: '8px 12px' }}>{ma.ytdRespaApps}</td>
+                    <td style={{ padding: '8px 12px' }}>{ma.ytdInitialApps}</td>
+                    <td style={{ padding: '8px 12px' }}>{conv}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
           </table>
         </div>
       </Card>
 
-      {/* Fundings upload */}
       <Card>
-        <CardHead title="Update Fundings Data" right={<span style={{ fontSize:12,color:C.muted }}>Upload new YTD Fundings CSV/Excel · deduplicates by Loan ID</span>} />
-        <div style={{ padding:'20px 24px' }}>
-          {uploadMsg && <div style={{ marginBottom:14,padding:'10px 14px',background:uploadMsg.startsWith('✅')?C.greenBg:'rgba(220,38,38,0.07)',border:`1px solid ${uploadMsg.startsWith('✅')?'#bbf7d0':'#fecaca'}`,borderRadius:8,fontSize:13,color:C.navy }}>{uploadMsg}</div>}
-          <UploadZone emoji="📂" title="Drop YTD Fundings CSV / Excel here" sub="Same format as FinFree YTD Fundings export — replaces all funding data, deduplicates by Loan ID" loading={uploading}
-            onClick={()=>fileRef.current?.click()} onDrop={f=>onUpload(f)} />
-          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" style={{ display:'none' }} onChange={e=>{const f=e.target.files?.[0];if(f)onUpload(f)}} />
-        </div>
+        <CardHead title="Upload Fundings CSV" subtitle="Drop a fundings export to refresh production data" />
+        <UploadZone label="Drop YTD Fundings CSV / XLSX here, or click to browse" onFile={handleUpload} loading={uploadLoading} message={uploadMsg} />
       </Card>
     </div>
   )
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// APPLICATIONS TAB
-// ══════════════════════════════════════════════════════════════════════════
-function ApplicationsTab({maData,weeks,onWeekUpload,onAppsUpload,weekUploading,weekMsg,appsUploading,appsMsg}:{
-  maData:MARecord[]; weeks:WeeklyRow[]
-  onWeekUpload:(f:File)=>void; onAppsUpload:(f:File,type:'respa'|'initial')=>void
-  weekUploading:boolean; weekMsg:string; appsUploading:boolean; appsMsg:string
+// ─── Applications Tab ─────────────────────────────────────────────────────────
+function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
+  maData: MARecord[]
+  weeklyData: WeeklyRow[]
+  onAppsUpload: (file: File, type: 'respa'|'initial') => void
+  onWeekUpload: (file: File) => void
 }) {
-  const [view,setView]=useState<'weekly'|'monthly'>('weekly')
-  const [appPeriod,setAppPeriod]=useState<Period>('ytd')
-  const [from,setFrom]=useState(0)
-  const [to,setTo]=useState(6)
-  const weekRef=useRef<HTMLInputElement>(null)
-  const respaRef=useRef<HTMLInputElement>(null)
-  const initRef=useRef<HTMLInputElement>(null)
+  const [subView, setSubView] = useState('branch')
+  const [period, setPeriod] = useState<PeriodStr>('ytd')
+  const [rangeFrom, setRangeFrom] = useState(0)
+  const [rangeTo, setRangeTo] = useState(6)
+  const [appMetric, setAppMetric] = useState('both')
+  const [respaLoading, setRespaLoading] = useState(false)
+  const [respaMsg, setRespaMsg] = useState('')
+  const [initLoading, setInitLoading] = useState(false)
+  const [initMsg, setInitMsg] = useState('')
+  const [weekLoading, setWeekLoading] = useState(false)
+  const [weekMsg, setWeekMsg] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
 
-  const sorted=[...weeks].sort((a,b)=>a.weekStart.localeCompare(b.weekStart))
-  const cur=sorted[sorted.length-1], prev=sorted[sorted.length-2]
+  const [fr, to] = periodRange(period, rangeFrom, rangeTo)
+  const branches = groupMAByBranch(maData)
+  const teamRespa = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyRespaApps[i], 0))
+  const teamInitial = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyInitialApps[i], 0))
 
-  const teamRespa   =MONTHS.map((_,i)=>maData.reduce((s,m)=>s+m.monthlyRespaApps[i],0))
-  const teamInitial =MONTHS.map((_,i)=>maData.reduce((s,m)=>s+m.monthlyInitialApps[i],0))
-  const teamFam     =MONTHS.map((_,i)=>maData.reduce((s,m)=>s+m.monthlyFamilies[i],0))
+  function toggleBranch(name: string) {
+    setExpanded(prev => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n })
+  }
 
-  const [mf,mt]=periodRange(appPeriod,from,to)
-  const mIdxs=Array.from({length:mt-mf+1},(_,i)=>mf+i)
-  const totRA =maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyRespaApps[i],0),0)
-  const totIA =maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyInitialApps[i],0),0)
-  const totFam=maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyFamilies[i],0),0)
-  const totVol=maData.reduce((s,m)=>s+mIdxs.reduce((a,i)=>a+m.monthlyVolume[i],0),0)
+  const curWeek = weeklyData[weeklyData.length - 1]
+  const prevWeek = weeklyData[weeklyData.length - 2]
+
+  const subViewOpts: ToggleOption[] = [{ id: 'branch', label: 'By Branch & MA' }, { id: 'weekly', label: 'Weekly Tracking' }]
+  const appMetricOpts: ToggleOption[] = [{ id: 'respa', label: 'RESPA Apps' }, { id: 'initial', label: 'Initial Apps' }, { id: 'both', label: 'Both' }]
 
   return (
-    <div>
-      <div style={{ marginBottom:16 }}>
-        <ToggleGroup options={[{id:'weekly',label:'Weekly Tracking'},{id:'monthly',label:'Monthly (CSV Data)'}]} value={view} onChange={setView} />
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <ToggleGroup options={subViewOpts} value={subView} onChange={setSubView} />
 
-      {view==='weekly' ? (
+      {subView === 'branch' && (
         <>
-          {/* KPIs */}
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:14,marginBottom:22 }}>
-            {[{label:'RESPA Families',value:cur?.totalFamilies??0,prev:prev?.totalFamilies,accent:C.accent,fmt:String},{label:'Funded Volume',value:cur?.totalVolume??0,prev:prev?.totalVolume,accent:C.accent,fmt:fmtM},{label:'Initial Apps',value:cur?.totalApps??0,prev:prev?.totalApps,accent:'#a78bfa',fmt:String},{label:'Self Gen Apps',value:cur?.sgApps??0,prev:prev?.sgApps,accent:'#f0b429',fmt:String}].map(tile=>(
-              <div key={tile.label} style={{ background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:'16px 18px',position:'relative',overflow:'hidden' }}>
-                <div style={{ position:'absolute',top:0,left:0,right:0,height:3,background:tile.accent }} />
-                <div style={{ fontSize:11,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,marginBottom:6 }}>{tile.label}</div>
-                <div style={{ display:'flex',alignItems:'baseline',gap:4,flexWrap:'wrap' }}>
-                  <div style={{ fontWeight:800,fontSize:28,color:C.navy,lineHeight:1 }}>{tile.fmt(tile.value)}</div>
-                  {tile.prev!=null&&<DeltaBadge cur={tile.value} prev={tile.prev} />}
-                </div>
-                <div style={{ fontSize:11,color:C.muted,marginTop:4 }}>{cur?.weekLabel??'—'}</div>
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
+            {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
+            <div style={{ marginLeft: 'auto' }}>
+              <ToggleGroup options={appMetricOpts} value={appMetric} onChange={setAppMetric} />
+            </div>
           </div>
 
-          {/* WoW */}
-          {cur&&prev&&(
-            <Card>
-              <CardHead title="Week-over-Week" right={<span style={{ fontSize:12,color:C.muted }}>{prev.weekLabel} → {cur.weekLabel}</span>} />
-              <div style={{ padding:'14px 20px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:10 }}>
-                {([['Total Families',prev.totalFamilies,cur.totalFamilies,(n:number)=>n+' fam'],['Volume',prev.totalVolume,cur.totalVolume,fmtM],['SG Families',prev.sgFamilies,cur.sgFamilies,(n:number)=>n+' fam'],['BL Families',prev.blFamilies,cur.blFamilies,(n:number)=>n+' fam'],['Initial Apps',prev.totalApps,cur.totalApps,(n:number)=>n+' apps'],['SG Apps',prev.sgApps,cur.sgApps,(n:number)=>n+' apps'],['BL Apps',prev.blApps,cur.blApps,(n:number)=>n+' apps']] as [string,number,number,(n:number)=>string][]).map(([label,pv,cv,fmt])=>{
-                  const p=pctCh(cv,pv),up=p!==null&&p>0.5,dn=p!==null&&p<-0.5
-                  return (
-                    <div key={label} style={{ display:'flex',justifyContent:'space-between',alignItems:'center',padding:'7px 0',borderBottom:`1px solid ${C.border}` }}>
-                      <span style={{ fontSize:12,color:C.muted }}>{label}</span>
-                      <div style={{ display:'flex',alignItems:'center',gap:8 }}>
-                        <span style={{ fontSize:12,color:C.muted,fontFamily:'Consolas,monospace' }}>{fmt(pv)}</span>
-                        <span style={{ color:C.border }}>→</span>
-                        <span style={{ fontFamily:'Consolas,monospace',fontSize:13,fontWeight:700,color:up?C.green:dn?C.red:C.navy }}>{fmt(cv)}</span>
-                        {p!==null&&<DeltaBadge cur={cv} prev={pv} />}
-                      </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {(appMetric === 'respa' || appMetric === 'both') && (
+              <Card style={{ flex: 1 }}>
+                <CardHead title="Monthly RESPA Apps" />
+                <HoverBarChart values={teamRespa} labels={MONTHS} color="#7c3aed" fmt={String} primaryLabel="RESPA Apps" />
+              </Card>
+            )}
+            {(appMetric === 'initial' || appMetric === 'both') && (
+              <Card style={{ flex: 1 }}>
+                <CardHead title="Monthly Initial Apps" />
+                <HoverBarChart values={teamInitial} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="Initial Apps" />
+              </Card>
+            )}
+          </div>
+
+          <Card>
+            <CardHead title="Branch & MA Applications" />
+            {branches.map(branch => {
+              const brRespa = branch.members.reduce((s, m) => s + sumMonths(m.monthlyRespaApps, fr, to), 0)
+              const brInitial = branch.members.reduce((s, m) => s + sumMonths(m.monthlyInitialApps, fr, to), 0)
+              const isOpen = expanded.has(branch.name)
+              return (
+                <div key={branch.name} style={{ marginBottom: 12 }}>
+                  <div onClick={() => toggleBranch(branch.name)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid ${C.borderSoft}` }}>
+                    <div style={{ width: 4, height: 32, borderRadius: 2, background: branch.color, flexShrink: 0 }} />
+                    <div style={{ fontWeight: 700, color: C.navy, flex: 1 }}>{branch.name}</div>
+                    <div style={{ fontSize: 13, color: C.dim }}>RESPA: {brRespa} · Initial: {brInitial}</div>
+                    <div style={{ fontSize: 14, color: C.muted }}>{isOpen ? '▲' : '▼'}</div>
+                  </div>
+                  {isOpen && (
+                    <div style={{ paddingTop: 8, paddingLeft: 16 }}>
+                      {branch.members.map(ma => {
+                        const maRespa = sumMonths(ma.monthlyRespaApps, fr, to)
+                        const maInit = sumMonths(ma.monthlyInitialApps, fr, to)
+                        return (
+                          <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '6px 0', borderBottom: `1px solid ${C.bg}` }}>
+                            <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
+                            {(appMetric === 'respa' || appMetric === 'both') && (
+                              <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>RESPA: {maRespa}</div>
+                            )}
+                            {(appMetric === 'initial' || appMetric === 'both') && (
+                              <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>Initial: {maInit}</div>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
-                  )
-                })}
-              </div>
+                  )}
+                </div>
+              )
+            })}
+          </Card>
+
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Card style={{ flex: 1 }}>
+              <CardHead title="Upload RESPA Apps CSV" />
+              <UploadZone
+                label="Drop RESPA Apps CSV / XLSX"
+                onFile={async (f) => {
+                  setRespaLoading(true)
+                  try { await readRows(f); onAppsUpload(f, 'respa'); setRespaMsg(`Loaded ${f.name}`) }
+                  catch { setRespaMsg('Error') }
+                  setRespaLoading(false)
+                }}
+                loading={respaLoading} message={respaMsg}
+              />
             </Card>
+            <Card style={{ flex: 1 }}>
+              <CardHead title="Upload Initial Apps CSV" />
+              <UploadZone
+                label="Drop Initial Apps CSV / XLSX"
+                onFile={async (f) => {
+                  setInitLoading(true)
+                  try { await readRows(f); onAppsUpload(f, 'initial'); setInitMsg(`Loaded ${f.name}`) }
+                  catch { setInitMsg('Error') }
+                  setInitLoading(false)
+                }}
+                loading={initLoading} message={initMsg}
+              />
+            </Card>
+          </div>
+        </>
+      )}
+
+      {subView === 'weekly' && (
+        <>
+          {curWeek && (
+            <>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <KpiTile label="This Week Families" value={String(curWeek.families)} sub={curWeek.weekLabel} />
+                <KpiTile label="This Week Volume" value={fmtVol(curWeek.volume)} sub={curWeek.weekLabel} />
+                <KpiTile label="This Week RESPA" value={String(curWeek.respaApps)} sub={curWeek.weekLabel} />
+                <KpiTile label="This Week Initial" value={String(curWeek.initialApps)} sub={curWeek.weekLabel} />
+              </div>
+              {prevWeek && (
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: C.dim, alignItems: 'center' }}>
+                  <span>WoW Families: <DeltaBadge delta={curWeek.families - prevWeek.families} /></span>
+                  <span>WoW RESPA: <DeltaBadge delta={curWeek.respaApps - prevWeek.respaApps} /></span>
+                  <span>WoW Initial: <DeltaBadge delta={curWeek.initialApps - prevWeek.initialApps} /></span>
+                </div>
+              )}
+            </>
           )}
 
-          {/* Charts */}
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:18 }}>
-            <Card><CardHead title="Weekly RESPA Families" /><div style={{ padding:'16px 20px' }}><MiniBarChart values={sorted.map(w=>w.totalFamilies)} labels={sorted.map(w=>w.weekLabel.split('–')[0])} color={C.accent} fmt={String} /></div></Card>
-            <Card><CardHead title="Weekly Initial Apps" /><div style={{ padding:'16px 20px' }}><MiniBarChart values={sorted.map(w=>w.totalApps)} labels={sorted.map(w=>w.weekLabel.split('–')[0])} color="#a78bfa" fmt={String} /></div></Card>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Card style={{ flex: 1 }}>
+              <CardHead title="Weekly Families" />
+              <HoverBarChart values={weeklyData.map(w => w.families)} labels={weeklyData.map(w => w.weekLabel)} color={C.accent} fmt={String} primaryLabel="Families" />
+            </Card>
+            <Card style={{ flex: 1 }}>
+              <CardHead title="Weekly Initial Apps" />
+              <HoverBarChart values={weeklyData.map(w => w.initialApps)} labels={weeklyData.map(w => w.weekLabel)} color="#7c3aed" fmt={String} primaryLabel="Initial Apps" />
+            </Card>
           </div>
 
-          {/* History */}
           <Card>
-            <CardHead title="Weekly History" right={<span style={{ fontSize:12,color:C.muted }}>{sorted.length} weeks · newest first</span>} />
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%',borderCollapse:'collapse',minWidth:700 }}>
-                <thead><tr style={{ background:C.bg }}>{['Week','Families','Volume','SG Fam','BL Fam','Apps','SG Apps','BL Apps','WoW Fam','WoW Apps'].map((h,i)=>(
-                  <th key={h} style={{ fontSize:10,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,padding:'9px 14px',textAlign:i===0?'left':'right',borderBottom:`1px solid ${C.border}`,whiteSpace:'nowrap' }}>{h}</th>
-                ))}</tr></thead>
-                <tbody>{[...sorted].reverse().map((w,ri)=>{
-                  const oi=sorted.length-1-ri,pw=oi>0?sorted[oi-1]:null,isCur=ri===0
-                  return (
-                    <tr key={w.id} style={{ borderBottom:`1px solid ${C.border}`,background:isCur?'#F0FAFB':ri%2===1?'#FAFBFC':C.white }}>
-                      <td style={{ padding:'10px 14px',fontWeight:isCur?700:500,color:C.navy,fontSize:13,whiteSpace:'nowrap' }}>{isCur?'★ ':''}{w.weekLabel}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,fontWeight:isCur?700:400 }}>{w.totalFamilies}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,color:C.dim }}>{fmtM(w.totalVolume)}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,color:C.dim }}>{w.sgFamilies}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,color:C.dim }}>{w.blFamilies}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,fontWeight:isCur?700:400 }}>{w.totalApps}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,color:C.dim }}>{w.sgApps}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,color:C.dim }}>{w.blApps}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontSize:11 }}>{pw?<DeltaBadge cur={w.totalFamilies} prev={pw.totalFamilies} />:<span style={{ color:C.muted }}>—</span>}</td>
-                      <td style={{ padding:'10px 14px',textAlign:'right',fontSize:11 }}>{pw?<DeltaBadge cur={w.totalApps} prev={pw.totalApps} />:<span style={{ color:C.muted }}>—</span>}</td>
-                    </tr>
-                  )
-                })}</tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Weekly upload */}
-          <Card>
-            <CardHead title="Upload Weekly Summary" right={<span style={{ fontSize:12,color:C.muted }}>Adds new weeks · skips duplicates by week label</span>} />
-            <div style={{ padding:'20px 24px' }}>
-              {weekMsg&&<div style={{ marginBottom:14,padding:'10px 14px',background:weekMsg.startsWith('✅')?C.greenBg:'rgba(220,38,38,0.07)',border:`1px solid ${weekMsg.startsWith('✅')?'#bbf7d0':'#fecaca'}`,borderRadius:8,fontSize:13,color:C.navy }}>{weekMsg}</div>}
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:24 }}>
-                <UploadZone emoji="📅" title="Drop weekly summary Excel here" sub="Column A = week label (dedup key) · B=Families · C=Volume · D=SGFam · E=BLFam · F=Apps · G=SGApps · H=BLApps" loading={weekUploading} onClick={()=>weekRef.current?.click()} onDrop={f=>onWeekUpload(f)} />
-                <div>
-                  <div style={{ fontSize:10,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,marginBottom:10 }}>Example row</div>
-                  <table style={{ width:'100%',borderCollapse:'collapse',fontSize:11 }}>
-                    <thead><tr style={{ background:C.bg }}>{['Week','Fam','Vol','SGFam','BLFam','Apps','SG','BL'].map(h=><th key={h} style={{ padding:'5px 8px',textAlign:'left',borderBottom:`1px solid ${C.border}`,color:C.muted,fontWeight:600,fontSize:10 }}>{h}</th>)}</tr></thead>
-                    <tbody><tr>{['Jul 11–17','22','11000000','17','5','75','50','25'].map((v,i)=><td key={i} style={{ padding:'5px 8px',fontFamily:'Consolas,monospace',color:C.dim,fontSize:11 }}>{v}</td>)}</tr></tbody>
-                  </table>
-                </div>
-              </div>
-              <input ref={weekRef} type="file" accept=".csv,.xlsx,.xls" style={{ display:'none' }} onChange={e=>{const f=e.target.files?.[0];if(f)onWeekUpload(f)}} />
-            </div>
-          </Card>
-        </>
-      ) : (
-        /* Monthly view */
-        <>
-          <div style={{ marginBottom:14 }}><ToggleGroup options={PERIOD_OPTS} value={appPeriod} onChange={setAppPeriod} /></div>
-          {appPeriod==='range'&&<RangeSelector from={from} to={to} onChange={(f,t)=>{setFrom(f);setTo(t)}} />}
-
-          {/* KPIs */}
-          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(170px,1fr))',gap:14,marginBottom:22 }}>
-            {[{label:'RESPA Apps',value:totRA,accent:'#a78bfa'},{label:'Initial Apps',value:totIA,accent:'#f0b429'},{label:'Families Funded',value:totFam,accent:C.accent},{label:'Volume',value:totVol,accent:C.accent,money:true}].map(t=>(
-              <div key={t.label} style={{ background:C.white,border:`1px solid ${C.border}`,borderRadius:12,padding:'16px 18px',position:'relative',overflow:'hidden' }}>
-                <div style={{ position:'absolute',top:0,left:0,right:0,height:3,background:t.accent }} />
-                <div style={{ fontSize:11,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,marginBottom:6 }}>{t.label}</div>
-                <div style={{ fontWeight:800,fontSize:28,color:C.navy,lineHeight:1 }}>{'money' in t&&t.money?fmtM(t.value):t.value}</div>
-                <div style={{ fontSize:11,color:C.muted,marginTop:4 }}>{periodLabel(appPeriod,from,to,MONTHS)}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Charts */}
-          <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:18 }}>
-            <Card><CardHead title="Monthly RESPA Apps — Team" /><div style={{ padding:'16px 20px' }}><MiniBarChart values={teamRespa} labels={MONTHS} color="#a78bfa" fmt={String} /></div></Card>
-            <Card><CardHead title="Monthly Initial Apps — Team" /><div style={{ padding:'16px 20px' }}><MiniBarChart values={teamInitial} labels={MONTHS} color="#f0b429" fmt={String} /></div></Card>
-          </div>
-
-          {/* RESPA table */}
-          <Card>
-            <CardHead title="RESPA Apps by LO — Monthly" right={<span style={{ fontSize:12,color:C.muted }}>Peak month highlighted green</span>} />
-            <div style={{ overflowX:'auto' }}>
-              <table style={{ width:'100%',borderCollapse:'collapse',minWidth:900 }}>
-                <thead><tr style={{ background:C.bg }}>
-                  <th style={{ fontSize:10,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,padding:'9px 14px',textAlign:'left',borderBottom:`1px solid ${C.border}` }}>LO</th>
-                  {MONTHS.map(m=><th key={m} style={{ fontSize:10,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,padding:'9px 10px',textAlign:'right',borderBottom:`1px solid ${C.border}` }}>{m}</th>)}
-                  <th style={{ fontSize:10,fontWeight:600,letterSpacing:'.06em',textTransform:'uppercase',color:C.muted,padding:'9px 14px',textAlign:'right',borderBottom:`1px solid ${C.border}` }}>YTD</th>
-                </tr></thead>
-                <tbody>
-                  {[...maData].filter(m=>m.ytdRespaApps>0).sort((a,b)=>b.ytdRespaApps-a.ytdRespaApps).map((ma,i)=>(
-                    <tr key={ma.name} style={{ borderBottom:`1px solid ${C.border}`,background:i%2===1?'#FAFBFC':C.white }}>
-                      <td style={{ padding:'9px 14px',fontWeight:600,color:C.navy,fontSize:13 }}>{ma.name}</td>
-                      {ma.monthlyRespaApps.map((v,mi)=>{ const pk=v>0&&v===Math.max(...ma.monthlyRespaApps); return <td key={mi} style={{ padding:'9px 10px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:12,color:pk?C.green:C.text,fontWeight:pk?700:400,background:pk?C.greenBg:undefined }}>{v||'—'}</td> })}
-                      <td style={{ padding:'9px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,fontWeight:700,color:C.navy }}>{ma.ytdRespaApps}</td>
-                    </tr>
-                  ))}
-                  <tr style={{ background:C.bg,borderTop:`2px solid ${C.border}` }}>
-                    <td style={{ padding:'9px 14px',fontWeight:700,color:C.navy,fontSize:12 }}>TEAM TOTAL</td>
-                    {teamRespa.map((v,i)=><td key={i} style={{ padding:'9px 10px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:12,fontWeight:700,color:C.navy }}>{v}</td>)}
-                    <td style={{ padding:'9px 14px',textAlign:'right',fontFamily:'Consolas,monospace',fontSize:13,fontWeight:700,color:C.navy }}>{maData.reduce((s,m)=>s+m.ytdRespaApps,0)}</td>
+            <CardHead title="Weekly History" />
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ background: C.bg }}>
+                    {['Week','Families','Δ Fam','Volume','RESPA Apps','Δ RESPA','Initial Apps','Δ Initial'].map(h => (
+                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                    ))}
                   </tr>
+                </thead>
+                <tbody>
+                  {[...weeklyData].reverse().map((w, i, arr) => {
+                    const prev = arr[i+1]
+                    return (
+                      <tr key={w.weekLabel} style={{ borderBottom: `1px solid ${C.bg}` }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 600 }}>{w.weekLabel}</td>
+                        <td style={{ padding: '8px 12px' }}>{w.families}</td>
+                        <td style={{ padding: '8px 12px' }}>{prev ? <DeltaBadge delta={w.families - prev.families} /> : '—'}</td>
+                        <td style={{ padding: '8px 12px' }}>{fmtVol(w.volume)}</td>
+                        <td style={{ padding: '8px 12px' }}>{w.respaApps}</td>
+                        <td style={{ padding: '8px 12px' }}>{prev ? <DeltaBadge delta={w.respaApps - prev.respaApps} /> : '—'}</td>
+                        <td style={{ padding: '8px 12px' }}>{w.initialApps}</td>
+                        <td style={{ padding: '8px 12px' }}>{prev ? <DeltaBadge delta={w.initialApps - prev.initialApps} /> : '—'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           </Card>
 
-          {/* CSV uploads for apps */}
           <Card>
-            <CardHead title="Update Apps Data from CSV" right={<span style={{ fontSize:12,color:C.muted }}>Upload new YTD exports · deduplicates by Loan ID</span>} />
-            <div style={{ padding:'20px 24px' }}>
-              {appsMsg&&<div style={{ marginBottom:14,padding:'10px 14px',background:appsMsg.startsWith('✅')?C.greenBg:'rgba(220,38,38,0.07)',border:`1px solid ${appsMsg.startsWith('✅')?'#bbf7d0':'#fecaca'}`,borderRadius:8,fontSize:13,color:C.navy }}>{appsMsg}</div>}
-              <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:18 }}>
-                <UploadZone emoji="📋" title="RESPA Apps YTD" sub="FinFree YTD Respa Apps format · deduplicates by Loan ID" loading={appsUploading} onClick={()=>respaRef.current?.click()} onDrop={f=>onAppsUpload(f,'respa')} />
-                <UploadZone emoji="📋" title="Initial Apps YTD" sub="FinFree YTD Initial Aps format · deduplicates by Loan ID" loading={appsUploading} onClick={()=>initRef.current?.click()} onDrop={f=>onAppsUpload(f,'initial')} />
-              </div>
-              <input ref={respaRef} type="file" accept=".csv,.xlsx,.xls" style={{ display:'none' }} onChange={e=>{const f=e.target.files?.[0];if(f)onAppsUpload(f,'respa')}} />
-              <input ref={initRef}  type="file" accept=".csv,.xlsx,.xls" style={{ display:'none' }} onChange={e=>{const f=e.target.files?.[0];if(f)onAppsUpload(f,'initial')}} />
-            </div>
+            <CardHead title="Upload Weekly Data" />
+            <UploadZone
+              label="Drop weekly data CSV / XLSX"
+              onFile={async (f) => {
+                setWeekLoading(true)
+                try { await readRows(f); onWeekUpload(f); setWeekMsg(`Loaded ${f.name}`) }
+                catch { setWeekMsg('Error') }
+                setWeekLoading(false)
+              }}
+              loading={weekLoading} message={weekMsg}
+            />
           </Card>
         </>
       )}
@@ -573,122 +816,223 @@ function ApplicationsTab({maData,weeks,onWeekUpload,onAppsUpload,weekUploading,w
   )
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-// ROOT
-// ══════════════════════════════════════════════════════════════════════════
-const SUB_TABS=[{id:'branch',label:'Branch Production'},{id:'apps',label:'Applications'}] as const
-type SubTab=typeof SUB_TABS[number]['id']
+// ─── Changemakers Tab ─────────────────────────────────────────────────────────
+const PROJ_FACTOR = 365 / 196
 
-export default function Production() {
-  const [activeTab,setActiveTab]=useState<SubTab>('branch')
-  const [maData,setMAData]=useState<MARecord[]>(SEED_MA)
-  const [weeks,setWeeks]=useState<WeeklyRow[]>(SEED_WEEKLY)
+function getIndivStatus(ytdVol: number, ytdFam: number): BadgeStatus {
+  const pV = ytdVol * PROJ_FACTOR, pF = ytdFam * PROJ_FACTOR
+  if (pV >= 27_500_000 || pF >= 75) return 'qualified'
+  if (pV >= 14_000_000 || pF >= 38) return 'ontrack'
+  return 'rising'
+}
 
-  const [fundUploading,setFundUploading]=useState(false); const [fundMsg,setFundMsg]=useState('')
-  const [weekUploading,setWeekUploading]=useState(false); const [weekMsg,setWeekMsg]=useState('')
-  const [appsUploading,setAppsUploading]=useState(false); const [appsMsg,setAppsMsg]=useState('')
+function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
+  const pV = ytdVol * PROJ_FACTOR, pF = ytdFam * PROJ_FACTOR
+  if (pV >= 50_000_000 || pF >= 150) return 'qualified'
+  if (pV >= 25_000_000 || pF >= 70) return 'ontrack'
+  return 'rising'
+}
 
-  const readRows=useCallback(async(file:File):Promise<Record<string,unknown>[]>=>{
-    const buf=await file.arrayBuffer()
-    if(file.name.endsWith('.csv')){
-      const text=new TextDecoder().decode(buf)
-      const lines=text.split(/\r?\n/)
-      if(lines.length<2) return []
-      const headers=lines[0].split(',').map(h=>h.replace(/^"|"$/g,'').trim())
-      return lines.slice(1).filter(l=>l.trim()).map(l=>{
-        const vals=l.split(',').map(v=>v.replace(/^"|"$/g,'').trim())
-        const row:Record<string,unknown>={}
-        headers.forEach((h,i)=>{row[h]=vals[i]??''})
-        return row
-      })
-    }
-    const wb=XLSX.read(buf,{type:'array'})
-    return XLSX.utils.sheet_to_json<Record<string,unknown>>(wb.Sheets[wb.SheetNames[0]],{defval:''})
-  },[])
-
-  async function handleFundingsUpload(file:File){
-    setFundUploading(true); setFundMsg('')
-    try {
-      const rows=await readRows(file)
-      const parsed=parseFundingsRows(rows)
-      if(parsed.length===0){setFundMsg('❌ No 2026 funded loans found — check that "Assigned LC" and "Actual funding Date" columns are present');setFundUploading(false);return}
-      // Merge: keep existing RESPA/Initial app data
-      const respaMap =new Map(maData.map(m=>[m.name,m.monthlyRespaApps]))
-      const initMap  =new Map(maData.map(m=>[m.name,m.monthlyInitialApps]))
-      const merged=parsed.map(m=>({
-        ...m,
-        monthlyRespaApps:  respaMap.get(m.name)??new Array(12).fill(0),
-        monthlyInitialApps: initMap.get(m.name)??new Array(12).fill(0),
-        ytdRespaApps:  (respaMap.get(m.name)??[]).reduce((a:number,b:number)=>a+b,0),
-        ytdInitialApps: (initMap.get(m.name)??[]).reduce((a:number,b:number)=>a+b,0),
-      }))
-      // Preserve LOs that have apps but no fundings in the new file
-      maData.filter(m=>!parsed.find(p=>p.name===m.name)&&(m.ytdRespaApps>0||m.ytdInitialApps>0)).forEach(m=>{
-        merged.push({...m,ytdFamilies:0,ytdVolume:0,monthlyFamilies:new Array(12).fill(0),monthlyVolume:new Array(12).fill(0)})
-      })
-      setMAData(merged)
-      const tf=parsed.reduce((s,m)=>s+m.ytdFamilies,0),tv=parsed.reduce((s,m)=>s+m.ytdVolume,0)
-      setFundMsg(`✅ Loaded ${rows.length} records → ${tf} families funded · ${fmtM(tv)} · ${parsed.length} LOs`)
-    } catch(e){setFundMsg('❌ Error reading file: '+String(e))}
-    setFundUploading(false)
-  }
-
-  async function handleWeekUpload(file:File){
-    setWeekUploading(true); setWeekMsg('')
-    try {
-      const rows=await readRows(file)
-      const existing=new Set(weeks.map(w=>w.weekLabel))
-      const newW:WeeklyRow[]=[]; let dups=0
-      rows.forEach((row,i)=>{
-        const vals=Object.values(row); const label=String(vals[0]??'').trim(); if(!label) return
-        if(existing.has(label)){dups++;return}
-        newW.push({id:`u-${Date.now()}-${i}`,weekLabel:label,weekStart:'',totalFamilies:+String(vals[1]).replace(/[^0-9.]/g,'')||0,totalVolume:parseFloat(String(vals[2]).replace(/[^0-9.]/g,''))||0,sgFamilies:+String(vals[3]).replace(/[^0-9]/g,'')||0,blFamilies:+String(vals[4]).replace(/[^0-9]/g,'')||0,totalApps:+String(vals[5]).replace(/[^0-9]/g,'')||0,sgApps:+String(vals[6]).replace(/[^0-9]/g,'')||0,blApps:+String(vals[7]).replace(/[^0-9]/g,'')||0})
-      })
-      setWeeks(prev=>[...prev,...newW])
-      setWeekMsg(`✅ Added ${newW.length} week(s)${dups?` · ${dups} duplicate(s) skipped`:''}`)
-    } catch{setWeekMsg('❌ Error reading file')}
-    setWeekUploading(false)
-  }
-
-  async function handleAppsUpload(file:File,type:'respa'|'initial'){
-    setAppsUploading(true); setAppsMsg('')
-    try {
-      const rows=await readRows(file)
-      const appMap=parseAppsRows(rows)
-      const total=[...appMap.values()].reduce((s,arr)=>s+arr.reduce((a,b)=>a+b,0),0)
-      if(total===0){setAppsMsg('❌ No 2026 records found — check that "Assigned LC" and "Application created at" columns are present');setAppsUploading(false);return}
-      setMAData(prev=>{
-        const map=new Map(prev.map(m=>[m.name,{...m,monthlyRespaApps:[...m.monthlyRespaApps],monthlyInitialApps:[...m.monthlyInitialApps]}]))
-        appMap.forEach((counts,lo)=>{
-          if(!map.has(lo)) map.set(lo,emptyMA(lo))
-          const ma=map.get(lo)!
-          if(type==='respa'){counts.forEach((v,i)=>{ma.monthlyRespaApps[i]=v}); ma.ytdRespaApps=counts.reduce((a,b)=>a+b,0)}
-          else              {counts.forEach((v,i)=>{ma.monthlyInitialApps[i]=v}); ma.ytdInitialApps=counts.reduce((a,b)=>a+b,0)}
-        })
-        return [...map.values()]
-      })
-      setAppsMsg(`✅ Updated ${type==='respa'?'RESPA':'Initial'} Apps — ${rows.length} records · ${total} apps · ${appMap.size} LOs`)
-    } catch(e){setAppsMsg('❌ Error reading file: '+String(e))}
-    setAppsUploading(false)
-  }
-
-  const ytdFam=maData.reduce((s,m)=>s+m.ytdFamilies,0)
-  const ytdVol=maData.reduce((s,m)=>s+m.ytdVolume,0)
-  const ytdRA =maData.reduce((s,m)=>s+m.ytdRespaApps,0)
+function ChangemakersTab({ maData }: { maData: MARecord[] }) {
+  const totalFam = maData.reduce((s, m) => s + m.ytdFamilies, 0)
+  const totalVol = maData.reduce((s, m) => s + m.ytdVolume, 0)
+  const projFam = Math.round(totalFam * PROJ_FACTOR)
+  const projVol = Math.round(totalVol * PROJ_FACTOR)
+  const branches = groupMAByBranch(maData)
 
   return (
-    <div style={{ maxWidth:1100,margin:'0 auto',padding:'36px 40px 90px' }}>
-      <div style={{ marginBottom:26 }}>
-        <h1 style={{ fontWeight:800,letterSpacing:'-.02em',fontSize:32,margin:0,color:C.navy }}>Production</h1>
-        <div style={{ fontSize:14,color:C.muted,marginTop:5 }}>FinFree Division · 2026 — {ytdFam} families funded · {fmtM(ytdVol)} · {ytdRA} RESPA apps</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #0A2540 100%)', borderRadius: 16, padding: '40px 36px', color: '#fff' }}>
+        <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>We&#39;re building something special! 🏆</div>
+        <div style={{ fontSize: 16, opacity: 0.85, marginBottom: 6 }}>2026 FinFree Division · YTD results and projected year-end pace</div>
+        <div style={{ fontSize: 13, opacity: 0.6 }}>As of July 15, 2026</div>
       </div>
-      <div style={{ display:'flex',borderBottom:`2px solid ${C.border}`,marginBottom:28 }}>
-        {SUB_TABS.map(tab=>(
-          <button key={tab.id} onClick={()=>setActiveTab(tab.id)} style={{ padding:'10px 22px',fontSize:13,fontWeight:700,cursor:'pointer',border:'none',background:'none',color:activeTab===tab.id?C.navy:C.muted,borderBottom:`2px solid ${activeTab===tab.id?C.accent:'transparent'}`,marginBottom:-2,transition:'color .12s' }}>{tab.label}</button>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+        <KpiTile label="Divisional YTD Families" value={String(totalFam)} sub="Jan–Jul 2026" />
+        <KpiTile label="Divisional YTD Volume" value={fmtVol(totalVol)} sub="Jan–Jul 2026" />
+        <KpiTile label="Projected EOY Families" value={String(projFam)} sub="At current pace" />
+        <KpiTile label="Projected EOY Volume" value={fmtVol(projVol)} sub="At current pace" />
+      </div>
+
+      <Card>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginRight: 8 }}>Status Guide:</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <StatusBadge status="qualified" />
+            <span style={{ fontSize: 12, color: C.dim }}>Proj. ≥$27.5M or ≥75 fam (individual) · ≥$50M or ≥150 (branch)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <StatusBadge status="ontrack" />
+            <span style={{ fontSize: 12, color: C.dim }}>Proj. ≥$14M or ≥38 fam (individual) · ≥$25M or ≥70 (branch)</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <StatusBadge status="rising" />
+            <span style={{ fontSize: 12, color: C.dim }}>Keep climbing!</span>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHead title="Changemakers Standings" subtitle="Projected EOY = YTD × 1.863 (365 ÷ 196 days)" />
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.bg }}>
+                {['Name','YTD Families','YTD Volume','Proj. Families','Proj. Volume','Status'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {branches.map(branch => {
+                const bFam = branch.members.reduce((s, m) => s + m.ytdFamilies, 0)
+                const bVol = branch.members.reduce((s, m) => s + m.ytdVolume, 0)
+                const bProjFam = Math.round(bFam * PROJ_FACTOR)
+                const bProjVol = Math.round(bVol * PROJ_FACTOR)
+                const bStatus = getBranchStatus(bVol, bFam)
+                return (
+                  <>
+                    <tr key={`br-${branch.name}`} style={{ background: '#F8F9FB', borderBottom: `2px solid ${C.border}` }}>
+                      <td style={{ padding: '10px 12px', fontWeight: 800, color: C.navy, borderLeft: `4px solid ${branch.color}` }}>{branch.name}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{bFam}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{fmtVolFull(bVol)}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{bProjFam}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{fmtVolFull(bProjVol)}</td>
+                      <td style={{ padding: '10px 12px' }}><StatusBadge status={bStatus} /></td>
+                    </tr>
+                    {branch.members.map(ma => {
+                      const pFam = Math.round(ma.ytdFamilies * PROJ_FACTOR)
+                      const pVol = Math.round(ma.ytdVolume * PROJ_FACTOR)
+                      const st = getIndivStatus(ma.ytdVolume, ma.ytdFamilies)
+                      return (
+                        <tr key={ma.name} style={{ borderBottom: `1px solid ${C.bg}` }}>
+                          <td style={{ padding: '8px 12px 8px 28px', color: C.text }}>{ma.name}</td>
+                          <td style={{ padding: '8px 12px' }}>{ma.ytdFamilies}</td>
+                          <td style={{ padding: '8px 12px' }}>{fmtVolFull(ma.ytdVolume)}</td>
+                          <td style={{ padding: '8px 12px', color: C.dim }}>{pFam}</td>
+                          <td style={{ padding: '8px 12px', color: C.dim }}>{fmtVolFull(pVol)}</td>
+                          <td style={{ padding: '8px 12px' }}><StatusBadge status={st} /></td>
+                        </tr>
+                      )
+                    })}
+                  </>
+                )
+              })}
+              <tr style={{ background: C.navy }}>
+                <td style={{ padding: '12px 16px', fontWeight: 800, color: '#fff' }}>Division Total</td>
+                <td style={{ padding: '12px 16px', fontWeight: 700, color: '#fff' }}>{totalFam}</td>
+                <td style={{ padding: '12px 16px', fontWeight: 700, color: '#fff' }}>{fmtVolFull(totalVol)}</td>
+                <td style={{ padding: '12px 16px', fontWeight: 700, color: C.accent }}>{projFam}</td>
+                <td style={{ padding: '12px 16px', fontWeight: 700, color: C.accent }}>{fmtVolFull(projVol)}</td>
+                <td style={{ padding: '12px 16px' }} />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      <Card style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+        <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 8 }}>Qualification Thresholds</div>
+        <div style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>
+          <strong>Individual — Change Maker Qualified:</strong> Projected EOY ≥ $27.5M or ≥ 75 families<br />
+          <strong>Individual — On Track:</strong> Projected EOY ≥ $14M or ≥ 38 families<br />
+          <strong>Branch — Change Maker Qualified:</strong> Projected EOY ≥ $50M or ≥ 150 families<br />
+          <strong>Branch — On Track:</strong> Projected EOY ≥ $25M or ≥ 70 families<br />
+          <strong>Projection factor:</strong> 365 ÷ 196 ≈ 1.863 (YTD through July 15, 2026)
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ─── Root Production component ────────────────────────────────────────────────
+export default function Production() {
+  const [maData, setMaData] = useState<MARecord[]>(SEED_MA)
+  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
+  const [activeTab, setActiveTab] = useState<'branch'|'apps'|'changemakers'>('branch')
+
+  const handleFundingsUpload = useCallback(async (file: File) => {
+    const rows = await readRows(file)
+    const parsed = parseFundingsRows(rows)
+    setMaData(prev => {
+      const next = [...prev]
+      for (const p of parsed) {
+        const idx = next.findIndex(m => nameSimilar(m.name, p.name))
+        if (idx >= 0) {
+          next[idx] = { ...next[idx], ytdFamilies: p.ytdFamilies, ytdVolume: p.ytdVolume, monthlyFamilies: p.monthlyFamilies, monthlyVolume: p.monthlyVolume }
+        } else {
+          next.push(p)
+        }
+      }
+      return next
+    })
+  }, [])
+
+  const handleAppsUpload = useCallback(async (file: File, type: 'respa'|'initial') => {
+    const rows = await readRows(file)
+    const parsed = parseAppsRows(rows)
+    setMaData(prev => {
+      const next = [...prev]
+      parsed.forEach((appData, maKey) => {
+        const idx = next.findIndex(m => normName(m.name) === maKey || nameSimilar(m.name, maKey))
+        if (idx >= 0) {
+          if (type === 'respa') {
+            next[idx] = { ...next[idx], monthlyRespaApps: appData.respa, ytdRespaApps: appData.respa.reduce((a,b)=>a+b,0) }
+          } else {
+            next[idx] = { ...next[idx], monthlyInitialApps: appData.initial, ytdInitialApps: appData.initial.reduce((a,b)=>a+b,0) }
+          }
+        }
+      })
+      return next
+    })
+  }, [])
+
+  const handleWeekUpload = useCallback(async (file: File) => {
+    const rows = await readRows(file)
+    const newRows: WeeklyRow[] = rows.map(r => ({
+      weekLabel: String(r['Week'] ?? r['weekLabel'] ?? ''),
+      families: Number(r['Families'] ?? r['families'] ?? 0),
+      volume: Number(r['Volume'] ?? r['volume'] ?? 0),
+      respaApps: Number(r['RESPA Apps'] ?? r['respaApps'] ?? 0),
+      initialApps: Number(r['Initial Apps'] ?? r['initialApps'] ?? 0),
+    })).filter(r => r.weekLabel)
+    setWeeklyData(prev => {
+      const labels = new Set(prev.map(w => w.weekLabel))
+      return [...prev, ...newRows.filter(r => !labels.has(r.weekLabel))]
+    })
+  }, [])
+
+  const tabOpts: Array<{ id: 'branch'|'apps'|'changemakers'; label: string }> = [
+    { id: 'branch', label: 'Branch Production' },
+    { id: 'apps', label: 'Applications' },
+    { id: 'changemakers', label: 'Changemakers Trip' },
+  ]
+
+  return (
+    <div style={{ background: C.bg, minHeight: '100vh', padding: '24px 32px' }}>
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
+        <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division · YTD through July 15</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
+        {tabOpts.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+            padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
+            fontSize: 14, fontWeight: activeTab === t.id ? 700 : 400,
+            color: activeTab === t.id ? C.navy : C.dim,
+            borderBottom: `2px solid ${activeTab === t.id ? C.navy : 'transparent'}`,
+            marginBottom: -2, transition: 'all 0.15s',
+          }}>
+            {t.label}
+          </button>
         ))}
       </div>
-      {activeTab==='branch'&&<BranchProduction maData={maData} onUpload={handleFundingsUpload} uploading={fundUploading} uploadMsg={fundMsg} />}
-      {activeTab==='apps'  &&<ApplicationsTab maData={maData} weeks={weeks} onWeekUpload={handleWeekUpload} onAppsUpload={handleAppsUpload} weekUploading={weekUploading} weekMsg={weekMsg} appsUploading={appsUploading} appsMsg={appsMsg} />}
+
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} onFundingsUpload={handleFundingsUpload} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={handleAppsUpload} onWeekUpload={handleWeekUpload} />}
+      {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
   )
 }
