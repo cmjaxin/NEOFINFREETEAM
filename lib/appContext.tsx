@@ -4,7 +4,7 @@ import { createClient } from './supabase/client'
 import { Employee, EmployeeChild, CoachingNote, Win, ChecklistCompletion, Profile, OnboardingRole } from './types'
 import { sectionsFor, allItemsFor } from './checklist'
 
-type View = 'dashboard' | 'directory' | 'terminated' | 'profile' | 'templates' | 'production'
+type View = 'dashboard' | 'directory' | 'terminated' | 'profile' | 'templates' | 'production' | 'wins'
 
 interface AppState {
   profile: Profile | null

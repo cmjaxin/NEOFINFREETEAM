@@ -18,6 +18,7 @@ const BRANCH_CONFIG = [
   { name: 'Thomas Branch',     color: '#34d399', members: ['Aaron Thomas','Kaytlin Collins','Ashley Roberts'] },
   { name: 'Allen Branch',      color: '#a78bfa', members: ['Gregory Allen','Greg Allen'] },
   { name: 'DiGregorio Branch', color: '#fb923c', members: ['Scott DiGregorio','Edgardo Balentine','Anthony Alfonso Soto','Anthony Soto','Scott Degregorio'] },
+  { name: 'Padron Branch',    color: '#06b6d4', members: ['Justin Padron'] },
 ]
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -194,7 +195,8 @@ function parseFundingsRows(rows: CsvRow[]): MARecord[] {
   const map = new Map<string, MARecord>()
   const seen = new Set<string>()
   for (const row of rows) {
-    const lc = String(row['Assigned LC'] ?? row['Assigned MA Support'] ?? '')
+    const maSupport = String(row['Assigned MA Support'] ?? '').trim()
+    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
     const loanId = String(row['Loan File ID'] ?? row['LoanFileID'] ?? '')
     const key = `${lc}::${loanId}`
@@ -222,7 +224,8 @@ function parseFundingsRows(rows: CsvRow[]): MARecord[] {
 function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: number[] }> {
   const map = new Map<string, { respa: number[]; initial: number[] }>()
   for (const row of rows) {
-    const lc = String(row['Assigned LC'] ?? row['Assigned MA Support'] ?? '')
+    const maSupport = String(row['Assigned MA Support'] ?? '').trim()
+    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
     const dateRaw = row['Application created at'] ?? row['App Date'] ?? ''
     const dt = dateRaw ? parseDate(dateRaw as string) : null

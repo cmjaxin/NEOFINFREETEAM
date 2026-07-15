@@ -28,7 +28,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   const inits = initials(profile?.full_name ?? '')
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins') {
     setView(id)
     onClose()
   }
@@ -46,6 +46,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
           { id: 'dashboard', label: 'Onboarding' },
           { id: 'directory', label: 'Team Directory' },
           { id: 'production', label: 'Production' },
+          { id: 'wins', label: 'Monthly Wins' },
           { id: 'terminated', label: 'Terminated' },
           { id: 'templates', label: 'Templates' },
         ] as const).map(({ id, label }) => (
