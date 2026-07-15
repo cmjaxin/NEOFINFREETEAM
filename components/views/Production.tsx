@@ -274,6 +274,169 @@ async function readRows(file: File): Promise<CsvRow[]> {
   })
 }
 
+// ─── Email helpers ─────────────────────────────────────────────────────────────
+const TO = 'josh.mettle@neohomeloans.com'
+
+function pad(s: string, w: number) { return s.length >= w ? s : s + ' '.repeat(w - s.length) }
+
+function buildAppsEmailBody(maData: MARecord[], weeklyData: WeeklyRow[]): string {
+  const now = new Date()
+  const dateStr = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`
+
+  const lines: string[] = [
+    `NEO FinFree Division — RESPA Files & Initial Apps Report`,
+    `Generated: ${dateStr}`,
+    ``,
+  ]
+
+  // Weekly snapshot
+  if (weeklyData.length > 0) {
+    const cur = weeklyData[weeklyData.length - 1]
+    const prev = weeklyData[weeklyData.length - 2]
+    lines.push(`━━━ LATEST WEEK: ${cur.weekLabel} ━━━`, ``)
+    lines.push(`Families:     ${cur.families}${prev ? `  (${cur.families - prev.families >= 0 ? '+' : ''}${cur.families - prev.families} WoW)` : ''}`)
+    lines.push(`Volume:       ${fmtVol(cur.volume)}`)
+    lines.push(`RESPA Apps:   ${cur.respaApps}${prev ? `  (${cur.respaApps - prev.respaApps >= 0 ? '+' : ''}${cur.respaApps - prev.respaApps} WoW)` : ''}`)
+    lines.push(`Initial Apps: ${cur.initialApps}${prev ? `  (${cur.initialApps - prev.initialApps >= 0 ? '+' : ''}${cur.initialApps - prev.initialApps} WoW)` : ''}`)
+    lines.push(``)
+  }
+
+  // Weekly history table
+  if (weeklyData.length > 0) {
+    lines.push(`━━━ WEEKLY HISTORY ━━━`, ``)
+    lines.push(`${pad('Week', 10)}  ${pad('Families', 10)}  ${pad('RESPA Apps', 12)}  Initial Apps`)
+    lines.push(`${'─'.repeat(50)}`)
+    for (const w of [...weeklyData].reverse()) {
+      lines.push(`${pad(w.weekLabel, 10)}  ${pad(String(w.families), 10)}  ${pad(String(w.respaApps), 12)}  ${w.initialApps}`)
+    }
+    lines.push(``)
+  }
+
+  // YTD monthly totals (Jan–Jul)
+  lines.push(`━━━ MONTHLY TOTALS (JAN–JUL) ━━━`, ``)
+  lines.push(`${pad('Month', 8)}  ${pad('RESPA', 8)}  Initial`)
+  lines.push(`${'─'.repeat(30)}`)
+  for (let i = 0; i <= 6; i++) {
+    const r = maData.reduce((s, m) => s + m.monthlyRespaApps[i], 0)
+    const init = maData.reduce((s, m) => s + m.monthlyInitialApps[i], 0)
+    if (r > 0 || init > 0) lines.push(`${pad(MONTHS[i], 8)}  ${pad(String(r), 8)}  ${init}`)
+  }
+  const ytdR = maData.reduce((s, m) => s + m.ytdRespaApps, 0)
+  const ytdI = maData.reduce((s, m) => s + m.ytdInitialApps, 0)
+  lines.push(`${'─'.repeat(30)}`)
+  lines.push(`${pad('YTD', 8)}  ${pad(String(ytdR), 8)}  ${ytdI}`)
+  lines.push(``)
+
+  // Branch breakdown
+  lines.push(`━━━ BRANCH BREAKDOWN (YTD) ━━━`, ``)
+  lines.push(`${pad('Branch', 24)}  ${pad('RESPA', 8)}  Initial`)
+  lines.push(`${'─'.repeat(46)}`)
+  const branchGroups = groupMAByBranch(maData)
+  for (const bg of branchGroups) {
+    const r = bg.members.reduce((s, m) => s + m.ytdRespaApps, 0)
+    const init = bg.members.reduce((s, m) => s + m.ytdInitialApps, 0)
+    lines.push(`${pad(bg.name, 24)}  ${pad(String(r), 8)}  ${init}`)
+  }
+  lines.push(``)
+
+  // Individual MA breakdown
+  lines.push(`━━━ INDIVIDUAL MA BREAKDOWN (YTD) ━━━`, ``)
+  lines.push(`${pad('Name', 24)}  ${pad('Branch', 20)}  ${pad('RESPA', 7)}  Initial`)
+  lines.push(`${'─'.repeat(66)}`)
+  const sorted = [...maData].filter(m => m.ytdRespaApps + m.ytdInitialApps > 0).sort((a, b) => b.ytdRespaApps - a.ytdRespaApps)
+  for (const ma of sorted) {
+    const bc = BRANCH_CONFIG.find(b => b.members.some(m => nameSimilar(m, ma.name)))
+    lines.push(`${pad(ma.name, 24)}  ${pad(bc?.name ?? 'Solo', 20)}  ${pad(String(ma.ytdRespaApps), 7)}  ${ma.ytdInitialApps}`)
+  }
+  lines.push(``, `— NEO FinFree Division`)
+  return lines.join('\n')
+}
+
+function buildProductionEmailBody(maData: MARecord[], prevMonthIdx: number): string {
+  const monthName = MONTHS[prevMonthIdx]
+  const lines: string[] = [
+    `NEO FinFree Division — ${monthName} 2026 Production Numbers`,
+    ``,
+  ]
+
+  // Team total
+  const teamFam = maData.reduce((s, m) => s + (m.monthlyFamilies[prevMonthIdx] ?? 0), 0)
+  const teamVol = maData.reduce((s, m) => s + (m.monthlyVolume[prevMonthIdx] ?? 0), 0)
+  const teamR = maData.reduce((s, m) => s + (m.monthlyRespaApps[prevMonthIdx] ?? 0), 0)
+  const teamI = maData.reduce((s, m) => s + (m.monthlyInitialApps[prevMonthIdx] ?? 0), 0)
+  lines.push(`DIVISION TOTAL`)
+  lines.push(`  Families:  ${teamFam}`)
+  lines.push(`  Volume:    ${fmtVol(teamVol)}  (${fmtVolFull(teamVol)})`)
+  lines.push(`  RESPA Apps: ${teamR}`)
+  lines.push(`  Initial Apps: ${teamI}`)
+  lines.push(``)
+
+  // Branch breakdown
+  lines.push(`━━━ BRANCH BREAKDOWN ━━━`, ``)
+  lines.push(`${pad('Branch', 24)}  ${pad('Families', 10)}  ${pad('Volume', 14)}  RESPA`)
+  lines.push(`${'─'.repeat(60)}`)
+  const branches = groupMAByBranch(maData)
+  for (const bg of branches) {
+    const f = bg.members.reduce((s, m) => s + (m.monthlyFamilies[prevMonthIdx] ?? 0), 0)
+    const v = bg.members.reduce((s, m) => s + (m.monthlyVolume[prevMonthIdx] ?? 0), 0)
+    const r = bg.members.reduce((s, m) => s + (m.monthlyRespaApps[prevMonthIdx] ?? 0), 0)
+    if (f + v + r > 0) lines.push(`${pad(bg.name, 24)}  ${pad(String(f), 10)}  ${pad(fmtVol(v), 14)}  ${r}`)
+  }
+  lines.push(``)
+
+  // Individual stats
+  lines.push(`━━━ INDIVIDUAL STATS ━━━`, ``)
+  lines.push(`${pad('Name', 24)}  ${pad('Families', 10)}  ${pad('Volume', 14)}  RESPA`)
+  lines.push(`${'─'.repeat(60)}`)
+  const sorted = [...maData]
+    .filter(m => (m.monthlyFamilies[prevMonthIdx] ?? 0) + (m.monthlyVolume[prevMonthIdx] ?? 0) > 0)
+    .sort((a, b) => (b.monthlyFamilies[prevMonthIdx] ?? 0) - (a.monthlyFamilies[prevMonthIdx] ?? 0))
+  for (const ma of sorted) {
+    const f = ma.monthlyFamilies[prevMonthIdx] ?? 0
+    const v = ma.monthlyVolume[prevMonthIdx] ?? 0
+    const r = ma.monthlyRespaApps[prevMonthIdx] ?? 0
+    lines.push(`${pad(ma.name, 24)}  ${pad(String(f), 10)}  ${pad(fmtVol(v), 14)}  ${r}`)
+  }
+
+  // Top 3
+  const top3 = [...maData].filter(m => (m.monthlyFamilies[prevMonthIdx] ?? 0) > 0).sort((a, b) => (b.monthlyFamilies[prevMonthIdx] ?? 0) - (a.monthlyFamilies[prevMonthIdx] ?? 0)).slice(0, 3)
+  if (top3.length > 0) {
+    lines.push(``, `━━━ TOP PRODUCERS — ${monthName} ━━━`, ``)
+    const medals = ['🥇', '🥈', '🥉']
+    top3.forEach((ma, i) => {
+      const f = ma.monthlyFamilies[prevMonthIdx] ?? 0
+      const v = ma.monthlyVolume[prevMonthIdx] ?? 0
+      lines.push(`${medals[i]}  ${ma.name} — ${f} families, ${fmtVol(v)}`)
+    })
+  }
+  lines.push(``, `— NEO FinFree Division`)
+  return lines.join('\n')
+}
+
+function EmailReportButton({ subject, body, label }: { subject: string; body: string; label: string }) {
+  function handleClick() {
+    const href = `mailto:${TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+    window.open(href, '_blank')
+  }
+  return (
+    <button onClick={handleClick} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 7,
+      padding: '9px 18px', borderRadius: 9, border: 'none', cursor: 'pointer',
+      background: C.navy, color: '#fff', fontWeight: 700, fontSize: 13,
+      boxShadow: '0 2px 8px rgba(10,37,64,0.18)', transition: 'opacity 0.12s',
+    }}
+      onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+      onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+    >
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+      </svg>
+      {label}
+    </button>
+  )
+}
+
 // ─── UI Atoms ─────────────────────────────────────────────────────────────────
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
@@ -479,13 +642,19 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
 
   const metricOpts: ToggleOption[] = [{ id: 'volume', label: 'Volume' }, { id: 'families', label: 'Families' }]
 
+  // Previous month = June (idx 5) while we're in July
+  const prevMonthIdx = 5
+  const prodSubject = `${MONTHS[prevMonthIdx]} Production Numbers`
+  const prodBody = buildProductionEmailBody(maData, prevMonthIdx)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
         {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
           <ToggleGroup options={metricOpts} value={metric} onChange={setMetric} />
+          <EmailReportButton subject={prodSubject} body={prodBody} label="Email June Report" />
         </div>
       </div>
 
@@ -639,9 +808,15 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
   const subViewOpts: ToggleOption[] = [{ id: 'branch', label: 'By Branch & MA' }, { id: 'weekly', label: 'Weekly Tracking' }]
   const appMetricOpts: ToggleOption[] = [{ id: 'respa', label: 'RESPA Apps' }, { id: 'initial', label: 'Initial Apps' }, { id: 'both', label: 'Both' }]
 
+  const appsSubject = `RESPA files & Initial Apps ${new Date().toLocaleDateString('en-US')}`
+  const appsBody = buildAppsEmailBody(maData, weeklyData)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <ToggleGroup options={subViewOpts} value={subView} onChange={setSubView} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <ToggleGroup options={subViewOpts} value={subView} onChange={setSubView} />
+        <EmailReportButton subject={appsSubject} body={appsBody} label="Email Report" />
+      </div>
 
       {subView === 'branch' && (
         <>
