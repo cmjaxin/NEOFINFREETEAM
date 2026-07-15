@@ -914,6 +914,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
 
       {subView === 'weekly' && (
         <>
+          {/* ── Team-level weekly snapshot ── */}
           {curWeek && (
             <>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -932,19 +933,100 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
             </>
           )}
 
+          {/* ── Team trend charts ── */}
           <div style={{ display: 'flex', gap: 16 }}>
             <Card style={{ flex: 1 }}>
-              <CardHead title="Weekly Families" />
-              <HoverBarChart values={weeklyData.map(w => w.families)} labels={weeklyData.map(w => w.weekLabel)} color={C.accent} fmt={String} primaryLabel="Families" />
+              <CardHead title="Team — Monthly RESPA Apps" subtitle="All branches combined" />
+              <HoverBarChart values={teamRespa.slice(0,7)} labels={MONTHS.slice(0,7)} color="#7c3aed" fmt={String} primaryLabel="RESPA Apps" />
             </Card>
             <Card style={{ flex: 1 }}>
-              <CardHead title="Weekly Initial Apps" />
-              <HoverBarChart values={weeklyData.map(w => w.initialApps)} labels={weeklyData.map(w => w.weekLabel)} color="#7c3aed" fmt={String} primaryLabel="Initial Apps" />
+              <CardHead title="Team — Monthly Initial Apps" subtitle="All branches combined" />
+              <HoverBarChart values={teamInitial.slice(0,7)} labels={MONTHS.slice(0,7)} color={C.accent} fmt={String} primaryLabel="Initial Apps" />
             </Card>
           </div>
 
+          {/* ── Branch trend cards ── */}
+          <div style={{ fontWeight: 700, fontSize: 15, color: C.navy, marginTop: 4 }}>Branch Trends (Jan–Jul)</div>
+          {branches.filter(b => b.members.some(m => m.ytdRespaApps + m.ytdInitialApps > 0)).map(branch => {
+            const brMonthlyRespa = MONTHS.slice(0,7).map((_, i) =>
+              branch.members.reduce((s, m) => s + m.monthlyRespaApps[i], 0)
+            )
+            const brMonthlyInit = MONTHS.slice(0,7).map((_, i) =>
+              branch.members.reduce((s, m) => s + m.monthlyInitialApps[i], 0)
+            )
+            const brYtdRespa = brMonthlyRespa.reduce((a,b)=>a+b,0)
+            const brYtdInit = brMonthlyInit.reduce((a,b)=>a+b,0)
+            return (
+              <Card key={branch.name} style={{ borderTop: `3px solid ${branch.color}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+                  <div style={{ width: 4, height: 28, borderRadius: 2, background: branch.color, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>{branch.name}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>
+                      {brYtdRespa} RESPA · {brYtdInit} Initial YTD
+                    </div>
+                  </div>
+                </div>
+
+                {/* Branch trend charts */}
+                <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 6 }}>RESPA Apps / Month</div>
+                    <HoverBarChart values={brMonthlyRespa} labels={MONTHS.slice(0,7)} color={branch.color} fmt={String} primaryLabel="RESPA" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 6 }}>Initial Apps / Month</div>
+                    <HoverBarChart values={brMonthlyInit} labels={MONTHS.slice(0,7)} color={branch.color} fmt={String} primaryLabel="Initial" />
+                  </div>
+                </div>
+
+                {/* Individual MA rows within branch */}
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>Individual Trends</div>
+                  {branch.members.filter(m => m.ytdRespaApps + m.ytdInitialApps > 0).map(ma => {
+                    const maRespa = ma.monthlyRespaApps.slice(0, 7)
+                    const maInit  = ma.monthlyInitialApps.slice(0, 7)
+                    const peakR   = Math.max(...maRespa, 1)
+                    const peakI   = Math.max(...maInit, 1)
+                    return (
+                      <div key={ma.name} style={{ marginBottom: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: C.navy }}>{ma.name}</div>
+                          <div style={{ fontSize: 12, color: C.muted }}>
+                            <span style={{ color: '#7c3aed', fontWeight: 600 }}>{ma.ytdRespaApps} RESPA</span>
+                            {' · '}
+                            <span style={{ color: branch.color, fontWeight: 600 }}>{ma.ytdInitialApps} Initial</span>
+                          </div>
+                        </div>
+                        {/* Dual mini bar — RESPA (purple) and Initial (branch color) per month */}
+                        <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 52 }}>
+                          {MONTHS.slice(0,7).map((mo, i) => {
+                            const hR = Math.max(2, (maRespa[i] / peakR) * 44)
+                            const hI = Math.max(2, (maInit[i] / peakI) * 44)
+                            const hasData = maRespa[i] + maInit[i] > 0
+                            return (
+                              <div key={mo} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}
+                                title={`${mo}: ${maRespa[i]} RESPA, ${maInit[i]} Initial`}>
+                                <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', justifyContent: 'center' }}>
+                                  <div style={{ flex: 1, height: hasData ? hR : 2, background: maRespa[i] > 0 ? '#7c3aed' : C.border, borderRadius: '2px 2px 0 0', opacity: 0.85 }} />
+                                  <div style={{ flex: 1, height: hasData ? hI : 2, background: maInit[i] > 0 ? branch.color : C.border, borderRadius: '2px 2px 0 0', opacity: 0.85 }} />
+                                </div>
+                                <div style={{ fontSize: 9, color: C.muted, lineHeight: 1, textAlign: 'center' }}>{mo}</div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </Card>
+            )
+          })}
+
+          {/* ── Weekly history table ── */}
           <Card>
-            <CardHead title="Weekly History" />
+            <CardHead title="Team Weekly History" subtitle="Upload weekly CSVs to populate this table" />
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
