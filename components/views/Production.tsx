@@ -352,64 +352,61 @@ function buildAppsEmailBody(maData: MARecord[], weeklyData: WeeklyRow[]): string
   return lines.join('\n')
 }
 
-function buildProductionEmailBody(maData: MARecord[], prevMonthIdx: number): string {
-  const monthName = MONTHS[prevMonthIdx]
+function buildProductionEmailBody(maData: MARecord[], mo: number): string {
+  const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const monthName = FULL_MONTHS[mo]
+  const div = '═'.repeat(48)
+  const thin = '─'.repeat(48)
+
+  const teamFam = maData.reduce((s, m) => s + (m.monthlyFamilies[mo] ?? 0), 0)
+  const teamVol = maData.reduce((s, m) => s + (m.monthlyVolume[mo] ?? 0), 0)
+
+  const branches = groupMAByBranch(maData)
+  const sorted = [...maData]
+    .filter(m => (m.monthlyFamilies[mo] ?? 0) > 0)
+    .sort((a, b) => (b.monthlyFamilies[mo] ?? 0) - (a.monthlyFamilies[mo] ?? 0))
+  const top3 = sorted.slice(0, 3)
+  const medals = ['🥇', '🥈', '🥉']
+
   const lines: string[] = [
-    `NEO FinFree Division — ${monthName} 2026 Production Numbers`,
+    `NEO HOME LOANS — FINFREE DIVISION`,
+    `${monthName} 2026 Production Report`,
+    div,
     ``,
+    `DIVISION TOTAL`,
+    thin,
+    `  Families Funded:   ${teamFam}`,
+    `  Total Volume:      ${fmtVolFull(teamVol)}`,
+    ``,
+    `TOP PRODUCERS`,
+    thin,
   ]
 
-  // Team total
-  const teamFam = maData.reduce((s, m) => s + (m.monthlyFamilies[prevMonthIdx] ?? 0), 0)
-  const teamVol = maData.reduce((s, m) => s + (m.monthlyVolume[prevMonthIdx] ?? 0), 0)
-  const teamR = maData.reduce((s, m) => s + (m.monthlyRespaApps[prevMonthIdx] ?? 0), 0)
-  const teamI = maData.reduce((s, m) => s + (m.monthlyInitialApps[prevMonthIdx] ?? 0), 0)
-  lines.push(`DIVISION TOTAL`)
-  lines.push(`  Families:  ${teamFam}`)
-  lines.push(`  Volume:    ${fmtVol(teamVol)}  (${fmtVolFull(teamVol)})`)
-  lines.push(`  RESPA Apps: ${teamR}`)
-  lines.push(`  Initial Apps: ${teamI}`)
-  lines.push(``)
+  top3.forEach((ma, i) => {
+    const f = ma.monthlyFamilies[mo] ?? 0
+    const v = ma.monthlyVolume[mo] ?? 0
+    lines.push(`  ${medals[i]}  ${ma.name}`)
+    lines.push(`       ${f} ${f === 1 ? 'family' : 'families'}  ·  ${fmtVolFull(v)}`)
+  })
 
-  // Branch breakdown
-  lines.push(`━━━ BRANCH BREAKDOWN ━━━`, ``)
-  lines.push(`${pad('Branch', 24)}  ${pad('Families', 10)}  ${pad('Volume', 14)}  RESPA`)
-  lines.push(`${'─'.repeat(60)}`)
-  const branches = groupMAByBranch(maData)
+  lines.push(``, `BRANCH RESULTS`, thin)
   for (const bg of branches) {
-    const f = bg.members.reduce((s, m) => s + (m.monthlyFamilies[prevMonthIdx] ?? 0), 0)
-    const v = bg.members.reduce((s, m) => s + (m.monthlyVolume[prevMonthIdx] ?? 0), 0)
-    const r = bg.members.reduce((s, m) => s + (m.monthlyRespaApps[prevMonthIdx] ?? 0), 0)
-    if (f + v + r > 0) lines.push(`${pad(bg.name, 24)}  ${pad(String(f), 10)}  ${pad(fmtVol(v), 14)}  ${r}`)
-  }
-  lines.push(``)
-
-  // Individual stats
-  lines.push(`━━━ INDIVIDUAL STATS ━━━`, ``)
-  lines.push(`${pad('Name', 24)}  ${pad('Families', 10)}  ${pad('Volume', 14)}  RESPA`)
-  lines.push(`${'─'.repeat(60)}`)
-  const sorted = [...maData]
-    .filter(m => (m.monthlyFamilies[prevMonthIdx] ?? 0) + (m.monthlyVolume[prevMonthIdx] ?? 0) > 0)
-    .sort((a, b) => (b.monthlyFamilies[prevMonthIdx] ?? 0) - (a.monthlyFamilies[prevMonthIdx] ?? 0))
-  for (const ma of sorted) {
-    const f = ma.monthlyFamilies[prevMonthIdx] ?? 0
-    const v = ma.monthlyVolume[prevMonthIdx] ?? 0
-    const r = ma.monthlyRespaApps[prevMonthIdx] ?? 0
-    lines.push(`${pad(ma.name, 24)}  ${pad(String(f), 10)}  ${pad(fmtVol(v), 14)}  ${r}`)
+    const f = bg.members.reduce((s, m) => s + (m.monthlyFamilies[mo] ?? 0), 0)
+    const v = bg.members.reduce((s, m) => s + (m.monthlyVolume[mo] ?? 0), 0)
+    if (f === 0 && v === 0) continue
+    lines.push(`  ${bg.name}`)
+    lines.push(`    ${f} ${f === 1 ? 'family' : 'families'}  ·  ${fmtVolFull(v)}`)
+    // MA breakdown within branch
+    for (const ma of bg.members) {
+      const mf = ma.monthlyFamilies[mo] ?? 0
+      const mv = ma.monthlyVolume[mo] ?? 0
+      if (mf === 0 && mv === 0) continue
+      lines.push(`    · ${ma.name}  —  ${mf} ${mf === 1 ? 'family' : 'families'}  /  ${fmtVolFull(mv)}`)
+    }
+    lines.push(``)
   }
 
-  // Top 3
-  const top3 = [...maData].filter(m => (m.monthlyFamilies[prevMonthIdx] ?? 0) > 0).sort((a, b) => (b.monthlyFamilies[prevMonthIdx] ?? 0) - (a.monthlyFamilies[prevMonthIdx] ?? 0)).slice(0, 3)
-  if (top3.length > 0) {
-    lines.push(``, `━━━ TOP PRODUCERS — ${monthName} ━━━`, ``)
-    const medals = ['🥇', '🥈', '🥉']
-    top3.forEach((ma, i) => {
-      const f = ma.monthlyFamilies[prevMonthIdx] ?? 0
-      const v = ma.monthlyVolume[prevMonthIdx] ?? 0
-      lines.push(`${medals[i]}  ${ma.name} — ${f} families, ${fmtVol(v)}`)
-    })
-  }
-  lines.push(``, `— NEO FinFree Division`)
+  lines.push(div, `NEO FinFree Division  ·  ${monthName} 2026`)
   return lines.join('\n')
 }
 
@@ -642,19 +639,30 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
 
   const metricOpts: ToggleOption[] = [{ id: 'volume', label: 'Volume' }, { id: 'families', label: 'Families' }]
 
-  // Previous month = June (idx 5) while we're in July
-  const prevMonthIdx = 5
-  const prodSubject = `${MONTHS[prevMonthIdx]} Production Numbers`
-  const prodBody = buildProductionEmailBody(maData, prevMonthIdx)
+  const [emailMonth, setEmailMonth] = useState(5) // default: June
+  const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const prodSubject = `${FULL_MONTHS[emailMonth]} Production Numbers`
+  const prodBody = buildProductionEmailBody(maData, emailMonth)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
         {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <ToggleGroup options={metricOpts} value={metric} onChange={setMetric} />
-          <EmailReportButton subject={prodSubject} body={prodBody} label="Email June Report" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${C.border}`, borderRadius: 9, overflow: 'hidden', background: C.white }}>
+            <select
+              value={emailMonth}
+              onChange={e => setEmailMonth(Number(e.target.value))}
+              style={{ padding: '8px 10px', border: 'none', fontSize: 13, color: C.navy, fontWeight: 600, background: 'transparent', cursor: 'pointer', outline: 'none' }}
+            >
+              {FULL_MONTHS.slice(0, 7).map((m, i) => (
+                <option key={i} value={i}>{m}</option>
+              ))}
+            </select>
+            <EmailReportButton subject={prodSubject} body={prodBody} label="Email Report" />
+          </div>
         </div>
       </div>
 
