@@ -22,6 +22,8 @@ export const CHECKLIST: ChecklistSection[] = [
       { id: 'sd_welcome_letter', text: 'Send the division welcome letter', note: 'Opens Outlook pre-filled — edit the wording under Templates.', action: 'welcomeEmail' },
       { id: 'sd_poc', text: 'Send list with points of contact for all areas', note: 'Include payroll, benefits, HR, and leadership within the division' },
       { id: 'sd_distro', text: 'Add to applicable distribution lists', note: 'NEO FinFree LO Only · NEO FinFree Division · NEO FinFree Mettle Local · NEO FinFree Mettle Ops · NEO FinFree OPS' },
+      { id: 'sd_email_distro', text: 'Add to team email distribution group', note: 'Add to the FinFree division email distribution list so they receive all team communications' },
+      { id: 'sd_teams_channels', text: 'Add to Microsoft Teams channels', note: 'Add to all applicable Teams channels for their role — general division channel plus any role-specific channels' },
     ],
   },
   {
