@@ -27,6 +27,8 @@ interface MARecord {
   ytdFamilies: number; ytdVolume: number; ytdRespaApps: number; ytdInitialApps: number
   ytdFamiliesSG: number; ytdVolumeSG: number
   ytdFamiliesD2C: number; ytdVolumeD2C: number
+  ytdRespaAppsSG: number; ytdRespaAppsD2C: number
+  ytdInitialAppsSG: number; ytdInitialAppsD2C: number
   monthlyFamilies: number[]
   monthlyVolume: number[]
   monthlyFamiliesSG: number[]
@@ -35,6 +37,10 @@ interface MARecord {
   monthlyVolumeD2C: number[]
   monthlyRespaApps: number[]
   monthlyInitialApps: number[]
+  monthlyRespaAppsSG: number[]
+  monthlyRespaAppsD2C: number[]
+  monthlyInitialAppsSG: number[]
+  monthlyInitialAppsD2C: number[]
 }
 
 interface BranchFundEntry { branch: string; families: number; volume: number }
@@ -64,28 +70,28 @@ type PeriodStr = 'ytd'|'range'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'
 
 // ─── Seed MA data ─────────────────────────────────────────────────────────────
 const SEED_MA: MARecord[] = [
-  { name:'Katrinka Condie', ytdFamilies:58, ytdVolume:41832995, ytdRespaApps:63, ytdInitialApps:90, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[5,5,16,7,9,13,3,0,0,0,0,0], monthlyVolume:[2699708,2526094,12053658,5666263,6676691,8167395,4043186,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[7,15,8,6,7,15,5,0,0,0,0,0], monthlyInitialApps:[35,32,16,2,1,4,0,0,0,0,0,0] },
-  { name:'Justin Padron', ytdFamilies:52, ytdVolume:34456944, ytdRespaApps:51, ytdInitialApps:61, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[11,5,5,9,10,8,4,0,0,0,0,0], monthlyVolume:[4686842,2872015,4168096,6800626,5526631,5071814,5330920,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,4,11,10,10,6,4,0,0,0,0,0], monthlyInitialApps:[15,14,22,3,6,1,0,0,0,0,0,0] },
-  { name:'Skyler Ford', ytdFamilies:42, ytdVolume:20579512, ytdRespaApps:44, ytdInitialApps:108, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[5,5,6,8,6,9,3,0,0,0,0,0], monthlyVolume:[2640796,3095608,2637081,4393457,2184064,4316391,1312115,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,5,7,9,8,4,5,0,0,0,0,0], monthlyInitialApps:[36,26,40,3,1,2,0,0,0,0,0,0] },
-  { name:'Gregory Allen', ytdFamilies:38, ytdVolume:6629447, ytdRespaApps:61, ytdInitialApps:159, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[6,5,9,6,4,7,1,0,0,0,0,0], monthlyVolume:[1070876,879683,2060016,723084,760147,1025670,109971,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,8,8,8,18,11,3,0,0,0,0,0], monthlyInitialApps:[41,66,45,4,2,1,0,0,0,0,0,0] },
-  { name:'Jason Drobeck', ytdFamilies:36, ytdVolume:24556291, ytdRespaApps:51, ytdInitialApps:82, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[3,9,7,4,4,4,5,0,0,0,0,0], monthlyVolume:[1190250,5819496,5016537,2183977,5287250,1874296,3184485,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[12,6,7,9,6,7,4,0,0,0,0,0], monthlyInitialApps:[30,27,20,3,1,1,0,0,0,0,0,0] },
-  { name:'Drake Bloebaum', ytdFamilies:36, ytdVolume:17801759, ytdRespaApps:56, ytdInitialApps:101, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[5,3,6,6,4,10,2,0,0,0,0,0], monthlyVolume:[1238182,1129020,4279148,3036050,1511050,5734309,874000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[8,8,8,5,10,12,5,0,0,0,0,0], monthlyInitialApps:[26,38,32,1,1,2,1,0,0,0,0,0] },
-  { name:'Matthew Smith', ytdFamilies:23, ytdVolume:11769740, ytdRespaApps:37, ytdInitialApps:135, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,5,6,6,3,2,0,0,0,0,0,0], monthlyVolume:[832750,1336345,3304868,3045064,2299950,950763,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,7,8,8,2,6,1,0,0,0,0,0], monthlyInitialApps:[28,41,62,3,0,0,1,0,0,0,0,0] },
-  { name:'Ross Zimmerman', ytdFamilies:33, ytdVolume:16957257, ytdRespaApps:57, ytdInitialApps:113, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[4,2,6,7,4,9,1,0,0,0,0,0], monthlyVolume:[3224378,768000,2927940,3678830,2810661,3354753,192695,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[10,7,6,9,13,6,6,0,0,0,0,0], monthlyInitialApps:[48,32,26,1,2,1,3,0,0,0,0,0] },
-  { name:'Aaron Thomas', ytdFamilies:29, ytdVolume:13804933, ytdRespaApps:44, ytdInitialApps:74, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[2,5,4,6,4,4,4,0,0,0,0,0], monthlyVolume:[477350,1763950,2165373,4362040,1632155,1722600,1681465,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,9,11,7,8,3,0,0,0,0,0,0], monthlyInitialApps:[18,25,29,1,0,1,0,0,0,0,0,0] },
-  { name:'Kaytlin Collins', ytdFamilies:22, ytdVolume:5432496, ytdRespaApps:45, ytdInitialApps:64, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,4,3,5,3,3,3,0,0,0,0,0], monthlyVolume:[308750,425333,1184679,1372807,774790,838000,528137,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[3,5,9,6,3,16,3,0,0,0,0,0], monthlyInitialApps:[12,16,31,1,0,4,0,0,0,0,0,0] },
-  { name:'Scott DiGregorio', ytdFamilies:22, ytdVolume:10541726, ytdRespaApps:22, ytdInitialApps:34, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[3,5,0,5,4,5,0,0,0,0,0,0], monthlyVolume:[1000000,1260443,0,2494609,1601500,4185174,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,2,3,4,4,2,2,0,0,0,0,0], monthlyInitialApps:[11,10,12,1,0,0,0,0,0,0,0,0] },
-  { name:'Edgardo Balentine', ytdFamilies:21, ytdVolume:7856649, ytdRespaApps:36, ytdInitialApps:52, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[2,2,5,3,4,4,1,0,0,0,0,0], monthlyVolume:[795000,348616,1781326,858925,1971751,1881290,219741,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[4,5,4,4,6,5,8,0,0,0,0,0], monthlyInitialApps:[13,20,18,1,0,0,0,0,0,0,0,0] },
-  { name:'Michael Breen', ytdFamilies:17, ytdVolume:8562801, ytdRespaApps:20, ytdInitialApps:30, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,4,3,0,4,3,2,0,0,0,0,0], monthlyVolume:[158000,1595012,2395342,0,1592704,1121743,1700000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,2,2,6,4,1,0,0,0,0,0,0], monthlyInitialApps:[9,12,8,1,0,0,0,0,0,0,0,0] },
-  { name:'Michael Jones', ytdFamilies:15, ytdVolume:6748235, ytdRespaApps:29, ytdInitialApps:134, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[4,4,0,1,2,4,0,0,0,0,0,0], monthlyVolume:[1946862,1465882,0,524400,1482000,1329091,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,4,6,4,5,1,3,0,0,0,0,0], monthlyInitialApps:[39,32,61,1,1,0,0,0,0,0,0,0] },
-  { name:'Benjamin Kyle', ytdFamilies:13, ytdVolume:6415893, ytdRespaApps:15, ytdInitialApps:83, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[4,0,2,0,4,3,0,0,0,0,0,0], monthlyVolume:[1765550,0,928650,0,2772050,949643,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,1,1,3,7,2,0,0,0,0,0,0], monthlyInitialApps:[16,43,22,2,0,0,0,0,0,0,0,0] },
-  { name:'David Nelson', ytdFamilies:11, ytdVolume:3728819, ytdRespaApps:17, ytdInitialApps:116, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,1,2,3,4,0,1,0,0,0,0,0], monthlyVolume:[0,400500,398940,1915750,477379,0,536250,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,2,5,2,3,2,2,0,0,0,0,0], monthlyInitialApps:[32,29,54,1,0,0,0,0,0,0,0,0] },
-  { name:'Anthony Alfonso Soto', ytdFamilies:5, ytdVolume:1475303, ytdRespaApps:7, ytdInitialApps:9, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,0,1,2,1,0,1,0,0,0,0,0], monthlyVolume:[0,0,424000,519816,282987,0,248500,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,2,1,1,2,0,0,0,0,0,0], monthlyInitialApps:[3,2,4,0,0,0,0,0,0,0,0,0] },
-  { name:'Ashley Roberts', ytdFamilies:5, ytdVolume:1907773, ytdRespaApps:9, ytdInitialApps:6, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,0,0,1,1,1,2,0,0,0,0,0], monthlyVolume:[0,0,0,423200,236000,375000,873573,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,1,2,3,3,0,0,0,0,0,0], monthlyInitialApps:[0,3,3,0,0,0,0,0,0,0,0,0] },
-  { name:'Ryan Todey', ytdFamilies:3, ytdVolume:1597186, ytdRespaApps:1, ytdInitialApps:3, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[2,1,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[1340611,256575,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[3,0,0,0,0,0,0,0,0,0,0,0] },
-  { name:'Bryon Wensel', ytdFamilies:2, ytdVolume:487986, ytdRespaApps:3, ytdInitialApps:7, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,0,0,0,1,0,0,0,0,0,0,0], monthlyVolume:[187986,0,0,0,300000,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,0,1,0,0,1,0,0,0,0,0], monthlyInitialApps:[0,1,6,0,0,0,0,0,0,0,0,0] },
-  { name:'Joshua Mettle', ytdFamilies:2, ytdVolume:900500, ytdRespaApps:3, ytdInitialApps:3, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,0,1,0,0,0,1,0,0,0,0,0], monthlyVolume:[0,0,400500,0,0,0,500000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,1,0,0,0,2,0,0,0,0,0,0], monthlyInitialApps:[0,3,0,0,0,0,0,0,0,0,0,0] },
-  { name:'Matthew McNally', ytdFamilies:1, ytdVolume:289060, ytdRespaApps:0, ytdInitialApps:4, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[289060,0,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[1,1,2,0,0,0,0,0,0,0,0,0] },
+  { name:'Katrinka Condie', ytdFamilies:58, ytdVolume:41832995, ytdRespaApps:63, ytdInitialApps:90, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[5,5,16,7,9,13,3,0,0,0,0,0], monthlyVolume:[2699708,2526094,12053658,5666263,6676691,8167395,4043186,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[7,15,8,6,7,15,5,0,0,0,0,0], monthlyInitialApps:[35,32,16,2,1,4,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Justin Padron', ytdFamilies:52, ytdVolume:34456944, ytdRespaApps:51, ytdInitialApps:61, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[11,5,5,9,10,8,4,0,0,0,0,0], monthlyVolume:[4686842,2872015,4168096,6800626,5526631,5071814,5330920,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,4,11,10,10,6,4,0,0,0,0,0], monthlyInitialApps:[15,14,22,3,6,1,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Skyler Ford', ytdFamilies:42, ytdVolume:20579512, ytdRespaApps:44, ytdInitialApps:108, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[5,5,6,8,6,9,3,0,0,0,0,0], monthlyVolume:[2640796,3095608,2637081,4393457,2184064,4316391,1312115,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,5,7,9,8,4,5,0,0,0,0,0], monthlyInitialApps:[36,26,40,3,1,2,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Gregory Allen', ytdFamilies:38, ytdVolume:6629447, ytdRespaApps:61, ytdInitialApps:159, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[6,5,9,6,4,7,1,0,0,0,0,0], monthlyVolume:[1070876,879683,2060016,723084,760147,1025670,109971,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,8,8,8,18,11,3,0,0,0,0,0], monthlyInitialApps:[41,66,45,4,2,1,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Jason Drobeck', ytdFamilies:36, ytdVolume:24556291, ytdRespaApps:51, ytdInitialApps:82, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[3,9,7,4,4,4,5,0,0,0,0,0], monthlyVolume:[1190250,5819496,5016537,2183977,5287250,1874296,3184485,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[12,6,7,9,6,7,4,0,0,0,0,0], monthlyInitialApps:[30,27,20,3,1,1,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Drake Bloebaum', ytdFamilies:36, ytdVolume:17801759, ytdRespaApps:56, ytdInitialApps:101, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[5,3,6,6,4,10,2,0,0,0,0,0], monthlyVolume:[1238182,1129020,4279148,3036050,1511050,5734309,874000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[8,8,8,5,10,12,5,0,0,0,0,0], monthlyInitialApps:[26,38,32,1,1,2,1,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Matthew Smith', ytdFamilies:23, ytdVolume:11769740, ytdRespaApps:37, ytdInitialApps:135, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[1,5,6,6,3,2,0,0,0,0,0,0], monthlyVolume:[832750,1336345,3304868,3045064,2299950,950763,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,7,8,8,2,6,1,0,0,0,0,0], monthlyInitialApps:[28,41,62,3,0,0,1,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Ross Zimmerman', ytdFamilies:33, ytdVolume:16957257, ytdRespaApps:57, ytdInitialApps:113, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[4,2,6,7,4,9,1,0,0,0,0,0], monthlyVolume:[3224378,768000,2927940,3678830,2810661,3354753,192695,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[10,7,6,9,13,6,6,0,0,0,0,0], monthlyInitialApps:[48,32,26,1,2,1,3,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Aaron Thomas', ytdFamilies:29, ytdVolume:13804933, ytdRespaApps:44, ytdInitialApps:74, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[2,5,4,6,4,4,4,0,0,0,0,0], monthlyVolume:[477350,1763950,2165373,4362040,1632155,1722600,1681465,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,9,11,7,8,3,0,0,0,0,0,0], monthlyInitialApps:[18,25,29,1,0,1,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Kaytlin Collins', ytdFamilies:22, ytdVolume:5432496, ytdRespaApps:45, ytdInitialApps:64, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[1,4,3,5,3,3,3,0,0,0,0,0], monthlyVolume:[308750,425333,1184679,1372807,774790,838000,528137,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[3,5,9,6,3,16,3,0,0,0,0,0], monthlyInitialApps:[12,16,31,1,0,4,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Scott DiGregorio', ytdFamilies:22, ytdVolume:10541726, ytdRespaApps:22, ytdInitialApps:34, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[3,5,0,5,4,5,0,0,0,0,0,0], monthlyVolume:[1000000,1260443,0,2494609,1601500,4185174,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,2,3,4,4,2,2,0,0,0,0,0], monthlyInitialApps:[11,10,12,1,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Edgardo Balentine', ytdFamilies:21, ytdVolume:7856649, ytdRespaApps:36, ytdInitialApps:52, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[2,2,5,3,4,4,1,0,0,0,0,0], monthlyVolume:[795000,348616,1781326,858925,1971751,1881290,219741,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[4,5,4,4,6,5,8,0,0,0,0,0], monthlyInitialApps:[13,20,18,1,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Michael Breen', ytdFamilies:17, ytdVolume:8562801, ytdRespaApps:20, ytdInitialApps:30, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[1,4,3,0,4,3,2,0,0,0,0,0], monthlyVolume:[158000,1595012,2395342,0,1592704,1121743,1700000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,2,2,6,4,1,0,0,0,0,0,0], monthlyInitialApps:[9,12,8,1,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Michael Jones', ytdFamilies:15, ytdVolume:6748235, ytdRespaApps:29, ytdInitialApps:134, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[4,4,0,1,2,4,0,0,0,0,0,0], monthlyVolume:[1946862,1465882,0,524400,1482000,1329091,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,4,6,4,5,1,3,0,0,0,0,0], monthlyInitialApps:[39,32,61,1,1,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Benjamin Kyle', ytdFamilies:13, ytdVolume:6415893, ytdRespaApps:15, ytdInitialApps:83, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[4,0,2,0,4,3,0,0,0,0,0,0], monthlyVolume:[1765550,0,928650,0,2772050,949643,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,1,1,3,7,2,0,0,0,0,0,0], monthlyInitialApps:[16,43,22,2,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'David Nelson', ytdFamilies:11, ytdVolume:3728819, ytdRespaApps:17, ytdInitialApps:116, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[0,1,2,3,4,0,1,0,0,0,0,0], monthlyVolume:[0,400500,398940,1915750,477379,0,536250,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,2,5,2,3,2,2,0,0,0,0,0], monthlyInitialApps:[32,29,54,1,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Anthony Alfonso Soto', ytdFamilies:5, ytdVolume:1475303, ytdRespaApps:7, ytdInitialApps:9, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[0,0,1,2,1,0,1,0,0,0,0,0], monthlyVolume:[0,0,424000,519816,282987,0,248500,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,2,1,1,2,0,0,0,0,0,0], monthlyInitialApps:[3,2,4,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Ashley Roberts', ytdFamilies:5, ytdVolume:1907773, ytdRespaApps:9, ytdInitialApps:6, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[0,0,0,1,1,1,2,0,0,0,0,0], monthlyVolume:[0,0,0,423200,236000,375000,873573,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,1,2,3,3,0,0,0,0,0,0], monthlyInitialApps:[0,3,3,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Ryan Todey', ytdFamilies:3, ytdVolume:1597186, ytdRespaApps:1, ytdInitialApps:3, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[2,1,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[1340611,256575,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[3,0,0,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Bryon Wensel', ytdFamilies:2, ytdVolume:487986, ytdRespaApps:3, ytdInitialApps:7, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[1,0,0,0,1,0,0,0,0,0,0,0], monthlyVolume:[187986,0,0,0,300000,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,0,1,0,0,1,0,0,0,0,0], monthlyInitialApps:[0,1,6,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Joshua Mettle', ytdFamilies:2, ytdVolume:900500, ytdRespaApps:3, ytdInitialApps:3, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[0,0,1,0,0,0,1,0,0,0,0,0], monthlyVolume:[0,0,400500,0,0,0,500000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,1,0,0,0,2,0,0,0,0,0,0], monthlyInitialApps:[0,3,0,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
+  { name:'Matthew McNally', ytdFamilies:1, ytdVolume:289060, ytdRespaApps:0, ytdInitialApps:4, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[289060,0,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[1,1,2,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
 ]
 
 const SEED_WEEKLY: WeeklyRow[] = [
@@ -252,6 +258,9 @@ function parseFundingsRows(rows: CsvRow[], source: 'sg' | 'd2c' | 'all' = 'all')
         monthlyFamiliesSG: Array(12).fill(0) as number[], monthlyVolumeSG: Array(12).fill(0) as number[],
         monthlyFamiliesD2C: Array(12).fill(0) as number[], monthlyVolumeD2C: Array(12).fill(0) as number[],
         monthlyRespaApps: Array(12).fill(0) as number[], monthlyInitialApps: Array(12).fill(0) as number[],
+        ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0,
+        monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[],
+        monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[],
       })
     }
     const rec = map.get(maKey)!
@@ -293,24 +302,40 @@ function parseFundingsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, { 
   return result
 }
 
-function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: number[] }> {
-  const map = new Map<string, { respa: number[]; initial: number[] }>()
+function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): Map<string, { respa: number[]; initial: number[]; respaBySource: { sg: number[]; d2c: number[] }; initialBySource: { sg: number[]; d2c: number[] } }> {
+  const map = new Map<string, { respa: number[]; initial: number[]; respaBySource: { sg: number[]; d2c: number[] }; initialBySource: { sg: number[]; d2c: number[] } }>()
   for (const row of rows) {
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
     const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
-    const type = String(row['App Type'] ?? row['Application Type'] ?? '')
-    const isRespa = /respa/i.test(type)
-    // RESPA uses Application created at; Initial uses Loan File Created date
-    const dateRaw = isRespa
-      ? (row['Application created at'] ?? row['App Date'] ?? '')
-      : (row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Application created at'] ?? row['App Date'] ?? '')
-    const dt = dateRaw ? parseDate(dateRaw as string) : null
-    const mo = dt ? dt.getMonth() : -1
     const maKey = normName(lc)
-    if (!map.has(maKey)) map.set(maKey, { respa: Array(12).fill(0) as number[], initial: Array(12).fill(0) as number[] })
+    if (!map.has(maKey)) map.set(maKey, {
+      respa: Array(12).fill(0) as number[],
+      initial: Array(12).fill(0) as number[],
+      respaBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
+      initialBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
+    })
     const rec = map.get(maKey)!
-    if (mo >= 0) { if (isRespa) rec.respa[mo] += 1; else rec.initial[mo] += 1 }
+    // RESPA: use Application created at date
+    const respaDateRaw = row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? ''
+    if (respaDateRaw) {
+      const dt = parseDate(respaDateRaw as string)
+      const mo = dt ? dt.getMonth() : -1
+      if (mo >= 0) {
+        rec.respa[mo] += 1
+        if (source) rec.respaBySource[source][mo] += 1
+      }
+    }
+    // Initial: use Loan File Created date
+    const initDateRaw = row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? ''
+    if (initDateRaw) {
+      const dt = parseDate(initDateRaw as string)
+      const mo = dt ? dt.getMonth() : -1
+      if (mo >= 0) {
+        rec.initial[mo] += 1
+        if (source) rec.initialBySource[source][mo] += 1
+      }
+    }
   }
   return map
 }
@@ -318,20 +343,16 @@ function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: 
 function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c', type: 'respa'|'initial'): Map<string, BranchCountEntry[]> {
   const map = new Map<string, { [branch: string]: number }>()
   for (const row of rows) {
-    const appType = String(row['App Type'] ?? row['Application Type'] ?? '')
-    const isRespa = /respa/i.test(appType)
-    if (type === 'respa' && !isRespa) continue
-    if (type === 'initial' && isRespa) continue
-    // RESPA uses Application created at; Initial uses Loan File Created date
-    const dateRaw = isRespa
-      ? (row['Application created at'] ?? row['App Date'] ?? '')
-      : (row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Application created at'] ?? row['App Date'] ?? '')
-    if (!dateRaw) continue
-    const dt = parseDate(dateRaw as string)
-    if (!dt) continue
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
     const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
+    // RESPA uses Application created at; Initial uses Loan File Created date
+    const dateRaw = type === 'respa'
+      ? (row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '')
+      : (row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '')
+    if (!dateRaw) continue
+    const dt = parseDate(dateRaw as string)
+    if (!dt) continue
     const branch = branchForMA(lc)
     const wk = isoWeekKey(dt)
     if (!map.has(wk)) map.set(wk, {})
@@ -983,6 +1004,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
   const [rangeFrom, setRangeFrom] = useState(0)
   const [rangeTo, setRangeTo] = useState(6)
   const [appMetric, setAppMetric] = useState('both')
+  const [appSource, setAppSource] = useState<'all'|'sg'|'d2c'>('all')
   const [weekLoading, setWeekLoading] = useState(false)
   const [weekMsg, setWeekMsg] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
@@ -993,8 +1015,12 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
   const branches = groupMAByBranch(maData)
-  const teamRespa = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyRespaApps[i], 0))
-  const teamInitial = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyInitialApps[i], 0))
+
+  function respaArr(m: MARecord) { return appSource === 'sg' ? m.monthlyRespaAppsSG : appSource === 'd2c' ? m.monthlyRespaAppsD2C : m.monthlyRespaApps }
+  function initArr(m: MARecord) { return appSource === 'sg' ? m.monthlyInitialAppsSG : appSource === 'd2c' ? m.monthlyInitialAppsD2C : m.monthlyInitialApps }
+
+  const teamRespa = MONTHS.map((_, i) => maData.reduce((s, m) => s + respaArr(m)[i], 0))
+  const teamInitial = MONTHS.map((_, i) => maData.reduce((s, m) => s + initArr(m)[i], 0))
 
   function toggleBranch(name: string) {
     setExpanded(prev => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n })
@@ -1005,6 +1031,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
 
   const subViewOpts: ToggleOption[] = [{ id: 'branch', label: 'By Branch & MA' }, { id: 'weekly', label: 'Weekly Tracking' }]
   const appMetricOpts: ToggleOption[] = [{ id: 'respa', label: 'RESPA Apps' }, { id: 'initial', label: 'Initial Apps' }, { id: 'both', label: 'Both' }]
+  const appSourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
 
   const appsSubject = `RESPA files & Initial Apps ${new Date().toLocaleDateString('en-US')}`
   const appsBody = buildAppsEmailBody(maData, weeklyData)
@@ -1027,8 +1054,12 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
             <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
             {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
-            <div style={{ marginLeft: 'auto' }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <ToggleGroup options={appMetricOpts} value={appMetric} onChange={setAppMetric} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Source:</span>
+                <ToggleGroup options={appSourceOpts} value={appSource} onChange={v => setAppSource(v as 'all'|'sg'|'d2c')} />
+              </div>
             </div>
           </div>
 
@@ -1050,8 +1081,8 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
           <Card>
             <CardHead title="Branch & MA Applications" />
             {branches.map(branch => {
-              const brRespa = branch.members.reduce((s, m) => s + sumMonths(m.monthlyRespaApps, fr, to), 0)
-              const brInitial = branch.members.reduce((s, m) => s + sumMonths(m.monthlyInitialApps, fr, to), 0)
+              const brRespa = branch.members.reduce((s, m) => s + sumMonths(respaArr(m), fr, to), 0)
+              const brInitial = branch.members.reduce((s, m) => s + sumMonths(initArr(m), fr, to), 0)
               const isOpen = expanded.has(branch.name)
               return (
                 <div key={branch.name} style={{ marginBottom: 12 }}>
@@ -1064,8 +1095,8 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
                   {isOpen && (
                     <div style={{ paddingTop: 8, paddingLeft: 16 }}>
                       {branch.members.map(ma => {
-                        const maRespa = sumMonths(ma.monthlyRespaApps, fr, to)
-                        const maInit = sumMonths(ma.monthlyInitialApps, fr, to)
+                        const maRespa = sumMonths(respaArr(ma), fr, to)
+                        const maInit = sumMonths(initArr(ma), fr, to)
                         return (
                           <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '6px 0', borderBottom: `1px solid ${C.bg}` }}>
                             <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
@@ -1153,10 +1184,10 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
           <div style={{ fontWeight: 700, fontSize: 15, color: C.navy, marginTop: 4 }}>Branch Trends (Jan–Jul)</div>
           {branches.filter(b => b.members.some(m => m.ytdRespaApps + m.ytdInitialApps > 0)).map(branch => {
             const brMonthlyRespa = MONTHS.slice(0,7).map((_, i) =>
-              branch.members.reduce((s, m) => s + m.monthlyRespaApps[i], 0)
+              branch.members.reduce((s, m) => s + respaArr(m)[i], 0)
             )
             const brMonthlyInit = MONTHS.slice(0,7).map((_, i) =>
-              branch.members.reduce((s, m) => s + m.monthlyInitialApps[i], 0)
+              branch.members.reduce((s, m) => s + initArr(m)[i], 0)
             )
             const brYtdRespa = brMonthlyRespa.reduce((a,b)=>a+b,0)
             const brYtdInit = brMonthlyInit.reduce((a,b)=>a+b,0)
@@ -1188,18 +1219,20 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
                 <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>Individual Trends</div>
                   {branch.members.filter(m => m.ytdRespaApps + m.ytdInitialApps > 0).map(ma => {
-                    const maRespa = ma.monthlyRespaApps.slice(0, 7)
-                    const maInit  = ma.monthlyInitialApps.slice(0, 7)
+                    const maRespa = respaArr(ma).slice(0, 7)
+                    const maInit  = initArr(ma).slice(0, 7)
                     const peakR   = Math.max(...maRespa, 1)
                     const peakI   = Math.max(...maInit, 1)
+                    const maYtdRespa = appSource === 'sg' ? ma.ytdRespaAppsSG : appSource === 'd2c' ? ma.ytdRespaAppsD2C : ma.ytdRespaApps
+                    const maYtdInit = appSource === 'sg' ? ma.ytdInitialAppsSG : appSource === 'd2c' ? ma.ytdInitialAppsD2C : ma.ytdInitialApps
                     return (
                       <div key={ma.name} style={{ marginBottom: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                           <div style={{ fontWeight: 600, fontSize: 13, color: C.navy }}>{ma.name}</div>
                           <div style={{ fontSize: 12, color: C.muted }}>
-                            <span style={{ color: '#7c3aed', fontWeight: 600 }}>{ma.ytdRespaApps} RESPA</span>
+                            <span style={{ color: '#7c3aed', fontWeight: 600 }}>{maYtdRespa} RESPA</span>
                             {' · '}
-                            <span style={{ color: branch.color, fontWeight: 600 }}>{ma.ytdInitialApps} Initial</span>
+                            <span style={{ color: branch.color, fontWeight: 600 }}>{maYtdInit} Initial</span>
                           </div>
                         </div>
                         {/* Dual mini bar — RESPA (purple) and Initial (branch color) per month */}
@@ -1487,18 +1520,31 @@ export default function Production() {
 
   const handleAppsUpload = useCallback(async (file: File, source: 'sg'|'d2c') => {
     const rows = await readRows(file)
-    const parsed = parseAppsRows(rows)
+    const parsed = parseAppsRows(rows, source)
     setMaData(prev => {
       const next = [...prev]
       parsed.forEach((appData, maKey) => {
         const idx = next.findIndex(m => normName(m.name) === maKey || nameSimilar(m.name, maKey))
         if (idx >= 0) {
+          const existingSG = source === 'sg'
+          const sgRespa = existingSG ? appData.respaBySource.sg : next[idx].monthlyRespaAppsSG
+          const d2cRespa = existingSG ? next[idx].monthlyRespaAppsD2C : appData.respaBySource.d2c
+          const sgInit = existingSG ? appData.initialBySource.sg : next[idx].monthlyInitialAppsSG
+          const d2cInit = existingSG ? next[idx].monthlyInitialAppsD2C : appData.initialBySource.d2c
           next[idx] = {
             ...next[idx],
-            monthlyRespaApps: appData.respa,
-            ytdRespaApps: appData.respa.reduce((a,b)=>a+b,0),
-            monthlyInitialApps: appData.initial,
-            ytdInitialApps: appData.initial.reduce((a,b)=>a+b,0),
+            monthlyRespaAppsSG: sgRespa,
+            monthlyRespaAppsD2C: d2cRespa,
+            monthlyInitialAppsSG: sgInit,
+            monthlyInitialAppsD2C: d2cInit,
+            monthlyRespaApps: sgRespa.map((v, i) => v + d2cRespa[i]),
+            monthlyInitialApps: sgInit.map((v, i) => v + d2cInit[i]),
+            ytdRespaAppsSG: sgRespa.reduce((a,b)=>a+b,0),
+            ytdRespaAppsD2C: d2cRespa.reduce((a,b)=>a+b,0),
+            ytdInitialAppsSG: sgInit.reduce((a,b)=>a+b,0),
+            ytdInitialAppsD2C: d2cInit.reduce((a,b)=>a+b,0),
+            ytdRespaApps: sgRespa.reduce((a,b)=>a+b,0) + d2cRespa.reduce((a,b)=>a+b,0),
+            ytdInitialApps: sgInit.reduce((a,b)=>a+b,0) + d2cInit.reduce((a,b)=>a+b,0),
           }
         }
       })
@@ -1511,13 +1557,16 @@ export default function Production() {
       for (const [wk, entries] of weeklyRespa.entries()) {
         const idx = next.findIndex(w => w.weekStart === wk)
         if (idx >= 0) {
-          const total = entries.reduce((s,e)=>s+e.count,0)
-          next[idx] = { ...next[idx], ...(source === 'sg' ? { sgRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) } : { d2cRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) }), respaApps: total }
+          if (source === 'sg') next[idx] = { ...next[idx], sgRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) }
+          else next[idx] = { ...next[idx], d2cRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) }
+          const sgR = (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.families,0)
+          const d2cR = (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.families,0)
+          next[idx] = { ...next[idx], respaApps: sgR + d2cR }
         }
       }
       for (const [wk, entries] of weeklyInit.entries()) {
-        const idx = next.findIndex(w => w.weekStart === wk)
         const total = entries.reduce((s,e)=>s+e.count,0)
+        const idx = next.findIndex(w => w.weekStart === wk)
         if (idx >= 0) {
           if (source === 'sg') next[idx] = { ...next[idx], sgInitialByBranch: entries }
           else next[idx] = { ...next[idx], d2cInitialByBranch: entries }
@@ -1549,8 +1598,14 @@ export default function Production() {
     setMaData(prev => prev.map(m => ({
       ...m,
       ytdRespaApps: 0, ytdInitialApps: 0,
+      ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0,
+      ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0,
       monthlyRespaApps: Array(12).fill(0) as number[],
       monthlyInitialApps: Array(12).fill(0) as number[],
+      monthlyRespaAppsSG: Array(12).fill(0) as number[],
+      monthlyRespaAppsD2C: Array(12).fill(0) as number[],
+      monthlyInitialAppsSG: Array(12).fill(0) as number[],
+      monthlyInitialAppsD2C: Array(12).fill(0) as number[],
     })))
     setWeeklyData(prev => prev.map(w => ({
       ...w,
