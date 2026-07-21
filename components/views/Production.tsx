@@ -25,8 +25,14 @@ const BRANCH_CONFIG = [
 interface MARecord {
   name: string
   ytdFamilies: number; ytdVolume: number; ytdRespaApps: number; ytdInitialApps: number
+  ytdFamiliesSG: number; ytdVolumeSG: number
+  ytdFamiliesD2C: number; ytdVolumeD2C: number
   monthlyFamilies: number[]
   monthlyVolume: number[]
+  monthlyFamiliesSG: number[]
+  monthlyVolumeSG: number[]
+  monthlyFamiliesD2C: number[]
+  monthlyVolumeD2C: number[]
   monthlyRespaApps: number[]
   monthlyInitialApps: number[]
 }
@@ -50,34 +56,28 @@ type PeriodStr = 'ytd'|'range'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'
 
 // ─── Seed MA data ─────────────────────────────────────────────────────────────
 const SEED_MA: MARecord[] = [
-  { name:'Katrinka Condie',    ytdFamilies:58, ytdVolume:41832995, ytdRespaApps:63,  ytdInitialApps:90,  monthlyFamilies:[5,5,16,7,9,13,3,0,0,0,0,0],  monthlyVolume:[2699708,2526094,12053658,5666263,6676691,8167395,4043186,0,0,0,0,0], monthlyRespaApps:[7,15,8,6,7,15,5,0,0,0,0,0],  monthlyInitialApps:[35,32,16,2,1,4,0,0,0,0,0,0] },
-  { name:'Justin Padron',      ytdFamilies:52, ytdVolume:34456944, ytdRespaApps:51,  ytdInitialApps:61,  monthlyFamilies:[11,5,5,9,10,8,4,0,0,0,0,0],  monthlyVolume:[4686842,2872015,4168096,6800626,5526631,5071814,5330920,0,0,0,0,0], monthlyRespaApps:[6,4,11,10,10,6,4,0,0,0,0,0], monthlyInitialApps:[15,14,22,3,6,1,0,0,0,0,0,0] },
-  { name:'Skyler Ford',        ytdFamilies:42, ytdVolume:20579512, ytdRespaApps:44,  ytdInitialApps:108, monthlyFamilies:[5,5,6,8,6,9,3,0,0,0,0,0],   monthlyVolume:[2640796,3095608,2637081,4393457,2184064,4316391,1312115,0,0,0,0,0], monthlyRespaApps:[6,5,7,9,8,4,5,0,0,0,0,0],   monthlyInitialApps:[36,26,40,3,1,2,0,0,0,0,0,0] },
-  { name:'Jacky Vuong',        ytdFamilies:40, ytdVolume:18636248, ytdRespaApps:29,  ytdInitialApps:43,  monthlyFamilies:[3,3,12,7,8,5,2,0,0,0,0,0],  monthlyVolume:[2550334,885653,3359814,4130460,4114987,2929000,666000,0,0,0,0,0],  monthlyRespaApps:[3,5,4,9,5,3,0,0,0,0,0,0],   monthlyInitialApps:[8,12,17,3,2,1,0,0,0,0,0,0] },
-  { name:'Gregory Allen',      ytdFamilies:38, ytdVolume:6629447,  ytdRespaApps:61,  ytdInitialApps:159, monthlyFamilies:[6,5,9,6,4,7,1,0,0,0,0,0],   monthlyVolume:[1070876,879683,2060016,723084,760147,1025670,109971,0,0,0,0,0],  monthlyRespaApps:[5,8,8,8,18,11,3,0,0,0,0,0],  monthlyInitialApps:[41,66,45,4,2,1,0,0,0,0,0,0] },
-  { name:'Jason Drobeck',      ytdFamilies:36, ytdVolume:24556291, ytdRespaApps:51,  ytdInitialApps:82,  monthlyFamilies:[3,9,7,4,4,4,5,0,0,0,0,0],   monthlyVolume:[1190250,5819496,5016537,2183977,5287250,1874296,3184485,0,0,0,0,0], monthlyRespaApps:[12,6,7,9,6,7,4,0,0,0,0,0],  monthlyInitialApps:[30,27,20,3,1,1,0,0,0,0,0,0] },
-  { name:'Drake Bloebaum',     ytdFamilies:36, ytdVolume:17801759, ytdRespaApps:56,  ytdInitialApps:101, monthlyFamilies:[5,3,6,6,4,10,2,0,0,0,0,0],  monthlyVolume:[1238182,1129020,4279148,3036050,1511050,5734309,874000,0,0,0,0,0], monthlyRespaApps:[8,8,8,5,10,12,5,0,0,0,0,0],  monthlyInitialApps:[26,38,32,1,1,2,1,0,0,0,0,0] },
-  { name:'Matthew Smith',      ytdFamilies:23, ytdVolume:11769740, ytdRespaApps:37,  ytdInitialApps:135, monthlyFamilies:[1,5,6,6,3,2,0,0,0,0,0,0],   monthlyVolume:[832750,1336345,3304868,3045064,2299950,950763,0,0,0,0,0,0],    monthlyRespaApps:[5,7,8,8,2,6,1,0,0,0,0,0],   monthlyInitialApps:[28,41,62,3,0,0,1,0,0,0,0,0] },
-  { name:'Ross Zimmerman',     ytdFamilies:33, ytdVolume:16957257, ytdRespaApps:57,  ytdInitialApps:113, monthlyFamilies:[4,2,6,7,4,9,1,0,0,0,0,0],   monthlyVolume:[3224378,768000,2927940,3678830,2810661,3354753,192695,0,0,0,0,0], monthlyRespaApps:[10,7,6,9,13,6,6,0,0,0,0,0],  monthlyInitialApps:[48,32,26,1,2,1,3,0,0,0,0,0] },
-  { name:'Aaron Thomas',       ytdFamilies:29, ytdVolume:13804933, ytdRespaApps:44,  ytdInitialApps:74,  monthlyFamilies:[2,5,4,6,4,4,4,0,0,0,0,0],   monthlyVolume:[477350,1763950,2165373,4362040,1632155,1722600,1681465,0,0,0,0,0], monthlyRespaApps:[6,9,11,7,8,3,0,0,0,0,0,0],   monthlyInitialApps:[18,25,29,1,0,1,0,0,0,0,0,0] },
-  { name:'Kaytlin Collins',    ytdFamilies:22, ytdVolume:5432496,  ytdRespaApps:45,  ytdInitialApps:64,  monthlyFamilies:[1,4,3,5,3,3,3,0,0,0,0,0],   monthlyVolume:[308750,425333,1184679,1372807,774790,838000,528137,0,0,0,0,0],  monthlyRespaApps:[3,5,9,6,3,16,3,0,0,0,0,0],   monthlyInitialApps:[12,16,31,1,0,4,0,0,0,0,0,0] },
-  { name:'Scott DiGregorio',   ytdFamilies:22, ytdVolume:10541726, ytdRespaApps:22,  ytdInitialApps:34,  monthlyFamilies:[3,5,0,5,4,5,0,0,0,0,0,0],   monthlyVolume:[1000000,1260443,0,2494609,1601500,4185174,0,0,0,0,0,0],      monthlyRespaApps:[5,2,3,4,4,2,2,0,0,0,0,0],   monthlyInitialApps:[11,10,12,1,0,0,0,0,0,0,0,0] },
-  { name:'Edgardo Balentine',  ytdFamilies:21, ytdVolume:7856649,  ytdRespaApps:36,  ytdInitialApps:52,  monthlyFamilies:[2,2,5,3,4,4,1,0,0,0,0,0],   monthlyVolume:[795000,348616,1781326,858925,1971751,1881290,219741,0,0,0,0,0], monthlyRespaApps:[4,5,4,4,6,5,8,0,0,0,0,0],   monthlyInitialApps:[13,20,18,1,0,0,0,0,0,0,0,0] },
-  { name:'Michael Breen',      ytdFamilies:17, ytdVolume:8562801,  ytdRespaApps:20,  ytdInitialApps:30,  monthlyFamilies:[1,4,3,0,4,3,2,0,0,0,0,0],   monthlyVolume:[158000,1595012,2395342,0,1592704,1121743,1700000,0,0,0,0,0],  monthlyRespaApps:[5,2,2,6,4,1,0,0,0,0,0,0],   monthlyInitialApps:[9,12,8,1,0,0,0,0,0,0,0,0] },
-  { name:'Michael Jones',      ytdFamilies:15, ytdVolume:6748235,  ytdRespaApps:29,  ytdInitialApps:134, monthlyFamilies:[4,4,0,1,2,4,0,0,0,0,0,0],   monthlyVolume:[1946862,1465882,0,524400,1482000,1329091,0,0,0,0,0,0],      monthlyRespaApps:[6,4,6,4,5,1,3,0,0,0,0,0],   monthlyInitialApps:[39,32,61,1,1,0,0,0,0,0,0,0] },
-  { name:'Benjamin Kyle',      ytdFamilies:13, ytdVolume:6415893,  ytdRespaApps:15,  ytdInitialApps:83,  monthlyFamilies:[4,0,2,0,4,3,0,0,0,0,0,0],   monthlyVolume:[1765550,0,928650,0,2772050,949643,0,0,0,0,0,0],            monthlyRespaApps:[1,1,1,3,7,2,0,0,0,0,0,0],   monthlyInitialApps:[16,43,22,2,0,0,0,0,0,0,0,0] },
-  { name:'David Nelson',       ytdFamilies:11, ytdVolume:3728819,  ytdRespaApps:17,  ytdInitialApps:116, monthlyFamilies:[0,1,2,3,4,0,1,0,0,0,0,0],   monthlyVolume:[0,400500,398940,1915750,477379,0,536250,0,0,0,0,0],        monthlyRespaApps:[1,2,5,2,3,2,2,0,0,0,0,0],   monthlyInitialApps:[32,29,54,1,0,0,0,0,0,0,0,0] },
-  { name:'Anthony Alfonso Soto',ytdFamilies:5, ytdVolume:1475303,  ytdRespaApps:7,   ytdInitialApps:9,   monthlyFamilies:[0,0,1,2,1,0,1,0,0,0,0,0],   monthlyVolume:[0,0,424000,519816,282987,0,248500,0,0,0,0,0],              monthlyRespaApps:[1,0,2,1,1,2,0,0,0,0,0,0],   monthlyInitialApps:[3,2,4,0,0,0,0,0,0,0,0,0] },
-  { name:'Ashley Roberts',     ytdFamilies:5,  ytdVolume:1907773,  ytdRespaApps:9,   ytdInitialApps:6,   monthlyFamilies:[0,0,0,1,1,1,2,0,0,0,0,0],   monthlyVolume:[0,0,0,423200,236000,375000,873573,0,0,0,0,0],              monthlyRespaApps:[0,0,1,2,3,3,0,0,0,0,0,0],   monthlyInitialApps:[0,3,3,0,0,0,0,0,0,0,0,0] },
-  { name:'Ryan Todey',         ytdFamilies:3,  ytdVolume:1597186,  ytdRespaApps:1,   ytdInitialApps:3,   monthlyFamilies:[2,1,0,0,0,0,0,0,0,0,0,0],   monthlyVolume:[1340611,256575,0,0,0,0,0,0,0,0,0,0],                       monthlyRespaApps:[1,0,0,0,0,0,0,0,0,0,0,0],   monthlyInitialApps:[3,0,0,0,0,0,0,0,0,0,0,0] },
-  { name:'Michael Madonna',    ytdFamilies:3,  ytdVolume:848955,   ytdRespaApps:8,   ytdInitialApps:11,  monthlyFamilies:[0,1,1,0,0,1,0,0,0,0,0,0],   monthlyVolume:[0,130000,644000,0,0,74955,0,0,0,0,0,0],                    monthlyRespaApps:[1,2,0,0,0,2,3,0,0,0,0,0],   monthlyInitialApps:[7,3,0,0,0,1,0,0,0,0,0,0] },
-  { name:'Bryon Wensel',       ytdFamilies:2,  ytdVolume:487986,   ytdRespaApps:3,   ytdInitialApps:7,   monthlyFamilies:[1,0,0,0,1,0,0,0,0,0,0,0],   monthlyVolume:[187986,0,0,0,300000,0,0,0,0,0,0,0],                        monthlyRespaApps:[1,0,0,1,0,0,1,0,0,0,0,0],   monthlyInitialApps:[0,1,6,0,0,0,0,0,0,0,0,0] },
-  { name:'Joshua Mettle',      ytdFamilies:2,  ytdVolume:900500,   ytdRespaApps:3,   ytdInitialApps:3,   monthlyFamilies:[0,0,1,0,0,0,1,0,0,0,0,0],   monthlyVolume:[0,0,400500,0,0,0,500000,0,0,0,0,0],                        monthlyRespaApps:[0,1,0,0,0,2,0,0,0,0,0,0],   monthlyInitialApps:[0,3,0,0,0,0,0,0,0,0,0,0] },
-  { name:'Julie Jolivet',      ytdFamilies:1,  ytdVolume:193652,   ytdRespaApps:1,   ytdInitialApps:0,   monthlyFamilies:[0,0,0,0,0,1,0,0,0,0,0,0],   monthlyVolume:[0,0,0,0,0,193652,0,0,0,0,0,0],                             monthlyRespaApps:[0,0,0,1,0,0,0,0,0,0,0,0],   monthlyInitialApps:[0,0,0,0,0,0,0,0,0,0,0,0] },
-  { name:'Joel Davis',         ytdFamilies:1,  ytdVolume:346655,   ytdRespaApps:0,   ytdInitialApps:0,   monthlyFamilies:[1,0,0,0,0,0,0,0,0,0,0,0],   monthlyVolume:[346655,0,0,0,0,0,0,0,0,0,0,0],                             monthlyRespaApps:[0,0,0,0,0,0,0,0,0,0,0,0],   monthlyInitialApps:[0,0,0,0,0,0,0,0,0,0,0,0] },
-  { name:'Matthew McNally',    ytdFamilies:1,  ytdVolume:289060,   ytdRespaApps:0,   ytdInitialApps:4,   monthlyFamilies:[1,0,0,0,0,0,0,0,0,0,0,0],   monthlyVolume:[289060,0,0,0,0,0,0,0,0,0,0,0],                             monthlyRespaApps:[0,0,0,0,0,0,0,0,0,0,0,0],   monthlyInitialApps:[1,1,2,0,0,0,0,0,0,0,0,0] },
-  { name:'Torrence Williamson',ytdFamilies:1,  ytdVolume:310500,   ytdRespaApps:1,   ytdInitialApps:11,  monthlyFamilies:[0,0,1,0,0,0,0,0,0,0,0,0],   monthlyVolume:[0,0,310500,0,0,0,0,0,0,0,0,0],                             monthlyRespaApps:[0,0,1,0,0,0,0,0,0,0,0,0],   monthlyInitialApps:[6,4,1,0,0,0,0,0,0,0,0,0] },
-  { name:'Valerie Miller',     ytdFamilies:0,  ytdVolume:0,        ytdRespaApps:5,   ytdInitialApps:0,   monthlyFamilies:[0,0,0,0,0,0,0,0,0,0,0,0],   monthlyVolume:[0,0,0,0,0,0,0,0,0,0,0,0],                                  monthlyRespaApps:[0,0,0,0,2,3,0,0,0,0,0,0],   monthlyInitialApps:[0,0,0,0,0,0,0,0,0,0,0,0] },
+  { name:'Katrinka Condie', ytdFamilies:58, ytdVolume:41832995, ytdRespaApps:63, ytdInitialApps:90, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[5,5,16,7,9,13,3,0,0,0,0,0], monthlyVolume:[2699708,2526094,12053658,5666263,6676691,8167395,4043186,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[7,15,8,6,7,15,5,0,0,0,0,0], monthlyInitialApps:[35,32,16,2,1,4,0,0,0,0,0,0] },
+  { name:'Justin Padron', ytdFamilies:52, ytdVolume:34456944, ytdRespaApps:51, ytdInitialApps:61, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[11,5,5,9,10,8,4,0,0,0,0,0], monthlyVolume:[4686842,2872015,4168096,6800626,5526631,5071814,5330920,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,4,11,10,10,6,4,0,0,0,0,0], monthlyInitialApps:[15,14,22,3,6,1,0,0,0,0,0,0] },
+  { name:'Skyler Ford', ytdFamilies:42, ytdVolume:20579512, ytdRespaApps:44, ytdInitialApps:108, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[5,5,6,8,6,9,3,0,0,0,0,0], monthlyVolume:[2640796,3095608,2637081,4393457,2184064,4316391,1312115,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,5,7,9,8,4,5,0,0,0,0,0], monthlyInitialApps:[36,26,40,3,1,2,0,0,0,0,0,0] },
+  { name:'Gregory Allen', ytdFamilies:38, ytdVolume:6629447, ytdRespaApps:61, ytdInitialApps:159, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[6,5,9,6,4,7,1,0,0,0,0,0], monthlyVolume:[1070876,879683,2060016,723084,760147,1025670,109971,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,8,8,8,18,11,3,0,0,0,0,0], monthlyInitialApps:[41,66,45,4,2,1,0,0,0,0,0,0] },
+  { name:'Jason Drobeck', ytdFamilies:36, ytdVolume:24556291, ytdRespaApps:51, ytdInitialApps:82, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[3,9,7,4,4,4,5,0,0,0,0,0], monthlyVolume:[1190250,5819496,5016537,2183977,5287250,1874296,3184485,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[12,6,7,9,6,7,4,0,0,0,0,0], monthlyInitialApps:[30,27,20,3,1,1,0,0,0,0,0,0] },
+  { name:'Drake Bloebaum', ytdFamilies:36, ytdVolume:17801759, ytdRespaApps:56, ytdInitialApps:101, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[5,3,6,6,4,10,2,0,0,0,0,0], monthlyVolume:[1238182,1129020,4279148,3036050,1511050,5734309,874000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[8,8,8,5,10,12,5,0,0,0,0,0], monthlyInitialApps:[26,38,32,1,1,2,1,0,0,0,0,0] },
+  { name:'Matthew Smith', ytdFamilies:23, ytdVolume:11769740, ytdRespaApps:37, ytdInitialApps:135, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,5,6,6,3,2,0,0,0,0,0,0], monthlyVolume:[832750,1336345,3304868,3045064,2299950,950763,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,7,8,8,2,6,1,0,0,0,0,0], monthlyInitialApps:[28,41,62,3,0,0,1,0,0,0,0,0] },
+  { name:'Ross Zimmerman', ytdFamilies:33, ytdVolume:16957257, ytdRespaApps:57, ytdInitialApps:113, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[4,2,6,7,4,9,1,0,0,0,0,0], monthlyVolume:[3224378,768000,2927940,3678830,2810661,3354753,192695,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[10,7,6,9,13,6,6,0,0,0,0,0], monthlyInitialApps:[48,32,26,1,2,1,3,0,0,0,0,0] },
+  { name:'Aaron Thomas', ytdFamilies:29, ytdVolume:13804933, ytdRespaApps:44, ytdInitialApps:74, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[2,5,4,6,4,4,4,0,0,0,0,0], monthlyVolume:[477350,1763950,2165373,4362040,1632155,1722600,1681465,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,9,11,7,8,3,0,0,0,0,0,0], monthlyInitialApps:[18,25,29,1,0,1,0,0,0,0,0,0] },
+  { name:'Kaytlin Collins', ytdFamilies:22, ytdVolume:5432496, ytdRespaApps:45, ytdInitialApps:64, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,4,3,5,3,3,3,0,0,0,0,0], monthlyVolume:[308750,425333,1184679,1372807,774790,838000,528137,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[3,5,9,6,3,16,3,0,0,0,0,0], monthlyInitialApps:[12,16,31,1,0,4,0,0,0,0,0,0] },
+  { name:'Scott DiGregorio', ytdFamilies:22, ytdVolume:10541726, ytdRespaApps:22, ytdInitialApps:34, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[3,5,0,5,4,5,0,0,0,0,0,0], monthlyVolume:[1000000,1260443,0,2494609,1601500,4185174,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,2,3,4,4,2,2,0,0,0,0,0], monthlyInitialApps:[11,10,12,1,0,0,0,0,0,0,0,0] },
+  { name:'Edgardo Balentine', ytdFamilies:21, ytdVolume:7856649, ytdRespaApps:36, ytdInitialApps:52, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[2,2,5,3,4,4,1,0,0,0,0,0], monthlyVolume:[795000,348616,1781326,858925,1971751,1881290,219741,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[4,5,4,4,6,5,8,0,0,0,0,0], monthlyInitialApps:[13,20,18,1,0,0,0,0,0,0,0,0] },
+  { name:'Michael Breen', ytdFamilies:17, ytdVolume:8562801, ytdRespaApps:20, ytdInitialApps:30, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,4,3,0,4,3,2,0,0,0,0,0], monthlyVolume:[158000,1595012,2395342,0,1592704,1121743,1700000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[5,2,2,6,4,1,0,0,0,0,0,0], monthlyInitialApps:[9,12,8,1,0,0,0,0,0,0,0,0] },
+  { name:'Michael Jones', ytdFamilies:15, ytdVolume:6748235, ytdRespaApps:29, ytdInitialApps:134, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[4,4,0,1,2,4,0,0,0,0,0,0], monthlyVolume:[1946862,1465882,0,524400,1482000,1329091,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[6,4,6,4,5,1,3,0,0,0,0,0], monthlyInitialApps:[39,32,61,1,1,0,0,0,0,0,0,0] },
+  { name:'Benjamin Kyle', ytdFamilies:13, ytdVolume:6415893, ytdRespaApps:15, ytdInitialApps:83, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[4,0,2,0,4,3,0,0,0,0,0,0], monthlyVolume:[1765550,0,928650,0,2772050,949643,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,1,1,3,7,2,0,0,0,0,0,0], monthlyInitialApps:[16,43,22,2,0,0,0,0,0,0,0,0] },
+  { name:'David Nelson', ytdFamilies:11, ytdVolume:3728819, ytdRespaApps:17, ytdInitialApps:116, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,1,2,3,4,0,1,0,0,0,0,0], monthlyVolume:[0,400500,398940,1915750,477379,0,536250,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,2,5,2,3,2,2,0,0,0,0,0], monthlyInitialApps:[32,29,54,1,0,0,0,0,0,0,0,0] },
+  { name:'Anthony Alfonso Soto', ytdFamilies:5, ytdVolume:1475303, ytdRespaApps:7, ytdInitialApps:9, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,0,1,2,1,0,1,0,0,0,0,0], monthlyVolume:[0,0,424000,519816,282987,0,248500,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,2,1,1,2,0,0,0,0,0,0], monthlyInitialApps:[3,2,4,0,0,0,0,0,0,0,0,0] },
+  { name:'Ashley Roberts', ytdFamilies:5, ytdVolume:1907773, ytdRespaApps:9, ytdInitialApps:6, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,0,0,1,1,1,2,0,0,0,0,0], monthlyVolume:[0,0,0,423200,236000,375000,873573,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,1,2,3,3,0,0,0,0,0,0], monthlyInitialApps:[0,3,3,0,0,0,0,0,0,0,0,0] },
+  { name:'Ryan Todey', ytdFamilies:3, ytdVolume:1597186, ytdRespaApps:1, ytdInitialApps:3, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[2,1,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[1340611,256575,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[3,0,0,0,0,0,0,0,0,0,0,0] },
+  { name:'Bryon Wensel', ytdFamilies:2, ytdVolume:487986, ytdRespaApps:3, ytdInitialApps:7, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,0,0,0,1,0,0,0,0,0,0,0], monthlyVolume:[187986,0,0,0,300000,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[1,0,0,1,0,0,1,0,0,0,0,0], monthlyInitialApps:[0,1,6,0,0,0,0,0,0,0,0,0] },
+  { name:'Joshua Mettle', ytdFamilies:2, ytdVolume:900500, ytdRespaApps:3, ytdInitialApps:3, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[0,0,1,0,0,0,1,0,0,0,0,0], monthlyVolume:[0,0,400500,0,0,0,500000,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,1,0,0,0,2,0,0,0,0,0,0], monthlyInitialApps:[0,3,0,0,0,0,0,0,0,0,0,0] },
+  { name:'Matthew McNally', ytdFamilies:1, ytdVolume:289060, ytdRespaApps:0, ytdInitialApps:4, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, monthlyFamilies:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[289060,0,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[1,1,2,0,0,0,0,0,0,0,0,0] },
 ]
 
 const SEED_WEEKLY: WeeklyRow[] = [
@@ -191,7 +191,7 @@ function parseDate(raw: string | number): Date | null {
 
 type CsvRow = Record<string, string | number>
 
-function parseFundingsRows(rows: CsvRow[]): MARecord[] {
+function parseFundingsRows(rows: CsvRow[], source: 'sg' | 'd2c' | 'all' = 'all'): MARecord[] {
   const map = new Map<string, MARecord>()
   const seen = new Set<string>()
   for (const row of rows) {
@@ -210,13 +210,18 @@ function parseFundingsRows(rows: CsvRow[]): MARecord[] {
     if (!map.has(maKey)) {
       map.set(maKey, {
         name: lc, ytdFamilies: 0, ytdVolume: 0, ytdRespaApps: 0, ytdInitialApps: 0,
+        ytdFamiliesSG: 0, ytdVolumeSG: 0, ytdFamiliesD2C: 0, ytdVolumeD2C: 0,
         monthlyFamilies: Array(12).fill(0) as number[], monthlyVolume: Array(12).fill(0) as number[],
+        monthlyFamiliesSG: Array(12).fill(0) as number[], monthlyVolumeSG: Array(12).fill(0) as number[],
+        monthlyFamiliesD2C: Array(12).fill(0) as number[], monthlyVolumeD2C: Array(12).fill(0) as number[],
         monthlyRespaApps: Array(12).fill(0) as number[], monthlyInitialApps: Array(12).fill(0) as number[],
       })
     }
     const rec = map.get(maKey)!
     if (mo >= 0) { rec.monthlyFamilies[mo] += 1; rec.monthlyVolume[mo] += vol }
     rec.ytdFamilies += 1; rec.ytdVolume += vol
+    if (source === 'sg') { if (mo >= 0) { rec.monthlyFamiliesSG[mo] += 1; rec.monthlyVolumeSG[mo] += vol } rec.ytdFamiliesSG += 1; rec.ytdVolumeSG += vol }
+    if (source === 'd2c') { if (mo >= 0) { rec.monthlyFamiliesD2C[mo] += 1; rec.monthlyVolumeD2C[mo] += vol } rec.ytdFamiliesD2C += 1; rec.ytdVolumeD2C += vol }
   }
   return Array.from(map.values())
 }
@@ -600,44 +605,44 @@ function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, 
 }
 
 // ─── Branch Production Tab ────────────────────────────────────────────────────
-function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[]; onFundingsUpload: (file: File) => void }) {
+function BranchProductionTab({ maData, onSGUpload, onD2CUpload }: { maData: MARecord[]; onSGUpload: (file: File) => void; onD2CUpload: (file: File) => void }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [rangeFrom, setRangeFrom] = useState(0)
   const [rangeTo, setRangeTo] = useState(6)
   const [metric, setMetric] = useState('volume')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
-  const [uploadLoading, setUploadLoading] = useState(false)
-  const [uploadMsg, setUploadMsg] = useState('')
+  const [source, setSource] = useState<'all'|'sg'|'d2c'>('all')
+  const [sgLoading, setSgLoading] = useState(false)
+  const [sgMsg, setSgMsg] = useState('')
+  const [d2cLoading, setD2cLoading] = useState(false)
+  const [d2cMsg, setD2cMsg] = useState('')
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
   const branches = groupMAByBranch(maData)
 
-  const totalFamilies = maData.reduce((s, m) => s + sumMonths(m.monthlyFamilies, fr, to), 0)
-  const totalVolume = maData.reduce((s, m) => s + sumMonths(m.monthlyVolume, fr, to), 0)
+  function famArr(m: MARecord) { return source === 'sg' ? m.monthlyFamiliesSG : source === 'd2c' ? m.monthlyFamiliesD2C : m.monthlyFamilies }
+  function volArr(m: MARecord) { return source === 'sg' ? m.monthlyVolumeSG : source === 'd2c' ? m.monthlyVolumeD2C : m.monthlyVolume }
+
+  const totalFamilies = maData.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
+  const totalVolume = maData.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
   const totalRespa = maData.reduce((s, m) => s + sumMonths(m.monthlyRespaApps, fr, to), 0)
   const totalInitial = maData.reduce((s, m) => s + sumMonths(m.monthlyInitialApps, fr, to), 0)
 
-  const teamFamilies = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyFamilies[i], 0))
-  const teamVolume = MONTHS.map((_, i) => maData.reduce((s, m) => s + m.monthlyVolume[i], 0))
+  const teamFamilies = MONTHS.map((_, i) => maData.reduce((s, m) => s + famArr(m)[i], 0))
+  const teamVolume = MONTHS.map((_, i) => maData.reduce((s, m) => s + volArr(m)[i], 0))
 
   const sorted = [...maData].sort((a, b) =>
     metric === 'volume'
-      ? sumMonths(b.monthlyVolume, fr, to) - sumMonths(a.monthlyVolume, fr, to)
-      : sumMonths(b.monthlyFamilies, fr, to) - sumMonths(a.monthlyFamilies, fr, to)
+      ? sumMonths(volArr(b), fr, to) - sumMonths(volArr(a), fr, to)
+      : sumMonths(famArr(b), fr, to) - sumMonths(famArr(a), fr, to)
   )
 
   function toggleBranch(name: string) {
     setExpanded(prev => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n })
   }
 
-  async function handleUpload(file: File) {
-    setUploadLoading(true)
-    try { await readRows(file); onFundingsUpload(file); setUploadMsg(`Loaded ${file.name}`) }
-    catch { setUploadMsg('Error reading file') }
-    setUploadLoading(false)
-  }
-
   const metricOpts: ToggleOption[] = [{ id: 'volume', label: 'Volume' }, { id: 'families', label: 'Families' }]
+  const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
 
   const [emailMonth, setEmailMonth] = useState(5) // default: June
   const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -651,6 +656,10 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
         {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <ToggleGroup options={metricOpts} value={metric} onChange={setMetric} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Source:</span>
+            <ToggleGroup options={sourceOpts} value={source} onChange={v => setSource(v as 'all'|'sg'|'d2c')} />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${C.border}`, borderRadius: 9, overflow: 'hidden', background: C.white }}>
             <select
               value={emailMonth}
@@ -687,11 +696,11 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
       <Card>
         <CardHead title="Branch Breakdown" />
         {branches.map(branch => {
-          const branchFam = branch.members.reduce((s, m) => s + sumMonths(m.monthlyFamilies, fr, to), 0)
-          const branchVol = branch.members.reduce((s, m) => s + sumMonths(m.monthlyVolume, fr, to), 0)
+          const branchFam = branch.members.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
+          const branchVol = branch.members.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
           const isOpen = expanded.has(branch.name)
           const maxMetric = Math.max(...branch.members.map(m =>
-            metric === 'volume' ? sumMonths(m.monthlyVolume, fr, to) : sumMonths(m.monthlyFamilies, fr, to)
+            metric === 'volume' ? sumMonths(volArr(m), fr, to) : sumMonths(famArr(m), fr, to)
           ), 1)
           return (
             <div key={branch.name} style={{ marginBottom: 12 }}>
@@ -704,7 +713,7 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
               {isOpen && (
                 <div style={{ paddingTop: 10, paddingLeft: 16 }}>
                   {branch.members.map(ma => {
-                    const mv = metric === 'volume' ? sumMonths(ma.monthlyVolume, fr, to) : sumMonths(ma.monthlyFamilies, fr, to)
+                    const mv = metric === 'volume' ? sumMonths(volArr(ma), fr, to) : sumMonths(famArr(ma), fr, to)
                     const pct = mv / maxMetric
                     return (
                       <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -728,7 +737,7 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
       <Card>
         <CardHead title="Leaderboard" subtitle={`Ranked by ${metric} — ${periodLabel(period, rangeFrom, rangeTo)}`} />
         {sorted.slice(0, 15).map((ma, i) => {
-          const mv = metric === 'volume' ? sumMonths(ma.monthlyVolume, fr, to) : sumMonths(ma.monthlyFamilies, fr, to)
+          const mv = metric === 'volume' ? sumMonths(volArr(ma), fr, to) : sumMonths(famArr(ma), fr, to)
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`
           return (
             <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: `1px solid ${C.bg}` }}>
@@ -746,7 +755,7 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ background: C.bg }}>
-                {['Rank','Name','Branch','Families','Volume','RESPA Apps','Initial Apps','Conv%'].map(h => (
+                {['Rank','Name','Branch','Families','Self-Gen','D2C','Volume','RESPA Apps','Initial Apps'].map(h => (
                   <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Rank' ? 'center' : 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
                 ))}
               </tr>
@@ -754,17 +763,17 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
             <tbody>
               {sorted.map((ma, i) => {
                 const branchMatch = BRANCH_CONFIG.find(b => b.members.some(m => nameSimilar(m, ma.name)))
-                const conv = ma.ytdRespaApps > 0 ? ((ma.ytdFamilies / ma.ytdRespaApps) * 100).toFixed(0) + '%' : '—'
                 return (
                   <tr key={ma.name} style={{ borderBottom: `1px solid ${C.bg}` }}>
                     <td style={{ padding: '8px 12px', textAlign: 'center', color: C.muted }}>{i+1}</td>
                     <td style={{ padding: '8px 12px', fontWeight: 600, color: C.navy }}>{ma.name}</td>
                     <td style={{ padding: '8px 12px', color: C.dim }}>{branchMatch?.name ?? '—'}</td>
-                    <td style={{ padding: '8px 12px' }}>{ma.ytdFamilies}</td>
-                    <td style={{ padding: '8px 12px' }}>{fmtVol(ma.ytdVolume)}</td>
+                    <td style={{ padding: '8px 12px' }}>{sumMonths(famArr(ma), fr, to)}</td>
+                    <td style={{ padding: '8px 12px', color: '#16a34a', fontWeight: ma.ytdFamiliesSG > 0 ? 600 : 400 }}>{ma.ytdFamiliesSG || '—'}</td>
+                    <td style={{ padding: '8px 12px', color: '#7c3aed', fontWeight: ma.ytdFamiliesD2C > 0 ? 600 : 400 }}>{ma.ytdFamiliesD2C || '—'}</td>
+                    <td style={{ padding: '8px 12px' }}>{fmtVol(sumMonths(volArr(ma), fr, to))}</td>
                     <td style={{ padding: '8px 12px' }}>{ma.ytdRespaApps}</td>
                     <td style={{ padding: '8px 12px' }}>{ma.ytdInitialApps}</td>
-                    <td style={{ padding: '8px 12px' }}>{conv}</td>
                   </tr>
                 )
               })}
@@ -773,10 +782,34 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
         </div>
       </Card>
 
-      <Card>
-        <CardHead title="Upload Fundings CSV" subtitle="Drop a fundings export to refresh production data" />
-        <UploadZone label="Drop YTD Fundings CSV / XLSX here, or click to browse" onFile={handleUpload} loading={uploadLoading} message={uploadMsg} />
-      </Card>
+      <div style={{ display: 'flex', gap: 16 }}>
+        <Card style={{ flex: 1, borderTop: `3px solid #16a34a` }}>
+          <CardHead title="Upload Self-Generated Fundings" subtitle="Loans originated by the MA directly" />
+          <UploadZone
+            label="Drop Self-Gen YTD Fundings CSV / XLSX"
+            onFile={async (f) => {
+              setSgLoading(true)
+              try { onSGUpload(f); setSgMsg(`Loaded ${f.name}`) }
+              catch { setSgMsg('Error reading file') }
+              setSgLoading(false)
+            }}
+            loading={sgLoading} message={sgMsg}
+          />
+        </Card>
+        <Card style={{ flex: 1, borderTop: `3px solid #7c3aed` }}>
+          <CardHead title="Upload D2C Fundings" subtitle="Direct-to-consumer loans" />
+          <UploadZone
+            label="Drop D2C YTD Fundings CSV / XLSX"
+            onFile={async (f) => {
+              setD2cLoading(true)
+              try { onD2CUpload(f); setD2cMsg(`Loaded ${f.name}`) }
+              catch { setD2cMsg('Error reading file') }
+              setD2cLoading(false)
+            }}
+            loading={d2cLoading} message={d2cMsg}
+          />
+        </Card>
+      </div>
     </div>
   )
 }
@@ -1220,17 +1253,25 @@ export default function Production() {
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
   const [activeTab, setActiveTab] = useState<'branch'|'apps'|'changemakers'>('branch')
 
-  const handleFundingsUpload = useCallback(async (file: File) => {
+  const handleFundingsUpload = useCallback(async (file: File, source: 'sg' | 'd2c') => {
     const rows = await readRows(file)
-    const parsed = parseFundingsRows(rows)
+    const parsed = parseFundingsRows(rows, source)
     setMaData(prev => {
       const next = [...prev]
       for (const p of parsed) {
         const idx = next.findIndex(m => nameSimilar(m.name, p.name))
         if (idx >= 0) {
-          next[idx] = { ...next[idx], ytdFamilies: p.ytdFamilies, ytdVolume: p.ytdVolume, monthlyFamilies: p.monthlyFamilies, monthlyVolume: p.monthlyVolume }
+          next[idx] = {
+            ...next[idx],
+            ytdFamilies: next[idx].ytdFamiliesSG + next[idx].ytdFamiliesD2C + (source === 'sg' ? p.ytdFamiliesSG : 0) + (source === 'd2c' ? p.ytdFamiliesD2C : 0),
+            ytdVolume: next[idx].ytdVolumeSG + next[idx].ytdVolumeD2C + (source === 'sg' ? p.ytdVolumeSG : 0) + (source === 'd2c' ? p.ytdVolumeD2C : 0),
+            monthlyFamilies: source === 'sg' ? p.monthlyFamiliesSG.map((v, i) => v + (next[idx].monthlyFamiliesD2C[i] ?? 0)) : p.monthlyFamiliesD2C.map((v, i) => v + (next[idx].monthlyFamiliesSG[i] ?? 0)),
+            monthlyVolume: source === 'sg' ? p.monthlyVolumeSG.map((v, i) => v + (next[idx].monthlyVolumeD2C[i] ?? 0)) : p.monthlyVolumeD2C.map((v, i) => v + (next[idx].monthlyVolumeSG[i] ?? 0)),
+            ...(source === 'sg' ? { ytdFamiliesSG: p.ytdFamiliesSG, ytdVolumeSG: p.ytdVolumeSG, monthlyFamiliesSG: p.monthlyFamiliesSG, monthlyVolumeSG: p.monthlyVolumeSG } : {}),
+            ...(source === 'd2c' ? { ytdFamiliesD2C: p.ytdFamiliesD2C, ytdVolumeD2C: p.ytdVolumeD2C, monthlyFamiliesD2C: p.monthlyFamiliesD2C, monthlyVolumeD2C: p.monthlyVolumeD2C } : {}),
+          }
         } else {
-          next.push(p)
+          next.push({ ...p, ytdFamilies: p.ytdFamiliesSG + p.ytdFamiliesD2C, ytdVolume: p.ytdVolumeSG + p.ytdVolumeD2C, monthlyFamilies: source === 'sg' ? p.monthlyFamiliesSG : p.monthlyFamiliesD2C, monthlyVolume: source === 'sg' ? p.monthlyVolumeSG : p.monthlyVolumeD2C })
         }
       }
       return next
@@ -1298,7 +1339,7 @@ export default function Production() {
         ))}
       </div>
 
-      {activeTab === 'branch' && <BranchProductionTab maData={maData} onFundingsUpload={handleFundingsUpload} />}
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} onSGUpload={(f) => handleFundingsUpload(f, 'sg')} onD2CUpload={(f) => handleFundingsUpload(f, 'd2c')} />}
       {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={handleAppsUpload} onWeekUpload={handleWeekUpload} />}
       {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
