@@ -316,24 +316,24 @@ function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): Map<string, { respa
       initialBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
     })
     const rec = map.get(maKey)!
-    // RESPA: use Application created at date
-    const respaDateRaw = row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? ''
+    // If Application created at is filled → RESPA. Otherwise → Initial (Loan File Created date).
+    const respaDateRaw = String(row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '').trim()
     if (respaDateRaw) {
-      const dt = parseDate(respaDateRaw as string)
+      const dt = parseDate(respaDateRaw)
       const mo = dt ? dt.getMonth() : -1
       if (mo >= 0) {
         rec.respa[mo] += 1
         if (source) rec.respaBySource[source][mo] += 1
       }
-    }
-    // Initial: use Loan File Created date
-    const initDateRaw = row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? ''
-    if (initDateRaw) {
-      const dt = parseDate(initDateRaw as string)
-      const mo = dt ? dt.getMonth() : -1
-      if (mo >= 0) {
-        rec.initial[mo] += 1
-        if (source) rec.initialBySource[source][mo] += 1
+    } else {
+      const initDateRaw = String(row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '').trim()
+      if (initDateRaw) {
+        const dt = parseDate(initDateRaw)
+        const mo = dt ? dt.getMonth() : -1
+        if (mo >= 0) {
+          rec.initial[mo] += 1
+          if (source) rec.initialBySource[source][mo] += 1
+        }
       }
     }
   }
@@ -346,10 +346,10 @@ function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c', type: 'respa'|'init
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
     const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
-    // RESPA uses Application created at; Initial uses Loan File Created date
-    const dateRaw = type === 'respa'
-      ? (row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '')
-      : (row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '')
+    // RESPA = Application created at is filled; Initial = only Loan File Created is filled
+    const appDateRaw = String(row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '').trim()
+    const loanDateRaw = String(row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '').trim()
+    const dateRaw = type === 'respa' ? appDateRaw : (appDateRaw ? '' : loanDateRaw)
     if (!dateRaw) continue
     const dt = parseDate(dateRaw as string)
     if (!dt) continue
@@ -1149,164 +1149,137 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
 
       {subView === 'weekly' && (
         <>
-          {/* ── Team-level weekly snapshot ── */}
-          {curWeek && (
-            <>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <KpiTile label="This Week Families" value={String(curWeek.families)} sub={curWeek.weekLabel} />
-                <KpiTile label="This Week Volume" value={fmtVol(curWeek.volume)} sub={curWeek.weekLabel} />
-                <KpiTile label="This Week RESPA" value={String(curWeek.respaApps)} sub={curWeek.weekLabel} />
-                <KpiTile label="This Week Initial" value={String(curWeek.initialApps)} sub={curWeek.weekLabel} />
-              </div>
-              {prevWeek && (
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 13, color: C.dim, alignItems: 'center' }}>
-                  <span>WoW Families: <DeltaBadge delta={curWeek.families - prevWeek.families} /></span>
-                  <span>WoW RESPA: <DeltaBadge delta={curWeek.respaApps - prevWeek.respaApps} /></span>
-                  <span>WoW Initial: <DeltaBadge delta={curWeek.initialApps - prevWeek.initialApps} /></span>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* ── Team trend charts ── */}
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Card style={{ flex: 1 }}>
-              <CardHead title="Team — Monthly RESPA Apps" subtitle="All branches combined" />
-              <HoverBarChart values={teamRespa.slice(0,7)} labels={MONTHS.slice(0,7)} color="#7c3aed" fmt={String} primaryLabel="RESPA Apps" />
-            </Card>
-            <Card style={{ flex: 1 }}>
-              <CardHead title="Team — Monthly Initial Apps" subtitle="All branches combined" />
-              <HoverBarChart values={teamInitial.slice(0,7)} labels={MONTHS.slice(0,7)} color={C.accent} fmt={String} primaryLabel="Initial Apps" />
-            </Card>
-          </div>
-
-          {/* ── Branch trend cards ── */}
-          <div style={{ fontWeight: 700, fontSize: 15, color: C.navy, marginTop: 4 }}>Branch Trends (Jan–Jul)</div>
-          {branches.filter(b => b.members.some(m => m.ytdRespaApps + m.ytdInitialApps > 0)).map(branch => {
-            const brMonthlyRespa = MONTHS.slice(0,7).map((_, i) =>
-              branch.members.reduce((s, m) => s + respaArr(m)[i], 0)
-            )
-            const brMonthlyInit = MONTHS.slice(0,7).map((_, i) =>
-              branch.members.reduce((s, m) => s + initArr(m)[i], 0)
-            )
-            const brYtdRespa = brMonthlyRespa.reduce((a,b)=>a+b,0)
-            const brYtdInit = brMonthlyInit.reduce((a,b)=>a+b,0)
+          {/* One card per week, most recent first */}
+          {[...weeklyData].reverse().map((w, wi, arr) => {
+            const prev = arr[wi + 1]
+            const sgRespa = w.sgRespaByBranch ?? []
+            const d2cRespa = w.d2cRespaByBranch ?? []
+            const sgInit = w.sgInitialByBranch ?? []
+            const d2cInit = w.d2cInitialByBranch ?? []
+            const hasSG = sgRespa.length > 0 || sgInit.length > 0
+            const hasD2C = d2cRespa.length > 0 || d2cInit.length > 0
+            const sgRespaTotal = sgRespa.reduce((s,e)=>s+e.families,0)
+            const d2cRespaTotal = d2cRespa.reduce((s,e)=>s+e.families,0)
+            const sgInitTotal = sgInit.reduce((s,e)=>s+e.count,0)
+            const d2cInitTotal = d2cInit.reduce((s,e)=>s+e.count,0)
+            const totalRespaW = hasSG || hasD2C ? sgRespaTotal + d2cRespaTotal : w.respaApps
+            const totalInitW = hasSG || hasD2C ? sgInitTotal + d2cInitTotal : w.initialApps
             return (
-              <Card key={branch.name} style={{ borderTop: `3px solid ${branch.color}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                  <div style={{ width: 4, height: 28, borderRadius: 2, background: branch.color, flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>{branch.name}</div>
-                    <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>
-                      {brYtdRespa} RESPA · {brYtdInit} Initial YTD
-                    </div>
+              <Card key={w.weekLabel}>
+                {/* Week header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>{w.weekLabel}</div>
+                  <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+                    <span style={{ color: '#7c3aed', fontWeight: 700 }}>{totalRespaW} RESPA{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({totalRespaW - (prev.respaApps ?? 0) >= 0 ? '+' : ''}{totalRespaW - (prev.respaApps ?? 0)} WoW)</span>}</span>
+                    <span style={{ color: C.accent, fontWeight: 700 }}>{totalInitW} Initial{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({totalInitW - (prev.initialApps ?? 0) >= 0 ? '+' : ''}{totalInitW - (prev.initialApps ?? 0)} WoW)</span>}</span>
+                    {w.volume > 0 && <span style={{ color: C.navy, fontWeight: 700 }}>{fmtVol(w.volume)}</span>}
                   </div>
                 </div>
 
-                {/* Branch trend charts */}
-                <div style={{ display: 'flex', gap: 14, marginBottom: 18 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 6 }}>RESPA Apps / Month</div>
-                    <HoverBarChart values={brMonthlyRespa} labels={MONTHS.slice(0,7)} color={branch.color} fmt={String} primaryLabel="RESPA" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 6 }}>Initial Apps / Month</div>
-                    <HoverBarChart values={brMonthlyInit} labels={MONTHS.slice(0,7)} color={branch.color} fmt={String} primaryLabel="Initial" />
-                  </div>
-                </div>
-
-                {/* Individual MA rows within branch */}
-                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, letterSpacing: '.05em', textTransform: 'uppercase', marginBottom: 8 }}>Individual Trends</div>
-                  {branch.members.filter(m => m.ytdRespaApps + m.ytdInitialApps > 0).map(ma => {
-                    const maRespa = respaArr(ma).slice(0, 7)
-                    const maInit  = initArr(ma).slice(0, 7)
-                    const peakR   = Math.max(...maRespa, 1)
-                    const peakI   = Math.max(...maInit, 1)
-                    const maYtdRespa = appSource === 'sg' ? ma.ytdRespaAppsSG : appSource === 'd2c' ? ma.ytdRespaAppsD2C : ma.ytdRespaApps
-                    const maYtdInit = appSource === 'sg' ? ma.ytdInitialAppsSG : appSource === 'd2c' ? ma.ytdInitialAppsD2C : ma.ytdInitialApps
-                    return (
-                      <div key={ma.name} style={{ marginBottom: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <div style={{ fontWeight: 600, fontSize: 13, color: C.navy }}>{ma.name}</div>
-                          <div style={{ fontSize: 12, color: C.muted }}>
-                            <span style={{ color: '#7c3aed', fontWeight: 600 }}>{maYtdRespa} RESPA</span>
-                            {' · '}
-                            <span style={{ color: branch.color, fontWeight: 600 }}>{maYtdInit} Initial</span>
-                          </div>
-                        </div>
-                        {/* Dual mini bar — RESPA (purple) and Initial (branch color) per month */}
-                        <div style={{ display: 'flex', gap: 3, alignItems: 'flex-end', height: 52 }}>
-                          {MONTHS.slice(0,7).map((mo, i) => {
-                            const hR = Math.max(2, (maRespa[i] / peakR) * 44)
-                            const hI = Math.max(2, (maInit[i] / peakI) * 44)
-                            const hasData = maRespa[i] + maInit[i] > 0
-                            return (
-                              <div key={mo} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, justifyContent: 'flex-end' }}
-                                title={`${mo}: ${maRespa[i]} RESPA, ${maInit[i]} Initial`}>
-                                <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', justifyContent: 'center' }}>
-                                  <div style={{ flex: 1, height: hasData ? hR : 2, background: maRespa[i] > 0 ? '#7c3aed' : C.border, borderRadius: '2px 2px 0 0', opacity: 0.85 }} />
-                                  <div style={{ flex: 1, height: hasData ? hI : 2, background: maInit[i] > 0 ? branch.color : C.border, borderRadius: '2px 2px 0 0', opacity: 0.85 }} />
-                                </div>
-                                <div style={{ fontSize: 9, color: C.muted, lineHeight: 1, textAlign: 'center' }}>{mo}</div>
-                              </div>
-                            )
-                          })}
-                        </div>
+                <div style={{ display: 'flex', gap: 20 }}>
+                  {/* Self-Gen column */}
+                  {(hasSG || !hasD2C) && (
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                        Self-Gen — {sgRespaTotal} RESPA · {sgInitTotal} Initial
                       </div>
-                    )
-                  })}
+                      {/* SG RESPA by branch */}
+                      {sgRespa.length > 0 && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>RESPA</div>
+                          {sgRespa.map(e => (
+                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
+                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{e.families}</div>
+                              {e.volume > 0 && <div style={{ fontSize: 12, color: C.dim }}>{fmtVol(e.volume)}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* SG Initial by branch */}
+                      {sgInit.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>Initial</div>
+                          {sgInit.map(e => (
+                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
+                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{e.count}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Individual MA breakdown for SG */}
+                      {branches.some(b => b.members.some(m => (m.ytdRespaAppsSG + m.ytdInitialAppsSG) > 0)) && (
+                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>By Person</div>
+                          {branches.flatMap(b => b.members.filter(m => m.ytdRespaAppsSG + m.ytdInitialAppsSG > 0).map(m => ({ ...m, branchColor: b.color }))).map(m => (
+                            <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                              <div style={{ flex: 1, fontSize: 12, color: C.text }}>{m.name}</div>
+                              <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{m.ytdRespaAppsSG} R</div>
+                              <div style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>{m.ytdInitialAppsSG} I</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  {hasSG && hasD2C && <div style={{ width: 1, background: C.border, alignSelf: 'stretch' }} />}
+
+                  {/* D2C column */}
+                  {hasD2C && (
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
+                        D2C — {d2cRespaTotal} RESPA · {d2cInitTotal} Initial
+                      </div>
+                      {d2cRespa.length > 0 && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>RESPA</div>
+                          {d2cRespa.map(e => (
+                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
+                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{e.families}</div>
+                              {e.volume > 0 && <div style={{ fontSize: 12, color: C.dim }}>{fmtVol(e.volume)}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {d2cInit.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>Initial</div>
+                          {d2cInit.map(e => (
+                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
+                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{e.count}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Individual MA breakdown for D2C */}
+                      {branches.some(b => b.members.some(m => (m.ytdRespaAppsD2C + m.ytdInitialAppsD2C) > 0)) && (
+                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>By Person</div>
+                          {branches.flatMap(b => b.members.filter(m => m.ytdRespaAppsD2C + m.ytdInitialAppsD2C > 0).map(m => ({ ...m }))).map(m => (
+                            <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+                              <div style={{ flex: 1, fontSize: 12, color: C.text }}>{m.name}</div>
+                              <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{m.ytdRespaAppsD2C} R</div>
+                              <div style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>{m.ytdInitialAppsD2C} I</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Fallback: no branch data yet */}
+                  {!hasSG && !hasD2C && (
+                    <div style={{ color: C.muted, fontSize: 13 }}>Upload SG and D2C reports to see branch breakdown</div>
+                  )}
                 </div>
               </Card>
             )
           })}
-
-          {/* ── Weekly history table ── */}
-          <Card>
-            <CardHead title="Team Weekly History" subtitle="Upload weekly CSVs to populate this table" />
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: C.bg }}>
-                    {['Week','Families','Δ Fam','Volume','RESPA Apps','Δ RESPA','Initial Apps','Δ Initial'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...weeklyData].reverse().map((w, i, arr) => {
-                    const prev = arr[i+1]
-                    return (
-                      <tr key={w.weekLabel} style={{ borderBottom: `1px solid ${C.bg}` }}>
-                        <td style={{ padding: '8px 12px', fontWeight: 600 }}>{w.weekLabel}</td>
-                        <td style={{ padding: '8px 12px' }}>{w.families}</td>
-                        <td style={{ padding: '8px 12px' }}>{prev ? <DeltaBadge delta={w.families - prev.families} /> : '—'}</td>
-                        <td style={{ padding: '8px 12px' }}>{fmtVol(w.volume)}</td>
-                        <td style={{ padding: '8px 12px' }}>{w.respaApps}</td>
-                        <td style={{ padding: '8px 12px' }}>{prev ? <DeltaBadge delta={w.respaApps - prev.respaApps} /> : '—'}</td>
-                        <td style={{ padding: '8px 12px' }}>{w.initialApps}</td>
-                        <td style={{ padding: '8px 12px' }}>{prev ? <DeltaBadge delta={w.initialApps - prev.initialApps} /> : '—'}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <Card>
-            <CardHead title="Upload Weekly Data" />
-            <UploadZone
-              label="Drop weekly data CSV / XLSX"
-              onFile={async (f) => {
-                setWeekLoading(true)
-                try { await readRows(f); onWeekUpload(f); setWeekMsg(`Loaded ${f.name}`) }
-                catch { setWeekMsg('Error') }
-                setWeekLoading(false)
-              }}
-              loading={weekLoading} message={weekMsg}
-            />
-          </Card>
         </>
       )}
     </div>
