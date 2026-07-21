@@ -37,12 +37,20 @@ interface MARecord {
   monthlyInitialApps: number[]
 }
 
+interface BranchFundEntry { branch: string; families: number; volume: number }
+interface BranchCountEntry { branch: string; count: number }
+
 interface WeeklyRow {
-  weekLabel: string
+  weekLabel: string     // e.g. "Jul 4 – Jul 10"
+  weekStart?: string    // ISO "2026-07-04" for sorting
   families: number
   volume: number
   respaApps: number
   initialApps: number
+  sgRespaByBranch?: BranchFundEntry[]
+  d2cRespaByBranch?: BranchFundEntry[]
+  sgInitialByBranch?: BranchCountEntry[]
+  d2cInitialByBranch?: BranchCountEntry[]
 }
 
 interface BranchGroup {
@@ -141,6 +149,35 @@ function groupMAByBranch(maData: MARecord[]): BranchGroup[] {
   return groups
 }
 
+function branchForMA(maName: string): string {
+  for (const bc of BRANCH_CONFIG) {
+    if (bc.members.some(m => nameSimilar(m, maName))) return bc.name
+  }
+  return 'Other'
+}
+
+function isoWeekLabel(dt: Date): string {
+  const mon = new Date(dt)
+  const day = mon.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  mon.setDate(mon.getDate() + diff)
+  const sun = new Date(mon)
+  sun.setDate(mon.getDate() + 6)
+  const fmtD = (d: Date) => {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    return `${months[d.getMonth()]} ${d.getDate()}`
+  }
+  return `${fmtD(mon)} – ${fmtD(sun)}`
+}
+
+function isoWeekKey(dt: Date): string {
+  const mon = new Date(dt)
+  const day = mon.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  mon.setDate(mon.getDate() + diff)
+  return mon.toISOString().slice(0,10)
+}
+
 const PERIOD_OPTS: { id: PeriodStr; label: string }[] = [
   { id: 'ytd', label: 'YTD' },
   { id: 'range', label: 'Custom Range' },
@@ -226,6 +263,36 @@ function parseFundingsRows(rows: CsvRow[], source: 'sg' | 'd2c' | 'all' = 'all')
   return Array.from(map.values())
 }
 
+function parseFundingsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, { label: string; byBranch: BranchFundEntry[] }> {
+  const map = new Map<string, { label: string; total: { [branch: string]: { fam: number; vol: number } } }>()
+  for (const row of rows) {
+    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? row['Closing Date'] ?? row['Date'] ?? ''
+    if (!dateRaw) continue
+    const dt = parseDate(dateRaw as string)
+    if (!dt) continue
+    const vol = parseFloat(String(row['Loan Amount'] ?? row['Volume'] ?? row['Amount'] ?? '0').replace(/[$,]/g, '')) || 0
+    const maSupport = String(row['Assigned MA Support'] ?? '').trim()
+    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
+    if (!lc) continue
+    const branch = branchForMA(lc)
+    const wk = isoWeekKey(dt)
+    const lbl = isoWeekLabel(dt)
+    if (!map.has(wk)) map.set(wk, { label: lbl, total: {} })
+    const entry = map.get(wk)!
+    if (!entry.total[branch]) entry.total[branch] = { fam: 0, vol: 0 }
+    entry.total[branch].fam += 1
+    entry.total[branch].vol += vol
+  }
+  const result = new Map<string, { label: string; byBranch: BranchFundEntry[] }>()
+  for (const [wk, v] of map.entries()) {
+    const byBranch = Object.entries(v.total)
+      .map(([branch, d]) => ({ branch, families: d.fam, volume: d.vol }))
+      .sort((a, b) => b.families - a.families)
+    result.set(wk, { label: v.label, byBranch })
+  }
+  return result
+}
+
 function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: number[] }> {
   const map = new Map<string, { respa: number[]; initial: number[] }>()
   for (const row of rows) {
@@ -243,6 +310,33 @@ function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: 
     if (mo >= 0) { if (isRespa) rec.respa[mo] += 1; else rec.initial[mo] += 1 }
   }
   return map
+}
+
+function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c', type: 'respa'|'initial'): Map<string, BranchCountEntry[]> {
+  const map = new Map<string, { [branch: string]: number }>()
+  for (const row of rows) {
+    const dateRaw = row['Application created at'] ?? row['App Date'] ?? ''
+    if (!dateRaw) continue
+    const dt = parseDate(dateRaw as string)
+    if (!dt) continue
+    const maSupport = String(row['Assigned MA Support'] ?? '').trim()
+    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
+    if (!lc) continue
+    const appType = String(row['App Type'] ?? row['Application Type'] ?? '')
+    const isRespa = /respa/i.test(appType)
+    if (type === 'respa' && !isRespa) continue
+    if (type === 'initial' && isRespa) continue
+    const branch = branchForMA(lc)
+    const wk = isoWeekKey(dt)
+    if (!map.has(wk)) map.set(wk, {})
+    const entry = map.get(wk)!
+    entry[branch] = (entry[branch] ?? 0) + 1
+  }
+  const result = new Map<string, BranchCountEntry[]>()
+  for (const [wk, v] of map.entries()) {
+    result.set(wk, Object.entries(v).map(([branch, count]) => ({ branch, count })).sort((a, b) => b.count - a.count))
+  }
+  return result
 }
 
 async function readRows(file: File): Promise<CsvRow[]> {
@@ -285,75 +379,148 @@ const TO = 'josh.mettle@neohomeloans.com'
 function pad(s: string, w: number) { return s.length >= w ? s : s + ' '.repeat(w - s.length) }
 
 function buildAppsEmailBody(maData: MARecord[], weeklyData: WeeklyRow[]): string {
-  const now = new Date()
-  const dateStr = `${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()}`
+  const fmtFam = (n: number) => `${n} ${n === 1 ? 'family' : 'families'}`
+  const fmtApp = (n: number) => `${n} Initial ${n === 1 ? 'App' : 'Apps'}`
+  const fmtDollar = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-  const lines: string[] = [
-    `NEO FinFree Division — RESPA Files & Initial Apps Report`,
-    `Generated: ${dateStr}`,
-    ``,
-  ]
-
-  // Weekly snapshot
-  if (weeklyData.length > 0) {
-    const cur = weeklyData[weeklyData.length - 1]
-    const prev = weeklyData[weeklyData.length - 2]
-    lines.push(`━━━ LATEST WEEK: ${cur.weekLabel} ━━━`, ``)
-    lines.push(`Families:     ${cur.families}${prev ? `  (${cur.families - prev.families >= 0 ? '+' : ''}${cur.families - prev.families} WoW)` : ''}`)
-    lines.push(`Volume:       ${fmtVol(cur.volume)}`)
-    lines.push(`RESPA Apps:   ${cur.respaApps}${prev ? `  (${cur.respaApps - prev.respaApps >= 0 ? '+' : ''}${cur.respaApps - prev.respaApps} WoW)` : ''}`)
-    lines.push(`Initial Apps: ${cur.initialApps}${prev ? `  (${cur.initialApps - prev.initialApps >= 0 ? '+' : ''}${cur.initialApps - prev.initialApps} WoW)` : ''}`)
-    lines.push(``)
+  function branchDisplayName(b: string): string {
+    if (b === 'DiGregorio Branch') return 'DiGregorio/Balentine Branch'
+    return b
   }
 
-  // Weekly history table
-  if (weeklyData.length > 0) {
-    lines.push(`━━━ WEEKLY HISTORY ━━━`, ``)
-    lines.push(`${pad('Week', 10)}  ${pad('Families', 10)}  ${pad('RESPA Apps', 12)}  Initial Apps`)
-    lines.push(`${'─'.repeat(50)}`)
-    for (const w of [...weeklyData].reverse()) {
-      lines.push(`${pad(w.weekLabel, 10)}  ${pad(String(w.families), 10)}  ${pad(String(w.respaApps), 12)}  ${w.initialApps}`)
+  const weeks = [...weeklyData].sort((a, b) => {
+    const ka = a.weekStart ?? a.weekLabel
+    const kb = b.weekStart ?? b.weekLabel
+    return ka < kb ? -1 : ka > kb ? 1 : 0
+  })
+
+  const lines: string[] = []
+
+  // ── Narrative opener (most recent vs prior week) ──
+  if (weeks.length >= 2) {
+    const cur = weeks[weeks.length - 1]
+    const prev = weeks[weeks.length - 2]
+    const respaChg = cur.respaApps - prev.respaApps
+    const respaChgPct = prev.respaApps > 0 ? Math.round((respaChg / prev.respaApps) * 100) : 0
+    const volChg = cur.volume - prev.volume
+    const volChgPct = prev.volume > 0 ? Math.round((volChg / prev.volume) * 100) : 0
+    const initChg = cur.initialApps - prev.initialApps
+    const minInit = Math.min(...weeks.map(w => w.initialApps))
+    const curIsMinInit = cur.initialApps <= minInit
+
+    const direction = respaChg >= 0 ? 'rebounded' : 'pulled back'
+    const initNote = curIsMinInit
+      ? `Initial Apps fell to ${cur.initialApps}, the lowest week in the entire ${weeks.length}-week window.`
+      : initChg >= 0
+      ? `Initial Apps picked up to ${cur.initialApps} (+${initChg} WoW).`
+      : `Initial Apps slipped to ${cur.initialApps} (${initChg} WoW).`
+
+    lines.push(
+      `RESPA ${direction} this week — ${cur.respaApps} families/${fmtDollar(cur.volume).replace(/\.00$/, '')}, ` +
+      `${respaChg >= 0 ? 'up' : 'down'} from ${prev.respaApps}/${fmtDollar(prev.volume).replace(/\.00$/, '')} last week ` +
+      `(${respaChgPct >= 0 ? '+' : ''}${respaChgPct}% families, ${volChgPct >= 0 ? '+' : ''}${volChgPct}% $). ` +
+      initNote
+    )
+    lines.push('')
+    lines.push('')
+  } else if (weeks.length === 1) {
+    const cur = weeks[0]
+    lines.push(`Week of ${cur.weekLabel} — ${cur.respaApps} RESPA families / $${(cur.volume/1e6).toFixed(1)}M, ${cur.initialApps} Initial Apps.`)
+    lines.push('')
+    lines.push('')
+  }
+
+  // ── One block per week (most recent first) ──
+  for (const w of [...weeks].reverse()) {
+    const sgRespa = w.sgRespaByBranch ?? []
+    const d2cRespa = w.d2cRespaByBranch ?? []
+    const sgInit = w.sgInitialByBranch ?? []
+    const d2cInit = w.d2cInitialByBranch ?? []
+
+    const sgRespaFam = sgRespa.reduce((s, e) => s + e.families, 0)
+    const sgRespaVol = sgRespa.reduce((s, e) => s + e.volume, 0)
+    const d2cRespaFam = d2cRespa.reduce((s, e) => s + e.families, 0)
+    const d2cRespaVol = d2cRespa.reduce((s, e) => s + e.volume, 0)
+    const sgInitTotal = sgInit.reduce((s, e) => s + e.count, 0)
+    const d2cInitTotal = d2cInit.reduce((s, e) => s + e.count, 0)
+
+    const hasSGD2C = sgRespa.length > 0 || d2cRespa.length > 0 || sgInit.length > 0 || d2cInit.length > 0
+    const totalFam = hasSGD2C ? sgRespaFam + d2cRespaFam : w.families
+    const totalVol = hasSGD2C ? sgRespaVol + d2cRespaVol : w.volume
+    const totalInit = hasSGD2C ? sgInitTotal + d2cInitTotal : w.initialApps
+
+    lines.push(`${w.weekLabel} – Total – ${fmtFam(totalFam)} - ${fmtDollar(totalVol)}`)
+    lines.push('')
+
+    if (sgRespa.length > 0) {
+      lines.push(`Self Gen Leads RESPA – ${fmtFam(sgRespaFam)} - ${fmtDollar(sgRespaVol)}`)
+      lines.push('')
+      for (const e of sgRespa) {
+        lines.push(`${branchDisplayName(e.branch)} – ${fmtFam(e.families)} - ${fmtDollar(e.volume)}`)
+      }
+      lines.push('')
     }
-    lines.push(``)
+
+    if (d2cRespa.length > 0) {
+      lines.push(`Better Leads RESPA – ${fmtFam(d2cRespaFam)} - ${fmtDollar(d2cRespaVol)}`)
+      lines.push('')
+      for (const e of d2cRespa) {
+        lines.push(`${branchDisplayName(e.branch)} – ${fmtFam(e.families)} - ${fmtDollar(e.volume)}`)
+      }
+      lines.push('')
+    }
+
+    if (!hasSGD2C) {
+      lines.push(`RESPA Files – ${fmtFam(w.families)} - ${fmtDollar(w.volume)}`)
+      lines.push('')
+    }
+
+    lines.push(`Initial Apps – Total ${totalInit}`)
+    lines.push('')
+
+    if (sgInit.length > 0) {
+      lines.push(`Self Gen Initial Apps – ${sgInitTotal} Initial Apps`)
+      lines.push('')
+      for (const e of sgInit) {
+        lines.push(`${branchDisplayName(e.branch)} – ${fmtApp(e.count)}`)
+      }
+      lines.push('')
+    }
+
+    if (d2cInit.length > 0) {
+      lines.push(`Better Leads Initial Apps – ${d2cInitTotal} Initial Apps`)
+      lines.push('')
+      for (const e of d2cInit) {
+        lines.push(`${branchDisplayName(e.branch)} – ${fmtApp(e.count)}`)
+      }
+      lines.push('')
+    }
+
+    if (!hasSGD2C && (w.respaApps > 0 || w.initialApps > 0)) {
+      lines.push(`(Upload SG and D2C reports to see source breakdown)`)
+      lines.push('')
+    }
+
+    lines.push('')
   }
 
-  // YTD monthly totals (Jan–Jul)
-  lines.push(`━━━ MONTHLY TOTALS (JAN–JUL) ━━━`, ``)
-  lines.push(`${pad('Month', 8)}  ${pad('RESPA', 8)}  Initial`)
-  lines.push(`${'─'.repeat(30)}`)
-  for (let i = 0; i <= 6; i++) {
-    const r = maData.reduce((s, m) => s + m.monthlyRespaApps[i], 0)
-    const init = maData.reduce((s, m) => s + m.monthlyInitialApps[i], 0)
-    if (r > 0 || init > 0) lines.push(`${pad(MONTHS[i], 8)}  ${pad(String(r), 8)}  ${init}`)
-  }
-  const ytdR = maData.reduce((s, m) => s + m.ytdRespaApps, 0)
-  const ytdI = maData.reduce((s, m) => s + m.ytdInitialApps, 0)
-  lines.push(`${'─'.repeat(30)}`)
-  lines.push(`${pad('YTD', 8)}  ${pad(String(ytdR), 8)}  ${ytdI}`)
-  lines.push(``)
-
-  // Branch breakdown
-  lines.push(`━━━ BRANCH BREAKDOWN (YTD) ━━━`, ``)
-  lines.push(`${pad('Branch', 24)}  ${pad('RESPA', 8)}  Initial`)
-  lines.push(`${'─'.repeat(46)}`)
-  const branchGroups = groupMAByBranch(maData)
-  for (const bg of branchGroups) {
-    const r = bg.members.reduce((s, m) => s + m.ytdRespaApps, 0)
-    const init = bg.members.reduce((s, m) => s + m.ytdInitialApps, 0)
-    lines.push(`${pad(bg.name, 24)}  ${pad(String(r), 8)}  ${init}`)
-  }
-  lines.push(``)
-
-  // Individual MA breakdown
-  lines.push(`━━━ INDIVIDUAL MA BREAKDOWN (YTD) ━━━`, ``)
-  lines.push(`${pad('Name', 24)}  ${pad('Branch', 20)}  ${pad('RESPA', 7)}  Initial`)
-  lines.push(`${'─'.repeat(66)}`)
-  const sorted = [...maData].filter(m => m.ytdRespaApps + m.ytdInitialApps > 0).sort((a, b) => b.ytdRespaApps - a.ytdRespaApps)
+  // ── Individual MA breakdown ──
+  lines.push(`Individual Breakdown`)
+  lines.push('')
+  const sorted = [...maData]
+    .filter(m => m.ytdRespaApps + m.ytdInitialApps > 0)
+    .sort((a, b) => b.ytdRespaApps - a.ytdRespaApps)
   for (const ma of sorted) {
     const bc = BRANCH_CONFIG.find(b => b.members.some(m => nameSimilar(m, ma.name)))
-    lines.push(`${pad(ma.name, 24)}  ${pad(bc?.name ?? 'Solo', 20)}  ${pad(String(ma.ytdRespaApps), 7)}  ${ma.ytdInitialApps}`)
+    lines.push(
+      `${ma.name} (${bc?.name ?? 'Solo'}) – RESPA: ${ma.ytdRespaApps} YTD | ` +
+      `Self-Gen: ${ma.ytdFamiliesSG} families / ${fmtDollar(ma.ytdVolumeSG)} | ` +
+      `D2C: ${ma.ytdFamiliesD2C} families / ${fmtDollar(ma.ytdVolumeD2C)} | ` +
+      `Initial: ${ma.ytdInitialApps} YTD`
+    )
   }
-  lines.push(``, `— NEO FinFree Division`)
+  lines.push('')
+  lines.push('— NEO FinFree Division')
   return lines.join('\n')
 }
 
@@ -818,7 +985,7 @@ function BranchProductionTab({ maData, onSGUpload, onD2CUpload }: { maData: MARe
 function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
   maData: MARecord[]
   weeklyData: WeeklyRow[]
-  onAppsUpload: (file: File, type: 'respa'|'initial') => void
+  onAppsUpload: (file: File, type: 'respa'|'initial', source?: 'sg'|'d2c') => void
   onWeekUpload: (file: File) => void
 }) {
   const [subView, setSubView] = useState('branch')
@@ -833,6 +1000,10 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
   const [weekLoading, setWeekLoading] = useState(false)
   const [weekMsg, setWeekMsg] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
+  const [sgInitLoading, setSgInitLoading] = useState(false)
+  const [sgInitMsg, setSgInitMsg] = useState('')
+  const [d2cInitLoading, setD2cInitLoading] = useState(false)
+  const [d2cInitMsg, setD2cInitMsg] = useState('')
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
   const branches = groupMAByBranch(maData)
@@ -929,7 +1100,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
                 label="Drop RESPA Apps CSV / XLSX"
                 onFile={async (f) => {
                   setRespaLoading(true)
-                  try { await readRows(f); onAppsUpload(f, 'respa'); setRespaMsg(`Loaded ${f.name}`) }
+                  try { await readRows(f); onAppsUpload(f, 'respa', undefined); setRespaMsg(`Loaded ${f.name}`) }
                   catch { setRespaMsg('Error') }
                   setRespaLoading(false)
                 }}
@@ -942,11 +1113,39 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
                 label="Drop Initial Apps CSV / XLSX"
                 onFile={async (f) => {
                   setInitLoading(true)
-                  try { await readRows(f); onAppsUpload(f, 'initial'); setInitMsg(`Loaded ${f.name}`) }
+                  try { await readRows(f); onAppsUpload(f, 'initial', undefined); setInitMsg(`Loaded ${f.name}`) }
                   catch { setInitMsg('Error') }
                   setInitLoading(false)
                 }}
                 loading={initLoading} message={initMsg}
+              />
+            </Card>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Card style={{ flex: 1, borderTop: '3px solid #16a34a' }}>
+              <CardHead title="Upload SG Initial Apps CSV" subtitle="Self-generated initial applications" />
+              <UploadZone
+                label="Drop SG Initial Apps CSV / XLSX"
+                onFile={async (f) => {
+                  setSgInitLoading(true)
+                  try { await readRows(f); onAppsUpload(f, 'initial', 'sg'); setSgInitMsg(`Loaded ${f.name}`) }
+                  catch { setSgInitMsg('Error') }
+                  setSgInitLoading(false)
+                }}
+                loading={sgInitLoading} message={sgInitMsg}
+              />
+            </Card>
+            <Card style={{ flex: 1, borderTop: '3px solid #7c3aed' }}>
+              <CardHead title="Upload D2C Initial Apps CSV" subtitle="Better/D2C initial applications" />
+              <UploadZone
+                label="Drop D2C Initial Apps CSV / XLSX"
+                onFile={async (f) => {
+                  setD2cInitLoading(true)
+                  try { await readRows(f); onAppsUpload(f, 'initial', 'd2c'); setD2cInitMsg(`Loaded ${f.name}`) }
+                  catch { setD2cInitMsg('Error') }
+                  setD2cInitLoading(false)
+                }}
+                loading={d2cInitLoading} message={d2cInitMsg}
               />
             </Card>
           </div>
@@ -1256,6 +1455,7 @@ export default function Production() {
   const handleFundingsUpload = useCallback(async (file: File, source: 'sg' | 'd2c') => {
     const rows = await readRows(file)
     const parsed = parseFundingsRows(rows, source)
+    const weeklyParsed = parseFundingsWeekly(rows, source)
     setMaData(prev => {
       const next = [...prev]
       for (const p of parsed) {
@@ -1276,9 +1476,34 @@ export default function Production() {
       }
       return next
     })
+    if (weeklyParsed.size > 0) {
+      setWeeklyData(prev => {
+        const next = prev.map(w => ({ ...w }))
+        for (const [wk, v] of weeklyParsed.entries()) {
+          const idx = next.findIndex(w => w.weekStart === wk || w.weekLabel === v.label)
+          if (idx >= 0) {
+            if (source === 'sg') next[idx] = { ...next[idx], sgRespaByBranch: v.byBranch, weekStart: wk, families: (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.families,0) + v.byBranch.reduce((s,e)=>s+e.families,0), volume: (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.volume,0) + v.byBranch.reduce((s,e)=>s+e.volume,0) }
+            else next[idx] = { ...next[idx], d2cRespaByBranch: v.byBranch, weekStart: wk, families: (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.families,0) + v.byBranch.reduce((s,e)=>s+e.families,0), volume: (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.volume,0) + v.byBranch.reduce((s,e)=>s+e.volume,0) }
+          } else {
+            const totalFam = v.byBranch.reduce((s,e)=>s+e.families,0)
+            const totalVol = v.byBranch.reduce((s,e)=>s+e.volume,0)
+            next.push({
+              weekLabel: v.label, weekStart: wk,
+              families: totalFam, volume: totalVol, respaApps: totalFam, initialApps: 0,
+              ...(source === 'sg' ? { sgRespaByBranch: v.byBranch } : { d2cRespaByBranch: v.byBranch }),
+            })
+          }
+        }
+        return next.sort((a, b) => {
+          const ka = a.weekStart ?? a.weekLabel
+          const kb = b.weekStart ?? b.weekLabel
+          return ka < kb ? -1 : ka > kb ? 1 : 0
+        })
+      })
+    }
   }, [])
 
-  const handleAppsUpload = useCallback(async (file: File, type: 'respa'|'initial') => {
+  const handleAppsUpload = useCallback(async (file: File, type: 'respa'|'initial', source?: 'sg'|'d2c') => {
     const rows = await readRows(file)
     const parsed = parseAppsRows(rows)
     setMaData(prev => {
@@ -1295,6 +1520,28 @@ export default function Production() {
       })
       return next
     })
+    if (source) {
+      const weeklyParsed = parseAppsWeekly(rows, source, type)
+      if (weeklyParsed.size > 0) {
+        setWeeklyData(prev => {
+          const next = prev.map(w => ({ ...w }))
+          for (const [wk, entries] of weeklyParsed.entries()) {
+            const idx = next.findIndex(w => w.weekStart === wk)
+            const total = entries.reduce((s,e)=>s+e.count,0)
+            if (idx >= 0) {
+              if (type === 'initial' && source === 'sg') next[idx] = { ...next[idx], sgInitialByBranch: entries }
+              else if (type === 'initial' && source === 'd2c') next[idx] = { ...next[idx], d2cInitialByBranch: entries }
+              if (type === 'initial') {
+                const sgT = source === 'sg' ? total : (next[idx].sgInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
+                const d2cT = source === 'd2c' ? total : (next[idx].d2cInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
+                next[idx] = { ...next[idx], initialApps: sgT + d2cT }
+              }
+            }
+          }
+          return next
+        })
+      }
+    }
   }, [])
 
   const handleWeekUpload = useCallback(async (file: File) => {
@@ -1340,7 +1587,7 @@ export default function Production() {
       </div>
 
       {activeTab === 'branch' && <BranchProductionTab maData={maData} onSGUpload={(f) => handleFundingsUpload(f, 'sg')} onD2CUpload={(f) => handleFundingsUpload(f, 'd2c')} />}
-      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={handleAppsUpload} onWeekUpload={handleWeekUpload} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, t, s) => handleAppsUpload(f, t, s)} onWeekUpload={handleWeekUpload} />}
       {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
   )
