@@ -45,6 +45,7 @@ interface MARecord {
 
 interface BranchFundEntry { branch: string; families: number; volume: number }
 interface BranchCountEntry { branch: string; count: number }
+interface MaWeekEntry { name: string; respa: number; initial: number }
 
 interface WeeklyRow {
   weekLabel: string     // e.g. "Jul 4 – Jul 10"
@@ -57,6 +58,8 @@ interface WeeklyRow {
   d2cRespaByBranch?: BranchFundEntry[]
   sgInitialByBranch?: BranchCountEntry[]
   d2cInitialByBranch?: BranchCountEntry[]
+  sgByMA?: MaWeekEntry[]
+  d2cByMA?: MaWeekEntry[]
 }
 
 interface BranchGroup {
@@ -340,28 +343,34 @@ function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): Map<string, { respa
   return map
 }
 
-function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c', type: 'respa'|'initial'): Map<string, BranchCountEntry[]> {
-  const map = new Map<string, { [branch: string]: number }>()
+function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, MaWeekEntry[]> {
+  // Returns: weekKey -> array of MA entries with respa+initial counts for that week
+  const map = new Map<string, { [maName: string]: { respa: number; initial: number } }>()
   for (const row of rows) {
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
     const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
-    // RESPA = Application created at is filled; Initial = only Loan File Created is filled
     const appDateRaw = String(row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '').trim()
     const loanDateRaw = String(row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '').trim()
-    const dateRaw = type === 'respa' ? appDateRaw : (appDateRaw ? '' : loanDateRaw)
+    // RESPA if app date filled; Initial if app date empty and loan date filled
+    const isRespa = !!appDateRaw
+    const dateRaw = isRespa ? appDateRaw : loanDateRaw
     if (!dateRaw) continue
-    const dt = parseDate(dateRaw as string)
+    const dt = parseDate(dateRaw)
     if (!dt) continue
-    const branch = branchForMA(lc)
     const wk = isoWeekKey(dt)
     if (!map.has(wk)) map.set(wk, {})
-    const entry = map.get(wk)!
-    entry[branch] = (entry[branch] ?? 0) + 1
+    const wkEntry = map.get(wk)!
+    if (!wkEntry[lc]) wkEntry[lc] = { respa: 0, initial: 0 }
+    if (isRespa) wkEntry[lc].respa += 1
+    else wkEntry[lc].initial += 1
   }
-  const result = new Map<string, BranchCountEntry[]>()
-  for (const [wk, v] of map.entries()) {
-    result.set(wk, Object.entries(v).map(([branch, count]) => ({ branch, count })).sort((a, b) => b.count - a.count))
+  const result = new Map<string, MaWeekEntry[]>()
+  for (const [wk, byMA] of map.entries()) {
+    const entries = Object.entries(byMA)
+      .map(([name, v]) => ({ name, respa: v.respa, initial: v.initial }))
+      .sort((a, b) => (b.respa + b.initial) - (a.respa + a.initial))
+    result.set(wk, entries)
   }
   return result
 }
@@ -1008,6 +1017,8 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
   const [weekLoading, setWeekLoading] = useState(false)
   const [weekMsg, setWeekMsg] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
+  const sortedWeeks = [...weeklyData].sort((a,b) => { const ka = a.weekStart ?? a.weekLabel; const kb = b.weekStart ?? b.weekLabel; return ka > kb ? -1 : ka < kb ? 1 : 0 })
+  const [selectedWeekIdx, setSelectedWeekIdx] = useState(0)
   const [sgLoading, setSgLoading] = useState(false)
   const [sgMsg, setSgMsg] = useState('')
   const [d2cLoading, setD2cLoading] = useState(false)
@@ -1147,141 +1158,105 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
         </>
       )}
 
-      {subView === 'weekly' && (
-        <>
-          {/* One card per week, most recent first */}
-          {[...weeklyData].reverse().map((w, wi, arr) => {
-            const prev = arr[wi + 1]
-            const sgRespa = w.sgRespaByBranch ?? []
-            const d2cRespa = w.d2cRespaByBranch ?? []
-            const sgInit = w.sgInitialByBranch ?? []
-            const d2cInit = w.d2cInitialByBranch ?? []
-            const hasSG = sgRespa.length > 0 || sgInit.length > 0
-            const hasD2C = d2cRespa.length > 0 || d2cInit.length > 0
-            const sgRespaTotal = sgRespa.reduce((s,e)=>s+e.families,0)
-            const d2cRespaTotal = d2cRespa.reduce((s,e)=>s+e.families,0)
-            const sgInitTotal = sgInit.reduce((s,e)=>s+e.count,0)
-            const d2cInitTotal = d2cInit.reduce((s,e)=>s+e.count,0)
-            const totalRespaW = hasSG || hasD2C ? sgRespaTotal + d2cRespaTotal : w.respaApps
-            const totalInitW = hasSG || hasD2C ? sgInitTotal + d2cInitTotal : w.initialApps
-            return (
-              <Card key={w.weekLabel}>
-                {/* Week header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>{w.weekLabel}</div>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
-                    <span style={{ color: '#7c3aed', fontWeight: 700 }}>{totalRespaW} RESPA{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({totalRespaW - (prev.respaApps ?? 0) >= 0 ? '+' : ''}{totalRespaW - (prev.respaApps ?? 0)} WoW)</span>}</span>
-                    <span style={{ color: C.accent, fontWeight: 700 }}>{totalInitW} Initial{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({totalInitW - (prev.initialApps ?? 0) >= 0 ? '+' : ''}{totalInitW - (prev.initialApps ?? 0)} WoW)</span>}</span>
-                    {w.volume > 0 && <span style={{ color: C.navy, fontWeight: 700 }}>{fmtVol(w.volume)}</span>}
+      {subView === 'weekly' && (() => {
+        const selWeek = sortedWeeks[selectedWeekIdx]
+        const prevWeek = sortedWeeks[selectedWeekIdx + 1]
+        if (!selWeek) return <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>Upload SG and D2C reports to populate weekly tracking.</div></Card>
+
+        // Build branch cards from MA-level weekly data
+        function weekBranchCards(source: 'sg'|'d2c') {
+          const maList = source === 'sg' ? (selWeek.sgByMA ?? []) : (selWeek.d2cByMA ?? [])
+          const prevMaList = source === 'sg' ? (prevWeek?.sgByMA ?? []) : (prevWeek?.d2cByMA ?? [])
+          if (!maList.length) return null
+          const color = source === 'sg' ? '#16a34a' : '#7c3aed'
+          const label = source === 'sg' ? 'Self-Gen' : 'D2C'
+          const totalRespaW = maList.reduce((s,e)=>s+e.respa,0)
+          const totalInitW = maList.reduce((s,e)=>s+e.initial,0)
+          const prevRespaW = prevMaList.reduce((s,e)=>s+e.respa,0)
+          const prevInitW = prevMaList.reduce((s,e)=>s+e.initial,0)
+          return (
+            <Card key={source} style={{ borderTop: `3px solid ${color}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>{label}</div>
+                <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+                  <span style={{ color: '#7c3aed', fontWeight: 700 }}>
+                    {totalRespaW} RESPA
+                    {prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({totalRespaW - prevRespaW >= 0 ? '+' : ''}{totalRespaW - prevRespaW} WoW)</span>}
+                  </span>
+                  <span style={{ color: C.accent, fontWeight: 700 }}>
+                    {totalInitW} Initial
+                    {prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({totalInitW - prevInitW >= 0 ? '+' : ''}{totalInitW - prevInitW} WoW)</span>}
+                  </span>
+                </div>
+              </div>
+              {BRANCH_CONFIG.map(bc => {
+                const members = maList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
+                const prevMembers = prevMaList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
+                if (!members.length) return null
+                const brRespa = members.reduce((s,e)=>s+e.respa,0)
+                const brInit = members.reduce((s,e)=>s+e.initial,0)
+                const prevBrRespa = prevMembers.reduce((s,e)=>s+e.respa,0)
+                const prevBrInit = prevMembers.reduce((s,e)=>s+e.initial,0)
+                return (
+                  <div key={bc.name} style={{ marginBottom: 12 }}>
+                    {/* Branch row */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.borderSoft}` }}>
+                      <div style={{ width: 4, height: 28, borderRadius: 2, background: bc.color, flexShrink: 0 }} />
+                      <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: C.navy }}>{bc.name}</div>
+                      <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{brRespa} RESPA{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brRespa-prevBrRespa>=0?'+':''}{brRespa-prevBrRespa})</span>}</div>
+                      <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 12 }}>{brInit} Initial{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brInit-prevBrInit>=0?'+':''}{brInit-prevBrInit})</span>}</div>
+                    </div>
+                    {/* Individual MA rows */}
+                    {members.map(ma => {
+                      const prev = prevMembers.find(p => nameSimilar(p.name, ma.name))
+                      return (
+                        <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0 5px 20px', borderBottom: `1px solid ${C.bg}` }}>
+                          <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
+                          {ma.respa > 0 && <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{ma.respa} RESPA{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.respa-(prev.respa??0)>=0?'+':''}{ma.respa-(prev.respa??0)})</span>}</div>}
+                          {ma.initial > 0 && <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 8 }}>{ma.initial} Initial{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.initial-(prev.initial??0)>=0?'+':''}{ma.initial-(prev.initial??0)})</span>}</div>}
+                        </div>
+                      )
+                    })}
                   </div>
-                </div>
+                )
+              })}
+            </Card>
+          )
+        }
 
-                <div style={{ display: 'flex', gap: 20 }}>
-                  {/* Self-Gen column */}
-                  {(hasSG || !hasD2C) && (
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
-                        Self-Gen — {sgRespaTotal} RESPA · {sgInitTotal} Initial
-                      </div>
-                      {/* SG RESPA by branch */}
-                      {sgRespa.length > 0 && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>RESPA</div>
-                          {sgRespa.map(e => (
-                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
-                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{e.families}</div>
-                              {e.volume > 0 && <div style={{ fontSize: 12, color: C.dim }}>{fmtVol(e.volume)}</div>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* SG Initial by branch */}
-                      {sgInit.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>Initial</div>
-                          {sgInit.map(e => (
-                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
-                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{e.count}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* Individual MA breakdown for SG */}
-                      {branches.some(b => b.members.some(m => (m.ytdRespaAppsSG + m.ytdInitialAppsSG) > 0)) && (
-                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>By Person</div>
-                          {branches.flatMap(b => b.members.filter(m => m.ytdRespaAppsSG + m.ytdInitialAppsSG > 0).map(m => ({ ...m, branchColor: b.color }))).map(m => (
-                            <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
-                              <div style={{ flex: 1, fontSize: 12, color: C.text }}>{m.name}</div>
-                              <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{m.ytdRespaAppsSG} R</div>
-                              <div style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>{m.ytdInitialAppsSG} I</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+        return (
+          <>
+            {/* Week selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <select
+                value={selectedWeekIdx}
+                onChange={e => setSelectedWeekIdx(Number(e.target.value))}
+                style={{ padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, cursor: 'pointer', outline: 'none' }}
+              >
+                {sortedWeeks.map((w, i) => (
+                  <option key={w.weekLabel} value={i}>{w.weekLabel}{i === 0 ? ' (Latest)' : ''}</option>
+                ))}
+              </select>
+              {prevWeek && <span style={{ fontSize: 13, color: C.muted }}>vs. {prevWeek.weekLabel}</span>}
+            </div>
 
-                  {/* Divider */}
-                  {hasSG && hasD2C && <div style={{ width: 1, background: C.border, alignSelf: 'stretch' }} />}
+            {/* KPI row */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <KpiTile label="RESPA Apps" value={String(selWeek.respaApps)} sub={selWeek.weekLabel} />
+              <KpiTile label="Initial Apps" value={String(selWeek.initialApps)} sub={selWeek.weekLabel} />
+              {selWeek.volume > 0 && <KpiTile label="Volume" value={fmtVol(selWeek.volume)} sub={selWeek.weekLabel} />}
+              {selWeek.families > 0 && <KpiTile label="Families" value={String(selWeek.families)} sub={selWeek.weekLabel} />}
+            </div>
 
-                  {/* D2C column */}
-                  {hasD2C && (
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>
-                        D2C — {d2cRespaTotal} RESPA · {d2cInitTotal} Initial
-                      </div>
-                      {d2cRespa.length > 0 && (
-                        <div style={{ marginBottom: 10 }}>
-                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>RESPA</div>
-                          {d2cRespa.map(e => (
-                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
-                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed' }}>{e.families}</div>
-                              {e.volume > 0 && <div style={{ fontSize: 12, color: C.dim }}>{fmtVol(e.volume)}</div>}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {d2cInit.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>Initial</div>
-                          {d2cInit.map(e => (
-                            <div key={e.branch} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.bg}` }}>
-                              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{e.branch}</div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: C.accent }}>{e.count}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      {/* Individual MA breakdown for D2C */}
-                      {branches.some(b => b.members.some(m => (m.ytdRespaAppsD2C + m.ytdInitialAppsD2C) > 0)) && (
-                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
-                          <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, marginBottom: 4 }}>By Person</div>
-                          {branches.flatMap(b => b.members.filter(m => m.ytdRespaAppsD2C + m.ytdInitialAppsD2C > 0).map(m => ({ ...m }))).map(m => (
-                            <div key={m.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
-                              <div style={{ flex: 1, fontSize: 12, color: C.text }}>{m.name}</div>
-                              <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{m.ytdRespaAppsD2C} R</div>
-                              <div style={{ fontSize: 12, color: C.accent, fontWeight: 600 }}>{m.ytdInitialAppsD2C} I</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+            {weekBranchCards('sg')}
+            {weekBranchCards('d2c')}
 
-                  {/* Fallback: no branch data yet */}
-                  {!hasSG && !hasD2C && (
-                    <div style={{ color: C.muted, fontSize: 13 }}>Upload SG and D2C reports to see branch breakdown</div>
-                  )}
-                </div>
-              </Card>
-            )
-          })}
-        </>
-      )}
+            {!selWeek.sgByMA?.length && !selWeek.d2cByMA?.length && (
+              <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>No branch-level data for this week. Upload SG and D2C reports to populate.</div></Card>
+            )}
+          </>
+        )
+      })()}
     </div>
   )
 }
@@ -1523,32 +1498,42 @@ export default function Production() {
       })
       return next
     })
-    const weeklyRespa = parseAppsWeekly(rows, source, 'respa')
-    const weeklyInit = parseAppsWeekly(rows, source, 'initial')
+    const weeklyMA = parseAppsWeekly(rows, source)
     setWeeklyData(prev => {
       const next = prev.map(w => ({ ...w }))
-      for (const [wk, entries] of weeklyRespa.entries()) {
+      for (const [wk, maEntries] of weeklyMA.entries()) {
         const idx = next.findIndex(w => w.weekStart === wk)
+        const totalRespa = maEntries.reduce((s,e)=>s+e.respa,0)
+        const totalInit = maEntries.reduce((s,e)=>s+e.initial,0)
+        // Derive branch-level counts from MA entries
+        const byBranchRespa: { [b: string]: number } = {}
+        const byBranchInit: { [b: string]: number } = {}
+        for (const e of maEntries) {
+          const b = branchForMA(e.name)
+          byBranchRespa[b] = (byBranchRespa[b] ?? 0) + e.respa
+          byBranchInit[b] = (byBranchInit[b] ?? 0) + e.initial
+        }
+        const respaByBranch = Object.entries(byBranchRespa).filter(([,v])=>v>0).map(([branch,families])=>({ branch, families, volume: 0 })).sort((a,b)=>b.families-a.families)
+        const initByBranch = Object.entries(byBranchInit).filter(([,v])=>v>0).map(([branch,count])=>({ branch, count })).sort((a,b)=>b.count-a.count)
         if (idx >= 0) {
-          if (source === 'sg') next[idx] = { ...next[idx], sgRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) }
-          else next[idx] = { ...next[idx], d2cRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) }
+          const updates = source === 'sg'
+            ? { sgByMA: maEntries, sgRespaByBranch: respaByBranch, sgInitialByBranch: initByBranch }
+            : { d2cByMA: maEntries, d2cRespaByBranch: respaByBranch, d2cInitialByBranch: initByBranch }
+          next[idx] = { ...next[idx], ...updates }
           const sgR = (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.families,0)
           const d2cR = (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.families,0)
-          next[idx] = { ...next[idx], respaApps: sgR + d2cR }
+          const sgI = (next[idx].sgInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
+          const d2cI = (next[idx].d2cInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
+          next[idx] = { ...next[idx], respaApps: sgR + d2cR, initialApps: sgI + d2cI }
+        } else {
+          next.push({
+            weekLabel: isoWeekLabel(new Date(wk + 'T12:00:00')), weekStart: wk,
+            families: 0, volume: 0, respaApps: totalRespa, initialApps: totalInit,
+            ...(source === 'sg' ? { sgByMA: maEntries, sgRespaByBranch: respaByBranch, sgInitialByBranch: initByBranch } : { d2cByMA: maEntries, d2cRespaByBranch: respaByBranch, d2cInitialByBranch: initByBranch }),
+          })
         }
       }
-      for (const [wk, entries] of weeklyInit.entries()) {
-        const total = entries.reduce((s,e)=>s+e.count,0)
-        const idx = next.findIndex(w => w.weekStart === wk)
-        if (idx >= 0) {
-          if (source === 'sg') next[idx] = { ...next[idx], sgInitialByBranch: entries }
-          else next[idx] = { ...next[idx], d2cInitialByBranch: entries }
-          const sgT = source === 'sg' ? total : (next[idx].sgInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
-          const d2cT = source === 'd2c' ? total : (next[idx].d2cInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
-          next[idx] = { ...next[idx], initialApps: sgT + d2cT }
-        }
-      }
-      return next
+      return next.sort((a,b) => { const ka = a.weekStart ?? a.weekLabel; const kb = b.weekStart ?? b.weekLabel; return ka < kb ? -1 : ka > kb ? 1 : 0 })
     })
   }, [])
 
