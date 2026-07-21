@@ -299,11 +299,14 @@ function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: 
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
     const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
-    const dateRaw = row['Application created at'] ?? row['App Date'] ?? ''
-    const dt = dateRaw ? parseDate(dateRaw as string) : null
-    const mo = dt ? dt.getMonth() : -1
     const type = String(row['App Type'] ?? row['Application Type'] ?? '')
     const isRespa = /respa/i.test(type)
+    // RESPA uses Application created at; Initial uses Loan File Created date
+    const dateRaw = isRespa
+      ? (row['Application created at'] ?? row['App Date'] ?? '')
+      : (row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Application created at'] ?? row['App Date'] ?? '')
+    const dt = dateRaw ? parseDate(dateRaw as string) : null
+    const mo = dt ? dt.getMonth() : -1
     const maKey = normName(lc)
     if (!map.has(maKey)) map.set(maKey, { respa: Array(12).fill(0) as number[], initial: Array(12).fill(0) as number[] })
     const rec = map.get(maKey)!
@@ -315,17 +318,20 @@ function parseAppsRows(rows: CsvRow[]): Map<string, { respa: number[]; initial: 
 function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c', type: 'respa'|'initial'): Map<string, BranchCountEntry[]> {
   const map = new Map<string, { [branch: string]: number }>()
   for (const row of rows) {
-    const dateRaw = row['Application created at'] ?? row['App Date'] ?? ''
+    const appType = String(row['App Type'] ?? row['Application Type'] ?? '')
+    const isRespa = /respa/i.test(appType)
+    if (type === 'respa' && !isRespa) continue
+    if (type === 'initial' && isRespa) continue
+    // RESPA uses Application created at; Initial uses Loan File Created date
+    const dateRaw = isRespa
+      ? (row['Application created at'] ?? row['App Date'] ?? '')
+      : (row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Application created at'] ?? row['App Date'] ?? '')
     if (!dateRaw) continue
     const dt = parseDate(dateRaw as string)
     if (!dt) continue
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
     const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
     if (!lc) continue
-    const appType = String(row['App Type'] ?? row['Application Type'] ?? '')
-    const isRespa = /respa/i.test(appType)
-    if (type === 'respa' && !isRespa) continue
-    if (type === 'initial' && isRespa) continue
     const branch = branchForMA(lc)
     const wk = isoWeekKey(dt)
     if (!map.has(wk)) map.set(wk, {})
@@ -985,7 +991,7 @@ function BranchProductionTab({ maData, onSGUpload, onD2CUpload }: { maData: MARe
 function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
   maData: MARecord[]
   weeklyData: WeeklyRow[]
-  onAppsUpload: (file: File, type: 'respa'|'initial', source?: 'sg'|'d2c') => void
+  onAppsUpload: (file: File, source: 'sg'|'d2c') => void
   onWeekUpload: (file: File) => void
 }) {
   const [subView, setSubView] = useState('branch')
@@ -993,17 +999,13 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
   const [rangeFrom, setRangeFrom] = useState(0)
   const [rangeTo, setRangeTo] = useState(6)
   const [appMetric, setAppMetric] = useState('both')
-  const [respaLoading, setRespaLoading] = useState(false)
-  const [respaMsg, setRespaMsg] = useState('')
-  const [initLoading, setInitLoading] = useState(false)
-  const [initMsg, setInitMsg] = useState('')
   const [weekLoading, setWeekLoading] = useState(false)
   const [weekMsg, setWeekMsg] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
-  const [sgInitLoading, setSgInitLoading] = useState(false)
-  const [sgInitMsg, setSgInitMsg] = useState('')
-  const [d2cInitLoading, setD2cInitLoading] = useState(false)
-  const [d2cInitMsg, setD2cInitMsg] = useState('')
+  const [sgLoading, setSgLoading] = useState(false)
+  const [sgMsg, setSgMsg] = useState('')
+  const [d2cLoading, setD2cLoading] = useState(false)
+  const [d2cMsg, setD2cMsg] = useState('')
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
   const branches = groupMAByBranch(maData)
@@ -1094,58 +1096,30 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
           </Card>
 
           <div style={{ display: 'flex', gap: 16 }}>
-            <Card style={{ flex: 1 }}>
-              <CardHead title="Upload RESPA Apps CSV" />
-              <UploadZone
-                label="Drop RESPA Apps CSV / XLSX"
-                onFile={async (f) => {
-                  setRespaLoading(true)
-                  try { await readRows(f); onAppsUpload(f, 'respa', undefined); setRespaMsg(`Loaded ${f.name}`) }
-                  catch { setRespaMsg('Error') }
-                  setRespaLoading(false)
-                }}
-                loading={respaLoading} message={respaMsg}
-              />
-            </Card>
-            <Card style={{ flex: 1 }}>
-              <CardHead title="Upload Initial Apps CSV" />
-              <UploadZone
-                label="Drop Initial Apps CSV / XLSX"
-                onFile={async (f) => {
-                  setInitLoading(true)
-                  try { await readRows(f); onAppsUpload(f, 'initial', undefined); setInitMsg(`Loaded ${f.name}`) }
-                  catch { setInitMsg('Error') }
-                  setInitLoading(false)
-                }}
-                loading={initLoading} message={initMsg}
-              />
-            </Card>
-          </div>
-          <div style={{ display: 'flex', gap: 16 }}>
             <Card style={{ flex: 1, borderTop: '3px solid #16a34a' }}>
-              <CardHead title="Upload SG Initial Apps CSV" subtitle="Self-generated initial applications" />
+              <CardHead title="Upload Self-Gen Applications" subtitle="One report for all SG apps — RESPA and Initial pulled by date field" />
               <UploadZone
-                label="Drop SG Initial Apps CSV / XLSX"
+                label="Drop Self-Gen Applications CSV / XLSX"
                 onFile={async (f) => {
-                  setSgInitLoading(true)
-                  try { await readRows(f); onAppsUpload(f, 'initial', 'sg'); setSgInitMsg(`Loaded ${f.name}`) }
-                  catch { setSgInitMsg('Error') }
-                  setSgInitLoading(false)
+                  setSgLoading(true)
+                  try { await onAppsUpload(f, 'sg'); setSgMsg(`Loaded ${f.name}`) }
+                  catch { setSgMsg('Error reading file') }
+                  setSgLoading(false)
                 }}
-                loading={sgInitLoading} message={sgInitMsg}
+                loading={sgLoading} message={sgMsg}
               />
             </Card>
             <Card style={{ flex: 1, borderTop: '3px solid #7c3aed' }}>
-              <CardHead title="Upload D2C Initial Apps CSV" subtitle="Better/D2C initial applications" />
+              <CardHead title="Upload D2C Applications" subtitle="One report for all D2C apps — RESPA and Initial pulled by date field" />
               <UploadZone
-                label="Drop D2C Initial Apps CSV / XLSX"
+                label="Drop D2C Applications CSV / XLSX"
                 onFile={async (f) => {
-                  setD2cInitLoading(true)
-                  try { await readRows(f); onAppsUpload(f, 'initial', 'd2c'); setD2cInitMsg(`Loaded ${f.name}`) }
-                  catch { setD2cInitMsg('Error') }
-                  setD2cInitLoading(false)
+                  setD2cLoading(true)
+                  try { await onAppsUpload(f, 'd2c'); setD2cMsg(`Loaded ${f.name}`) }
+                  catch { setD2cMsg('Error reading file') }
+                  setD2cLoading(false)
                 }}
-                loading={d2cInitLoading} message={d2cInitMsg}
+                loading={d2cLoading} message={d2cMsg}
               />
             </Card>
           </div>
@@ -1503,7 +1477,7 @@ export default function Production() {
     }
   }, [])
 
-  const handleAppsUpload = useCallback(async (file: File, type: 'respa'|'initial', source?: 'sg'|'d2c') => {
+  const handleAppsUpload = useCallback(async (file: File, source: 'sg'|'d2c') => {
     const rows = await readRows(file)
     const parsed = parseAppsRows(rows)
     setMaData(prev => {
@@ -1511,37 +1485,41 @@ export default function Production() {
       parsed.forEach((appData, maKey) => {
         const idx = next.findIndex(m => normName(m.name) === maKey || nameSimilar(m.name, maKey))
         if (idx >= 0) {
-          if (type === 'respa') {
-            next[idx] = { ...next[idx], monthlyRespaApps: appData.respa, ytdRespaApps: appData.respa.reduce((a,b)=>a+b,0) }
-          } else {
-            next[idx] = { ...next[idx], monthlyInitialApps: appData.initial, ytdInitialApps: appData.initial.reduce((a,b)=>a+b,0) }
+          next[idx] = {
+            ...next[idx],
+            monthlyRespaApps: appData.respa,
+            ytdRespaApps: appData.respa.reduce((a,b)=>a+b,0),
+            monthlyInitialApps: appData.initial,
+            ytdInitialApps: appData.initial.reduce((a,b)=>a+b,0),
           }
         }
       })
       return next
     })
-    if (source) {
-      const weeklyParsed = parseAppsWeekly(rows, source, type)
-      if (weeklyParsed.size > 0) {
-        setWeeklyData(prev => {
-          const next = prev.map(w => ({ ...w }))
-          for (const [wk, entries] of weeklyParsed.entries()) {
-            const idx = next.findIndex(w => w.weekStart === wk)
-            const total = entries.reduce((s,e)=>s+e.count,0)
-            if (idx >= 0) {
-              if (type === 'initial' && source === 'sg') next[idx] = { ...next[idx], sgInitialByBranch: entries }
-              else if (type === 'initial' && source === 'd2c') next[idx] = { ...next[idx], d2cInitialByBranch: entries }
-              if (type === 'initial') {
-                const sgT = source === 'sg' ? total : (next[idx].sgInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
-                const d2cT = source === 'd2c' ? total : (next[idx].d2cInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
-                next[idx] = { ...next[idx], initialApps: sgT + d2cT }
-              }
-            }
-          }
-          return next
-        })
+    const weeklyRespa = parseAppsWeekly(rows, source, 'respa')
+    const weeklyInit = parseAppsWeekly(rows, source, 'initial')
+    setWeeklyData(prev => {
+      const next = prev.map(w => ({ ...w }))
+      for (const [wk, entries] of weeklyRespa.entries()) {
+        const idx = next.findIndex(w => w.weekStart === wk)
+        if (idx >= 0) {
+          const total = entries.reduce((s,e)=>s+e.count,0)
+          next[idx] = { ...next[idx], ...(source === 'sg' ? { sgRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) } : { d2cRespaByBranch: entries.map(e => ({ branch: e.branch, families: e.count, volume: 0 })) }), respaApps: total }
+        }
       }
-    }
+      for (const [wk, entries] of weeklyInit.entries()) {
+        const idx = next.findIndex(w => w.weekStart === wk)
+        const total = entries.reduce((s,e)=>s+e.count,0)
+        if (idx >= 0) {
+          if (source === 'sg') next[idx] = { ...next[idx], sgInitialByBranch: entries }
+          else next[idx] = { ...next[idx], d2cInitialByBranch: entries }
+          const sgT = source === 'sg' ? total : (next[idx].sgInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
+          const d2cT = source === 'd2c' ? total : (next[idx].d2cInitialByBranch ?? []).reduce((s,e)=>s+e.count,0)
+          next[idx] = { ...next[idx], initialApps: sgT + d2cT }
+        }
+      }
+      return next
+    })
   }, [])
 
   const handleWeekUpload = useCallback(async (file: File) => {
@@ -1587,7 +1565,7 @@ export default function Production() {
       </div>
 
       {activeTab === 'branch' && <BranchProductionTab maData={maData} onSGUpload={(f) => handleFundingsUpload(f, 'sg')} onD2CUpload={(f) => handleFundingsUpload(f, 'd2c')} />}
-      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, t, s) => handleAppsUpload(f, t, s)} onWeekUpload={handleWeekUpload} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} />}
       {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
   )
