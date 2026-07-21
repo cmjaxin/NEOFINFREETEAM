@@ -1019,6 +1019,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
   const sortedWeeks = [...weeklyData].sort((a,b) => { const ka = a.weekStart ?? a.weekLabel; const kb = b.weekStart ?? b.weekLabel; return ka > kb ? -1 : ka < kb ? 1 : 0 })
   const [selectedWeekIdx, setSelectedWeekIdx] = useState(0)
+  const [weeklySource, setWeeklySource] = useState<'all'|'sg'|'d2c'>('all')
   const [sgLoading, setSgLoading] = useState(false)
   const [sgMsg, setSgMsg] = useState('')
   const [d2cLoading, setD2cLoading] = useState(false)
@@ -1163,96 +1164,122 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
         const prevWeek = sortedWeeks[selectedWeekIdx + 1]
         if (!selWeek) return <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>Upload SG and D2C reports to populate weekly tracking.</div></Card>
 
-        // Build branch cards from MA-level weekly data
-        function weekBranchCards(source: 'sg'|'d2c') {
-          const maList = source === 'sg' ? (selWeek.sgByMA ?? []) : (selWeek.d2cByMA ?? [])
-          const prevMaList = source === 'sg' ? (prevWeek?.sgByMA ?? []) : (prevWeek?.d2cByMA ?? [])
-          if (!maList.length) return null
-          const color = source === 'sg' ? '#16a34a' : '#7c3aed'
-          const label = source === 'sg' ? 'Self-Gen' : 'D2C'
-          const totalRespaW = maList.reduce((s,e)=>s+e.respa,0)
-          const totalInitW = maList.reduce((s,e)=>s+e.initial,0)
-          const prevRespaW = prevMaList.reduce((s,e)=>s+e.respa,0)
-          const prevInitW = prevMaList.reduce((s,e)=>s+e.initial,0)
-          return (
-            <Card key={source} style={{ borderTop: `3px solid ${color}` }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>{label}</div>
-                <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
-                  <span style={{ color: '#7c3aed', fontWeight: 700 }}>
-                    {totalRespaW} RESPA
-                    {prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({totalRespaW - prevRespaW >= 0 ? '+' : ''}{totalRespaW - prevRespaW} WoW)</span>}
-                  </span>
-                  <span style={{ color: C.accent, fontWeight: 700 }}>
-                    {totalInitW} Initial
-                    {prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({totalInitW - prevInitW >= 0 ? '+' : ''}{totalInitW - prevInitW} WoW)</span>}
-                  </span>
-                </div>
-              </div>
-              {BRANCH_CONFIG.map(bc => {
-                const members = maList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
-                const prevMembers = prevMaList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
-                if (!members.length) return null
-                const brRespa = members.reduce((s,e)=>s+e.respa,0)
-                const brInit = members.reduce((s,e)=>s+e.initial,0)
-                const prevBrRespa = prevMembers.reduce((s,e)=>s+e.respa,0)
-                const prevBrInit = prevMembers.reduce((s,e)=>s+e.initial,0)
-                return (
-                  <div key={bc.name} style={{ marginBottom: 12 }}>
-                    {/* Branch row */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.borderSoft}` }}>
-                      <div style={{ width: 4, height: 28, borderRadius: 2, background: bc.color, flexShrink: 0 }} />
-                      <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: C.navy }}>{bc.name}</div>
-                      <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{brRespa} RESPA{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brRespa-prevBrRespa>=0?'+':''}{brRespa-prevBrRespa})</span>}</div>
-                      <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 12 }}>{brInit} Initial{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brInit-prevBrInit>=0?'+':''}{brInit-prevBrInit})</span>}</div>
-                    </div>
-                    {/* Individual MA rows */}
-                    {members.map(ma => {
-                      const prev = prevMembers.find(p => nameSimilar(p.name, ma.name))
-                      return (
-                        <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0 5px 20px', borderBottom: `1px solid ${C.bg}` }}>
-                          <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
-                          {ma.respa > 0 && <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{ma.respa} RESPA{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.respa-(prev.respa??0)>=0?'+':''}{ma.respa-(prev.respa??0)})</span>}</div>}
-                          {ma.initial > 0 && <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 8 }}>{ma.initial} Initial{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.initial-(prev.initial??0)>=0?'+':''}{ma.initial-(prev.initial??0)})</span>}</div>}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )
-              })}
-            </Card>
-          )
+        // Merge SG + D2C MA lists for "All" view
+        function mergeMALists(sgList: MaWeekEntry[], d2cList: MaWeekEntry[]): MaWeekEntry[] {
+          const map: { [name: string]: MaWeekEntry } = {}
+          for (const e of [...sgList, ...d2cList]) {
+            if (!map[e.name]) map[e.name] = { name: e.name, respa: 0, initial: 0 }
+            map[e.name].respa += e.respa
+            map[e.name].initial += e.initial
+          }
+          return Object.values(map).sort((a,b) => (b.respa+b.initial)-(a.respa+a.initial))
         }
+
+        const sgList = selWeek.sgByMA ?? []
+        const d2cList = selWeek.d2cByMA ?? []
+        const prevSgList = prevWeek?.sgByMA ?? []
+        const prevD2cList = prevWeek?.d2cByMA ?? []
+
+        const activeList = weeklySource === 'sg' ? sgList : weeklySource === 'd2c' ? d2cList : mergeMALists(sgList, d2cList)
+        const prevActiveList = weeklySource === 'sg' ? prevSgList : weeklySource === 'd2c' ? prevD2cList : mergeMALists(prevSgList, prevD2cList)
+
+        const sourceColor = weeklySource === 'sg' ? '#16a34a' : weeklySource === 'd2c' ? '#7c3aed' : C.navy
+        const totalRespa = activeList.reduce((s,e)=>s+e.respa,0)
+        const totalInit = activeList.reduce((s,e)=>s+e.initial,0)
+        const prevTotalRespa = prevActiveList.reduce((s,e)=>s+e.respa,0)
+        const prevTotalInit = prevActiveList.reduce((s,e)=>s+e.initial,0)
+
+        const weeklySourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
 
         return (
           <>
-            {/* Week selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <select
-                value={selectedWeekIdx}
-                onChange={e => setSelectedWeekIdx(Number(e.target.value))}
-                style={{ padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, cursor: 'pointer', outline: 'none' }}
-              >
-                {sortedWeeks.map((w, i) => (
-                  <option key={w.weekLabel} value={i}>{w.weekLabel}{i === 0 ? ' (Latest)' : ''}</option>
-                ))}
-              </select>
-              {prevWeek && <span style={{ fontSize: 13, color: C.muted }}>vs. {prevWeek.weekLabel}</span>}
+            {/* Controls row: week selector + source toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <select
+                  value={selectedWeekIdx}
+                  onChange={e => setSelectedWeekIdx(Number(e.target.value))}
+                  style={{ padding: '8px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, fontWeight: 600, color: C.navy, background: C.white, cursor: 'pointer', outline: 'none' }}
+                >
+                  {sortedWeeks.map((w, i) => (
+                    <option key={w.weekLabel} value={i}>{w.weekLabel}{i === 0 ? ' (Latest)' : ''}</option>
+                  ))}
+                </select>
+                {prevWeek && <span style={{ fontSize: 13, color: C.muted }}>vs. {prevWeek.weekLabel}</span>}
+              </div>
+              <ToggleGroup options={weeklySourceOpts} value={weeklySource} onChange={v => setWeeklySource(v as 'all'|'sg'|'d2c')} />
             </div>
 
             {/* KPI row */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <KpiTile label="RESPA Apps" value={String(selWeek.respaApps)} sub={selWeek.weekLabel} />
-              <KpiTile label="Initial Apps" value={String(selWeek.initialApps)} sub={selWeek.weekLabel} />
-              {selWeek.volume > 0 && <KpiTile label="Volume" value={fmtVol(selWeek.volume)} sub={selWeek.weekLabel} />}
-              {selWeek.families > 0 && <KpiTile label="Families" value={String(selWeek.families)} sub={selWeek.weekLabel} />}
+              <KpiTile label="RESPA Apps" value={String(totalRespa)} sub={prevWeek ? `${totalRespa - prevTotalRespa >= 0 ? '+' : ''}${totalRespa - prevTotalRespa} WoW` : selWeek.weekLabel} />
+              <KpiTile label="Initial Apps" value={String(totalInit)} sub={prevWeek ? `${totalInit - prevTotalInit >= 0 ? '+' : ''}${totalInit - prevTotalInit} WoW` : selWeek.weekLabel} />
+              {weeklySource !== 'd2c' && selWeek.volume > 0 && <KpiTile label="Volume" value={fmtVol(selWeek.volume)} sub={selWeek.weekLabel} />}
             </div>
 
-            {weekBranchCards('sg')}
-            {weekBranchCards('d2c')}
-
-            {!selWeek.sgByMA?.length && !selWeek.d2cByMA?.length && (
-              <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>No branch-level data for this week. Upload SG and D2C reports to populate.</div></Card>
+            {/* Branch + MA breakdown */}
+            {activeList.length > 0 ? (
+              <Card style={{ borderTop: `3px solid ${sourceColor}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>
+                    {weeklySource === 'sg' ? 'Self-Gen' : weeklySource === 'd2c' ? 'D2C' : 'All Sources'}
+                  </div>
+                  <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+                    <span style={{ color: '#7c3aed', fontWeight: 700 }}>{totalRespa} RESPA</span>
+                    <span style={{ color: C.accent, fontWeight: 700 }}>{totalInit} Initial</span>
+                  </div>
+                </div>
+                {BRANCH_CONFIG.map(bc => {
+                  const members = activeList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
+                  const prevMembers = prevActiveList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
+                  if (!members.length) return null
+                  const brRespa = members.reduce((s,e)=>s+e.respa,0)
+                  const brInit = members.reduce((s,e)=>s+e.initial,0)
+                  const prevBrRespa = prevMembers.reduce((s,e)=>s+e.respa,0)
+                  const prevBrInit = prevMembers.reduce((s,e)=>s+e.initial,0)
+                  return (
+                    <div key={bc.name} style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.borderSoft}` }}>
+                        <div style={{ width: 4, height: 28, borderRadius: 2, background: bc.color, flexShrink: 0 }} />
+                        <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: C.navy }}>{bc.name}</div>
+                        <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>
+                          {brRespa} RESPA{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brRespa-prevBrRespa>=0?'+':''}{brRespa-prevBrRespa})</span>}
+                        </div>
+                        <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 12 }}>
+                          {brInit} Initial{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brInit-prevBrInit>=0?'+':''}{brInit-prevBrInit})</span>}
+                        </div>
+                      </div>
+                      {members.map(ma => {
+                        const prev = prevMembers.find(p => nameSimilar(p.name, ma.name))
+                        // For "All" view, also show SG/D2C split per MA
+                        const sgEntry = weeklySource === 'all' ? sgList.find(e => nameSimilar(e.name, ma.name)) : null
+                        const d2cEntry = weeklySource === 'all' ? d2cList.find(e => nameSimilar(e.name, ma.name)) : null
+                        return (
+                          <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0 5px 20px', borderBottom: `1px solid ${C.bg}` }}>
+                            <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
+                            {weeklySource === 'all' ? (
+                              <>
+                                {(sgEntry?.respa ?? 0) > 0 && <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>{sgEntry!.respa}R SG</div>}
+                                {(sgEntry?.initial ?? 0) > 0 && <div style={{ fontSize: 12, color: '#16a34a' }}>{sgEntry!.initial}I SG</div>}
+                                {(d2cEntry?.respa ?? 0) > 0 && <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{d2cEntry!.respa}R D2C</div>}
+                                {(d2cEntry?.initial ?? 0) > 0 && <div style={{ fontSize: 12, color: '#7c3aed' }}>{d2cEntry!.initial}I D2C</div>}
+                                <div style={{ fontSize: 13, color: C.navy, fontWeight: 700, marginLeft: 4 }}>{ma.respa + ma.initial} total</div>
+                              </>
+                            ) : (
+                              <>
+                                {ma.respa > 0 && <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{ma.respa} RESPA{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.respa-(prev.respa??0)>=0?'+':''}{ma.respa-(prev.respa??0)})</span>}</div>}
+                                {ma.initial > 0 && <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 8 }}>{ma.initial} Initial{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.initial-(prev.initial??0)>=0?'+':''}{ma.initial-(prev.initial??0)})</span>}</div>}
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })}
+              </Card>
+            ) : (
+              <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>No data for this week / source. Upload SG and D2C reports to populate.</div></Card>
             )}
           </>
         )
