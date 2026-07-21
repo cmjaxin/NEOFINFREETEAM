@@ -778,17 +778,15 @@ function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, 
 }
 
 // ─── Branch Production Tab ────────────────────────────────────────────────────
-function BranchProductionTab({ maData, onSGUpload, onD2CUpload }: { maData: MARecord[]; onSGUpload: (file: File) => void; onD2CUpload: (file: File) => void }) {
+function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[]; onFundingsUpload: (file: File) => void }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [rangeFrom, setRangeFrom] = useState(0)
   const [rangeTo, setRangeTo] = useState(6)
   const [metric, setMetric] = useState('volume')
   const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
   const [source, setSource] = useState<'all'|'sg'|'d2c'>('all')
-  const [sgLoading, setSgLoading] = useState(false)
-  const [sgMsg, setSgMsg] = useState('')
-  const [d2cLoading, setD2cLoading] = useState(false)
-  const [d2cMsg, setD2cMsg] = useState('')
+  const [fundLoading, setFundLoading] = useState(false)
+  const [fundMsg, setFundMsg] = useState('')
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
   const branches = groupMAByBranch(maData)
@@ -955,34 +953,19 @@ function BranchProductionTab({ maData, onSGUpload, onD2CUpload }: { maData: MARe
         </div>
       </Card>
 
-      <div style={{ display: 'flex', gap: 16 }}>
-        <Card style={{ flex: 1, borderTop: `3px solid #16a34a` }}>
-          <CardHead title="Upload Self-Generated Fundings" subtitle="Loans originated by the MA directly" />
-          <UploadZone
-            label="Drop Self-Gen YTD Fundings CSV / XLSX"
-            onFile={async (f) => {
-              setSgLoading(true)
-              try { onSGUpload(f); setSgMsg(`Loaded ${f.name}`) }
-              catch { setSgMsg('Error reading file') }
-              setSgLoading(false)
-            }}
-            loading={sgLoading} message={sgMsg}
-          />
-        </Card>
-        <Card style={{ flex: 1, borderTop: `3px solid #7c3aed` }}>
-          <CardHead title="Upload D2C Fundings" subtitle="Direct-to-consumer loans" />
-          <UploadZone
-            label="Drop D2C YTD Fundings CSV / XLSX"
-            onFile={async (f) => {
-              setD2cLoading(true)
-              try { onD2CUpload(f); setD2cMsg(`Loaded ${f.name}`) }
-              catch { setD2cMsg('Error reading file') }
-              setD2cLoading(false)
-            }}
-            loading={d2cLoading} message={d2cMsg}
-          />
-        </Card>
-      </div>
+      <Card>
+        <CardHead title="Upload Fundings" subtitle="YTD fundings export — source (SG vs D2C) detected from Lead Source field" />
+        <UploadZone
+          label="Drop YTD Fundings CSV / XLSX"
+          onFile={async (f) => {
+            setFundLoading(true)
+            try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
+            catch { setFundMsg('Error reading file') }
+            setFundLoading(false)
+          }}
+          loading={fundLoading} message={fundMsg}
+        />
+      </Card>
     </div>
   )
 }
@@ -1426,54 +1409,72 @@ export default function Production() {
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
   const [activeTab, setActiveTab] = useState<'branch'|'apps'|'changemakers'>('branch')
 
-  const handleFundingsUpload = useCallback(async (file: File, source: 'sg' | 'd2c') => {
+  function rowSource(row: CsvRow): 'sg' | 'd2c' {
+    const s = String(row['Lead Source'] ?? row['Source'] ?? row['Channel'] ?? row['Loan Source'] ?? row['Lead Type'] ?? '').toLowerCase()
+    return /d2c|better|direct/.test(s) ? 'd2c' : 'sg'
+  }
+
+  const handleFundingsUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
-    const parsed = parseFundingsRows(rows, source)
-    const weeklyParsed = parseFundingsWeekly(rows, source)
+    const sgRows = rows.filter(r => rowSource(r) === 'sg')
+    const d2cRows = rows.filter(r => rowSource(r) === 'd2c')
+    const parsedSG = parseFundingsRows(sgRows.length ? sgRows : rows, sgRows.length ? 'sg' : 'all')
+    const parsedD2C = parseFundingsRows(d2cRows, 'd2c')
+    const weeklySG = parseFundingsWeekly(sgRows.length ? sgRows : rows, 'sg')
+    const weeklyD2C = parseFundingsWeekly(d2cRows, 'd2c')
+
     setMaData(prev => {
       const next = [...prev]
-      for (const p of parsed) {
-        const idx = next.findIndex(m => nameSimilar(m.name, p.name))
-        if (idx >= 0) {
-          next[idx] = {
-            ...next[idx],
-            ytdFamilies: next[idx].ytdFamiliesSG + next[idx].ytdFamiliesD2C + (source === 'sg' ? p.ytdFamiliesSG : 0) + (source === 'd2c' ? p.ytdFamiliesD2C : 0),
-            ytdVolume: next[idx].ytdVolumeSG + next[idx].ytdVolumeD2C + (source === 'sg' ? p.ytdVolumeSG : 0) + (source === 'd2c' ? p.ytdVolumeD2C : 0),
-            monthlyFamilies: source === 'sg' ? p.monthlyFamiliesSG.map((v, i) => v + (next[idx].monthlyFamiliesD2C[i] ?? 0)) : p.monthlyFamiliesD2C.map((v, i) => v + (next[idx].monthlyFamiliesSG[i] ?? 0)),
-            monthlyVolume: source === 'sg' ? p.monthlyVolumeSG.map((v, i) => v + (next[idx].monthlyVolumeD2C[i] ?? 0)) : p.monthlyVolumeD2C.map((v, i) => v + (next[idx].monthlyVolumeSG[i] ?? 0)),
-            ...(source === 'sg' ? { ytdFamiliesSG: p.ytdFamiliesSG, ytdVolumeSG: p.ytdVolumeSG, monthlyFamiliesSG: p.monthlyFamiliesSG, monthlyVolumeSG: p.monthlyVolumeSG } : {}),
-            ...(source === 'd2c' ? { ytdFamiliesD2C: p.ytdFamiliesD2C, ytdVolumeD2C: p.ytdVolumeD2C, monthlyFamiliesD2C: p.monthlyFamiliesD2C, monthlyVolumeD2C: p.monthlyVolumeD2C } : {}),
+      for (const src of ['sg', 'd2c'] as const) {
+        const list = src === 'sg' ? parsedSG : parsedD2C
+        for (const p of list) {
+          const idx = next.findIndex(m => nameSimilar(m.name, p.name))
+          if (idx >= 0) {
+            const other = src === 'sg' ? next[idx].ytdFamiliesD2C : next[idx].ytdFamiliesSG
+            const otherVol = src === 'sg' ? next[idx].ytdVolumeD2C : next[idx].ytdVolumeSG
+            const otherFamArr = src === 'sg' ? next[idx].monthlyFamiliesD2C : next[idx].monthlyFamiliesSG
+            const otherVolArr = src === 'sg' ? next[idx].monthlyVolumeD2C : next[idx].monthlyVolumeSG
+            const thisFam = src === 'sg' ? p.ytdFamiliesSG : p.ytdFamiliesD2C
+            const thisVol = src === 'sg' ? p.ytdVolumeSG : p.ytdVolumeD2C
+            const thisFamArr = src === 'sg' ? p.monthlyFamiliesSG : p.monthlyFamiliesD2C
+            const thisVolArr = src === 'sg' ? p.monthlyVolumeSG : p.monthlyVolumeD2C
+            next[idx] = {
+              ...next[idx],
+              ytdFamilies: other + thisFam,
+              ytdVolume: otherVol + thisVol,
+              monthlyFamilies: thisFamArr.map((v, i) => v + (otherFamArr[i] ?? 0)),
+              monthlyVolume: thisVolArr.map((v, i) => v + (otherVolArr[i] ?? 0)),
+              ...(src === 'sg' ? { ytdFamiliesSG: p.ytdFamiliesSG, ytdVolumeSG: p.ytdVolumeSG, monthlyFamiliesSG: p.monthlyFamiliesSG, monthlyVolumeSG: p.monthlyVolumeSG } : {}),
+              ...(src === 'd2c' ? { ytdFamiliesD2C: p.ytdFamiliesD2C, ytdVolumeD2C: p.ytdVolumeD2C, monthlyFamiliesD2C: p.monthlyFamiliesD2C, monthlyVolumeD2C: p.monthlyVolumeD2C } : {}),
+            }
+          } else {
+            const fam = src === 'sg' ? p.ytdFamiliesSG : p.ytdFamiliesD2C
+            const vol = src === 'sg' ? p.ytdVolumeSG : p.ytdVolumeD2C
+            next.push({ ...p, ytdFamilies: fam, ytdVolume: vol, monthlyFamilies: src === 'sg' ? p.monthlyFamiliesSG : p.monthlyFamiliesD2C, monthlyVolume: src === 'sg' ? p.monthlyVolumeSG : p.monthlyVolumeD2C })
           }
-        } else {
-          next.push({ ...p, ytdFamilies: p.ytdFamiliesSG + p.ytdFamiliesD2C, ytdVolume: p.ytdVolumeSG + p.ytdVolumeD2C, monthlyFamilies: source === 'sg' ? p.monthlyFamiliesSG : p.monthlyFamiliesD2C, monthlyVolume: source === 'sg' ? p.monthlyVolumeSG : p.monthlyVolumeD2C })
         }
       }
       return next
     })
-    if (weeklyParsed.size > 0) {
-      setWeeklyData(prev => {
-        const next = prev.map(w => ({ ...w }))
-        for (const [wk, v] of weeklyParsed.entries()) {
-          const idx = next.findIndex(w => w.weekStart === wk || w.weekLabel === v.label)
-          if (idx >= 0) {
-            if (source === 'sg') next[idx] = { ...next[idx], sgRespaByBranch: v.byBranch, weekStart: wk, families: (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.families,0) + v.byBranch.reduce((s,e)=>s+e.families,0), volume: (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.volume,0) + v.byBranch.reduce((s,e)=>s+e.volume,0) }
-            else next[idx] = { ...next[idx], d2cRespaByBranch: v.byBranch, weekStart: wk, families: (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.families,0) + v.byBranch.reduce((s,e)=>s+e.families,0), volume: (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.volume,0) + v.byBranch.reduce((s,e)=>s+e.volume,0) }
-          } else {
-            const totalFam = v.byBranch.reduce((s,e)=>s+e.families,0)
-            const totalVol = v.byBranch.reduce((s,e)=>s+e.volume,0)
-            next.push({
-              weekLabel: v.label, weekStart: wk,
-              families: totalFam, volume: totalVol, respaApps: totalFam, initialApps: 0,
-              ...(source === 'sg' ? { sgRespaByBranch: v.byBranch } : { d2cRespaByBranch: v.byBranch }),
-            })
+
+    for (const [src, weeklyParsed] of [['sg', weeklySG], ['d2c', weeklyD2C]] as const) {
+      if (weeklyParsed.size > 0) {
+        setWeeklyData(prev => {
+          const next = prev.map(w => ({ ...w }))
+          for (const [wk, v] of weeklyParsed.entries()) {
+            const idx = next.findIndex(w => w.weekStart === wk || w.weekLabel === v.label)
+            if (idx >= 0) {
+              if (src === 'sg') next[idx] = { ...next[idx], sgRespaByBranch: v.byBranch, weekStart: wk, families: (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.families,0) + v.byBranch.reduce((s,e)=>s+e.families,0), volume: (next[idx].d2cRespaByBranch ?? []).reduce((s,e)=>s+e.volume,0) + v.byBranch.reduce((s,e)=>s+e.volume,0) }
+              else next[idx] = { ...next[idx], d2cRespaByBranch: v.byBranch, weekStart: wk, families: (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.families,0) + v.byBranch.reduce((s,e)=>s+e.families,0), volume: (next[idx].sgRespaByBranch ?? []).reduce((s,e)=>s+e.volume,0) + v.byBranch.reduce((s,e)=>s+e.volume,0) }
+            } else {
+              const totalFam = v.byBranch.reduce((s,e)=>s+e.families,0)
+              const totalVol = v.byBranch.reduce((s,e)=>s+e.volume,0)
+              next.push({ weekLabel: v.label, weekStart: wk, families: totalFam, volume: totalVol, respaApps: totalFam, initialApps: 0, ...(src === 'sg' ? { sgRespaByBranch: v.byBranch } : { d2cRespaByBranch: v.byBranch }) })
+            }
           }
-        }
-        return next.sort((a, b) => {
-          const ka = a.weekStart ?? a.weekLabel
-          const kb = b.weekStart ?? b.weekLabel
-          return ka < kb ? -1 : ka > kb ? 1 : 0
+          return next.sort((a, b) => { const ka = a.weekStart ?? a.weekLabel; const kb = b.weekStart ?? b.weekLabel; return ka < kb ? -1 : ka > kb ? 1 : 0 })
         })
-      })
+      }
     }
   }, [])
 
@@ -1564,7 +1565,7 @@ export default function Production() {
         ))}
       </div>
 
-      {activeTab === 'branch' && <BranchProductionTab maData={maData} onSGUpload={(f) => handleFundingsUpload(f, 'sg')} onD2CUpload={(f) => handleFundingsUpload(f, 'd2c')} />}
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} onFundingsUpload={handleFundingsUpload} />}
       {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} />}
       {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
