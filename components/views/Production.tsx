@@ -971,11 +971,12 @@ function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[];
 }
 
 // ─── Applications Tab ─────────────────────────────────────────────────────────
-function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
+function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onClearApps }: {
   maData: MARecord[]
   weeklyData: WeeklyRow[]
   onAppsUpload: (file: File, source: 'sg'|'d2c') => void
   onWeekUpload: (file: File) => void
+  onClearApps: () => void
 }) {
   const [subView, setSubView] = useState('branch')
   const [period, setPeriod] = useState<PeriodStr>('ytd')
@@ -1012,7 +1013,13 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload }: {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <ToggleGroup options={subViewOpts} value={subView} onChange={setSubView} />
-        <EmailReportButton subject={appsSubject} body={appsBody} label="Email Report" />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button
+            onClick={() => { if (confirm('Clear all application data? This cannot be undone.')) onClearApps() }}
+            style={{ padding: '8px 14px', background: '#fff', border: '1px solid #E4E8EC', borderRadius: 8, fontSize: 13, color: '#B0504A', fontWeight: 600, cursor: 'pointer' }}
+          >Clear All</button>
+          <EmailReportButton subject={appsSubject} body={appsBody} label="Email Report" />
+        </div>
       </div>
 
       {subView === 'branch' && (
@@ -1538,6 +1545,21 @@ export default function Production() {
     })
   }, [])
 
+  const handleClearApps = useCallback(() => {
+    setMaData(prev => prev.map(m => ({
+      ...m,
+      ytdRespaApps: 0, ytdInitialApps: 0,
+      monthlyRespaApps: Array(12).fill(0) as number[],
+      monthlyInitialApps: Array(12).fill(0) as number[],
+    })))
+    setWeeklyData(prev => prev.map(w => ({
+      ...w,
+      respaApps: 0, initialApps: 0,
+      sgRespaByBranch: undefined, d2cRespaByBranch: undefined,
+      sgInitialByBranch: undefined, d2cInitialByBranch: undefined,
+    })))
+  }, [])
+
   const tabOpts: Array<{ id: 'branch'|'apps'|'changemakers'; label: string }> = [
     { id: 'branch', label: 'Branch Production' },
     { id: 'apps', label: 'Applications' },
@@ -1566,7 +1588,7 @@ export default function Production() {
       </div>
 
       {activeTab === 'branch' && <BranchProductionTab maData={maData} onFundingsUpload={handleFundingsUpload} />}
-      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} />}
       {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
   )
