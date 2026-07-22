@@ -986,7 +986,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       {/* Leaderboard */}
       <Card style={{ padding: 0, overflow: 'hidden' }}>
         {/* Column headers */}
-        <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 160px 140px 140px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px, 220px) 160px 130px 130px 200px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>VOLUME</div>
@@ -1015,7 +1015,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 
           return (
             <div key={ma.name} style={{ background: rowBg, borderBottom: `1px solid ${C.bg}` }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 160px 140px 140px 160px', gap: 0, padding: '14px 20px', alignItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px, 220px) 160px 130px 130px 200px', gap: 0, padding: '14px 20px', alignItems: 'center' }}>
 
                 {/* Rank */}
                 <div style={{ fontSize: isTop3 ? 20 : 13, fontWeight: 800, color: C.muted, textAlign: 'center' }}>{rankLabel}</div>
