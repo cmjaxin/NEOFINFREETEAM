@@ -808,194 +808,251 @@ function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, 
 }
 
 // ─── Branch Production Tab ────────────────────────────────────────────────────
-function BranchProductionTab({ maData, onFundingsUpload }: { maData: MARecord[]; onFundingsUpload: (file: File) => void }) {
+function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload }: {
+  maData: MARecord[]
+  prevYearData: MARecord[]
+  onFundingsUpload: (file: File) => void
+  onPrevYearUpload: (file: File) => void
+}) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [rangeFrom, setRangeFrom] = useState(0)
   const [rangeTo, setRangeTo] = useState(6)
-  const [metric, setMetric] = useState('volume')
-  const [expanded, setExpanded] = useState<Set<string>>(new Set(BRANCH_CONFIG.map(b => b.name)))
   const [source, setSource] = useState<'all'|'sg'|'d2c'>('all')
   const [fundLoading, setFundLoading] = useState(false)
   const [fundMsg, setFundMsg] = useState('')
+  const [prevLoading, setPrevLoading] = useState(false)
+  const [prevMsg, setPrevMsg] = useState('')
+  const [emailMonth, setEmailMonth] = useState(5)
+  const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
-  const branches = groupMAByBranch(maData)
 
   function famArr(m: MARecord) { return source === 'sg' ? m.monthlyFamiliesSG : source === 'd2c' ? m.monthlyFamiliesD2C : m.monthlyFamilies }
   function volArr(m: MARecord) { return source === 'sg' ? m.monthlyVolumeSG : source === 'd2c' ? m.monthlyVolumeD2C : m.monthlyVolume }
 
   const totalFamilies = maData.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
   const totalVolume = maData.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
-  const totalRespa = maData.reduce((s, m) => s + sumMonths(m.monthlyRespaApps, fr, to), 0)
-  const totalInitial = maData.reduce((s, m) => s + sumMonths(m.monthlyInitialApps, fr, to), 0)
+
+  // Sort by volume descending
+  const sorted = [...maData].sort((a, b) => sumMonths(volArr(b), fr, to) - sumMonths(volArr(a), fr, to))
+  const maxVolume = Math.max(...sorted.map(m => sumMonths(volArr(m), fr, to)), 1)
+  const maxFamilies = Math.max(...sorted.map(m => sumMonths(famArr(m), fr, to)), 1)
+
+  // MoM trend: compare current month vs previous month (use `to` as current month index)
+  const currentMonth = to
+  const prevMonth = currentMonth > 0 ? currentMonth - 1 : null
+
+  function momTrend(arr: number[], cur: number, prev: number | null) {
+    if (prev === null || arr[prev] === 0) return null
+    return Math.round(((arr[cur] - arr[prev]) / arr[prev]) * 100)
+  }
+
+  // YTD prior year: sum same month range (fr..to) from prevYearData
+  function prevYearVal(name: string, type: 'vol'|'fam') {
+    const py = prevYearData.find(m => nameSimilar(m.name, name))
+    if (!py) return null
+    return type === 'vol' ? sumMonths(volArr(py), fr, to) : sumMonths(famArr(py), fr, to)
+  }
+
+  function ytyPct(cur: number, prev: number | null) {
+    if (prev === null || prev === 0) return null
+    return Math.round(((cur - prev) / prev) * 100)
+  }
+
+  const hasPrevYear = prevYearData.length > 0
+
+  const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
 
   const teamFamilies = MONTHS.map((_, i) => maData.reduce((s, m) => s + famArr(m)[i], 0))
   const teamVolume = MONTHS.map((_, i) => maData.reduce((s, m) => s + volArr(m)[i], 0))
+  const prevTeamFamilies = hasPrevYear ? MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + famArr(m)[i], 0)) : undefined
+  const prevTeamVolume = hasPrevYear ? MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + volArr(m)[i], 0)) : undefined
 
-  const sorted = [...maData].sort((a, b) =>
-    metric === 'volume'
-      ? sumMonths(volArr(b), fr, to) - sumMonths(volArr(a), fr, to)
-      : sumMonths(famArr(b), fr, to) - sumMonths(famArr(a), fr, to)
-  )
-
-  function toggleBranch(name: string) {
-    setExpanded(prev => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n })
-  }
-
-  const metricOpts: ToggleOption[] = [{ id: 'volume', label: 'Volume' }, { id: 'families', label: 'Families' }]
-  const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
-
-  const [emailMonth, setEmailMonth] = useState(5) // default: June
-  const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
   const prodSubject = `${FULL_MONTHS[emailMonth]} Production Numbers`
   const prodBody = buildProductionEmailBody(maData, emailMonth)
 
+  // Trend chip component
+  function TrendChip({ pct }: { pct: number | null }) {
+    if (pct === null) return <span style={{ fontSize: 11, color: C.muted }}>—</span>
+    const up = pct >= 0
+    return (
+      <span style={{
+        fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 12,
+        background: up ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+        color: up ? C.green : C.red,
+      }}>
+        {up ? '▲' : '▼'} {Math.abs(pct)}%
+      </span>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Controls */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
         {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ToggleGroup options={metricOpts} value={metric} onChange={setMetric} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Source:</span>
-            <ToggleGroup options={sourceOpts} value={source} onChange={v => setSource(v as 'all'|'sg'|'d2c')} />
-          </div>
+          <ToggleGroup options={sourceOpts} value={source} onChange={v => setSource(v as 'all'|'sg'|'d2c')} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${C.border}`, borderRadius: 9, overflow: 'hidden', background: C.white }}>
-            <select
-              value={emailMonth}
-              onChange={e => setEmailMonth(Number(e.target.value))}
-              style={{ padding: '8px 10px', border: 'none', fontSize: 13, color: C.navy, fontWeight: 600, background: 'transparent', cursor: 'pointer', outline: 'none' }}
-            >
-              {FULL_MONTHS.slice(0, 7).map((m, i) => (
-                <option key={i} value={i}>{m}</option>
-              ))}
+            <select value={emailMonth} onChange={e => setEmailMonth(Number(e.target.value))} style={{ padding: '8px 10px', border: 'none', fontSize: 13, color: C.navy, fontWeight: 600, background: 'transparent', cursor: 'pointer', outline: 'none' }}>
+              {FULL_MONTHS.slice(0, 7).map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
             <EmailReportButton subject={prodSubject} body={prodBody} label="Email Report" />
           </div>
         </div>
       </div>
 
+      {/* KPI tiles */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <KpiTile label="Families Helped" value={String(totalFamilies)} sub={periodLabel(period, rangeFrom, rangeTo)} />
         <KpiTile label="Total Volume" value={fmtVol(totalVolume)} sub={periodLabel(period, rangeFrom, rangeTo)} />
-        <KpiTile label="RESPA Apps" value={String(totalRespa)} sub={periodLabel(period, rangeFrom, rangeTo)} />
-        <KpiTile label="Initial Apps" value={String(totalInitial)} sub={periodLabel(period, rangeFrom, rangeTo)} />
+        {hasPrevYear && (() => {
+          const pyFam = prevYearData.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
+          const pyVol = prevYearData.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
+          const famPct = ytyPct(totalFamilies, pyFam)
+          const volPct = ytyPct(totalVolume, pyVol)
+          return (
+            <>
+              <KpiTile label="Prior Year Families" value={String(pyFam)} sub="Same period last year" />
+              <KpiTile label="YTY Volume Change" value={volPct !== null ? `${volPct >= 0 ? '+' : ''}${volPct}%` : '—'} sub="vs same period last year" />
+              <KpiTile label="YTY Families Change" value={famPct !== null ? `${famPct >= 0 ? '+' : ''}${famPct}%` : '—'} sub="vs same period last year" />
+            </>
+          )
+        })()}
       </div>
 
+      {/* Team charts: volume + families, with prior year overlay if uploaded */}
       <div style={{ display: 'flex', gap: 16 }}>
         <Card style={{ flex: 1 }}>
-          <CardHead title="Monthly Families" subtitle="All team members" />
-          <HoverBarChart values={teamFamilies} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="Families" />
+          <CardHead title="Monthly Volume" subtitle={hasPrevYear ? 'Current year vs prior year' : 'All team members'} />
+          <HoverBarChart values={teamVolume} labels={MONTHS} color="#7c3aed" fmt={fmtVol} primaryLabel="This Year" secondValues={prevTeamVolume} secondColor="#a78bfa" secondLabel="Last Year" />
         </Card>
         <Card style={{ flex: 1 }}>
-          <CardHead title="Monthly Volume" subtitle="All team members" />
-          <HoverBarChart values={teamVolume} labels={MONTHS} color="#7c3aed" fmt={fmtVol} primaryLabel="Volume" />
+          <CardHead title="Monthly Families" subtitle={hasPrevYear ? 'Current year vs prior year' : 'All team members'} />
+          <HoverBarChart values={teamFamilies} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="This Year" secondValues={prevTeamFamilies} secondColor="#93c5fd" secondLabel="Last Year" />
         </Card>
       </div>
 
+      {/* Leaderboard */}
       <Card>
-        <CardHead title="Branch Breakdown" />
-        {branches.map(branch => {
-          const branchFam = branch.members.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
-          const branchVol = branch.members.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
-          const isOpen = expanded.has(branch.name)
-          const maxMetric = Math.max(...branch.members.map(m =>
-            metric === 'volume' ? sumMonths(volArr(m), fr, to) : sumMonths(famArr(m), fr, to)
-          ), 1)
-          return (
-            <div key={branch.name} style={{ marginBottom: 12 }}>
-              <div onClick={() => toggleBranch(branch.name)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid ${C.borderSoft}` }}>
-                <div style={{ width: 4, height: 32, borderRadius: 2, background: branch.color, flexShrink: 0 }} />
-                <div style={{ fontWeight: 700, color: C.navy, flex: 1 }}>{branch.name}</div>
-                <div style={{ fontSize: 13, color: C.dim }}>{branchFam} families · {fmtVol(branchVol)}</div>
-                <div style={{ fontSize: 14, color: C.muted }}>{isOpen ? '▲' : '▼'}</div>
-              </div>
-              {isOpen && (
-                <div style={{ paddingTop: 10, paddingLeft: 16 }}>
-                  {branch.members.map(ma => {
-                    const mv = metric === 'volume' ? sumMonths(volArr(ma), fr, to) : sumMonths(famArr(ma), fr, to)
-                    const pct = mv / maxMetric
-                    return (
-                      <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <div style={{ width: 130, fontSize: 13, color: C.text, flexShrink: 0 }}>{ma.name}</div>
-                        <div style={{ flex: 1, height: 10, background: C.bg, borderRadius: 5, overflow: 'hidden' }}>
-                          <div style={{ width: `${pct*100}%`, height: '100%', background: branch.color, borderRadius: 5, transition: 'width 0.3s' }} />
-                        </div>
-                        <div style={{ width: 90, textAlign: 'right', fontSize: 13, fontWeight: 600, color: C.text }}>
-                          {metric === 'volume' ? fmtVol(mv) : `${mv} fam`}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </Card>
-
-      <Card>
-        <CardHead title="Leaderboard" subtitle={`Ranked by ${metric} — ${periodLabel(period, rangeFrom, rangeTo)}`} />
-        {sorted.slice(0, 15).map((ma, i) => {
-          const mv = metric === 'volume' ? sumMonths(volArr(ma), fr, to) : sumMonths(famArr(ma), fr, to)
-          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`
-          return (
-            <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: `1px solid ${C.bg}` }}>
-              <div style={{ width: 28, fontWeight: 700, fontSize: 14, color: C.navy }}>{medal}</div>
-              <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{metric === 'volume' ? fmtVol(mv) : mv}</div>
-            </div>
-          )
-        })}
-      </Card>
-
-      <Card>
-        <CardHead title="Full Detail" subtitle="YTD — all metrics" />
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: C.bg }}>
-                {['Rank','Name','Branch','Families','Self-Gen','D2C','Volume','RESPA Apps','Initial Apps'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Rank' ? 'center' : 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((ma, i) => {
-                const branchMatch = BRANCH_CONFIG.find(b => b.members.some(m => nameSimilar(m, ma.name)))
-                return (
-                  <tr key={ma.name} style={{ borderBottom: `1px solid ${C.bg}` }}>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', color: C.muted }}>{i+1}</td>
-                    <td style={{ padding: '8px 12px', fontWeight: 600, color: C.navy }}>{ma.name}</td>
-                    <td style={{ padding: '8px 12px', color: C.dim }}>{branchMatch?.name ?? '—'}</td>
-                    <td style={{ padding: '8px 12px' }}>{sumMonths(famArr(ma), fr, to)}</td>
-                    <td style={{ padding: '8px 12px', color: '#16a34a', fontWeight: ma.ytdFamiliesSG > 0 ? 600 : 400 }}>{ma.ytdFamiliesSG || '—'}</td>
-                    <td style={{ padding: '8px 12px', color: '#7c3aed', fontWeight: ma.ytdFamiliesD2C > 0 ? 600 : 400 }}>{ma.ytdFamiliesD2C || '—'}</td>
-                    <td style={{ padding: '8px 12px' }}>{fmtVol(sumMonths(volArr(ma), fr, to))}</td>
-                    <td style={{ padding: '8px 12px' }}>{ma.ytdRespaApps}</td>
-                    <td style={{ padding: '8px 12px' }}>{ma.ytdInitialApps}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <CardHead title="Leaderboard" subtitle={`${periodLabel(period, rangeFrom, rangeTo)} · ranked by volume`} />
+          <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, fontWeight: 600 }}>
+            <span style={{ color: '#7c3aed' }}>■ Volume</span>
+            <span style={{ color: C.accent }}>■ Families</span>
+          </div>
         </div>
+        {sorted.map((ma, i) => {
+          const vol = sumMonths(volArr(ma), fr, to)
+          const fam = sumMonths(famArr(ma), fr, to)
+          const volPct = vol / maxVolume
+          const famPct = fam / maxFamilies
+          const momVolPct = momTrend(volArr(ma), currentMonth, prevMonth)
+          const momFamPct = momTrend(famArr(ma), currentMonth, prevMonth)
+          const pyVol = prevYearVal(ma.name, 'vol')
+          const pyFam = prevYearVal(ma.name, 'fam')
+          const ytyV = ytyPct(vol, pyVol)
+          const ytyF = ytyPct(fam, pyFam)
+
+          // Changemaker projection
+          const projFam = Math.round(ma.ytdFamilies * PROJ_FACTOR)
+          const projVol = Math.round(ma.ytdVolume * PROJ_FACTOR)
+          const cmStatus = getIndivStatus(ma.ytdVolume, ma.ytdFamilies)
+
+          const rank = i + 1
+          const rankColor = rank === 1 ? '#f59e0b' : rank === 2 ? '#9ca3af' : rank === 3 ? '#b45309' : C.muted
+          const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`
+
+          return (
+            <div key={ma.name} style={{ padding: '14px 0', borderBottom: `1px solid ${C.bg}` }}>
+              {/* Top row: rank + name + Changemaker + MoM trends */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <div style={{ width: 32, fontSize: rank <= 3 ? 18 : 13, fontWeight: 800, color: rankColor, flexShrink: 0, textAlign: 'center' }}>{rankLabel}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>{ma.name}</div>
+                  <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
+                    Proj. EOY: {fmtVol(projVol)} · {projFam} fam
+                  </div>
+                </div>
+                <StatusBadge status={cmStatus} />
+                {/* MoM trend */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>vs last month</div>
+                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                    <TrendChip pct={momVolPct} />
+                    <span style={{ fontSize: 11, color: C.muted }}>vol</span>
+                    <TrendChip pct={momFamPct} />
+                    <span style={{ fontSize: 11, color: C.muted }}>fam</span>
+                  </div>
+                </div>
+                {/* YTY trend (only if prior year loaded) */}
+                {hasPrevYear && (
+                  <div style={{ textAlign: 'right', minWidth: 90 }}>
+                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>vs last year</div>
+                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                      <TrendChip pct={ytyV} />
+                      <span style={{ fontSize: 11, color: C.muted }}>vol</span>
+                      <TrendChip pct={ytyF} />
+                      <span style={{ fontSize: 11, color: C.muted }}>fam</span>
+                    </div>
+                  </div>
+                )}
+                {/* Numbers */}
+                <div style={{ textAlign: 'right', minWidth: 100 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed' }}>{fmtVol(vol)}</div>
+                  <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>{fam} families</div>
+                </div>
+              </div>
+              {/* Dual progress bars */}
+              <div style={{ paddingLeft: 44, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 10, color: C.muted, width: 40 }}>Vol</div>
+                  <div style={{ flex: 1, height: 8, background: C.bg, borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${volPct * 100}%`, height: '100%', background: '#7c3aed', borderRadius: 4, transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ fontSize: 10, color: C.muted, width: 40 }}>Fam</div>
+                  <div style={{ flex: 1, height: 8, background: C.bg, borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${famPct * 100}%`, height: '100%', background: C.accent, borderRadius: 4, transition: 'width 0.4s' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </Card>
 
-      <Card>
-        <CardHead title="Upload Fundings" subtitle="YTD fundings export — source (SG vs D2C) detected from Lead Source field" />
-        <UploadZone
-          label="Drop YTD Fundings CSV / XLSX"
-          onFile={async (f) => {
-            setFundLoading(true)
-            try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
-            catch { setFundMsg('Error reading file') }
-            setFundLoading(false)
-          }}
-          loading={fundLoading} message={fundMsg}
-        />
-      </Card>
+      {/* Upload section */}
+      <div style={{ display: 'flex', gap: 16 }}>
+        <Card style={{ flex: 1 }}>
+          <CardHead title="Upload Fundings" subtitle="YTD fundings export — source detected from Lead Source field" />
+          <UploadZone
+            label="Drop YTD Fundings CSV / XLSX"
+            onFile={async (f) => {
+              setFundLoading(true)
+              try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
+              catch { setFundMsg('Error reading file') }
+              setFundLoading(false)
+            }}
+            loading={fundLoading} message={fundMsg}
+          />
+        </Card>
+        <Card style={{ flex: 1 }}>
+          <CardHead title="Upload Prior Year" subtitle="Same report format from 2025 — used for YTY trend comparison" />
+          <UploadZone
+            label="Drop 2025 Fundings CSV / XLSX"
+            onFile={async (f) => {
+              setPrevLoading(true)
+              try { await onPrevYearUpload(f); setPrevMsg(`Loaded ${f.name}`) }
+              catch { setPrevMsg('Error reading file') }
+              setPrevLoading(false)
+            }}
+            loading={prevLoading} message={prevMsg}
+          />
+        </Card>
+      </div>
     </div>
   )
 }
@@ -1288,7 +1345,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
   )
 }
 
-// ─── Changemakers Tab ─────────────────────────────────────────────────────────
+// ─── Changemaker helpers ──────────────────────────────────────────────────────
 const PROJ_FACTOR = 365 / 196
 
 function getIndivStatus(ytdVol: number, ytdFam: number): BadgeStatus {
@@ -1305,124 +1362,37 @@ function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
   return 'rising'
 }
 
-function ChangemakersTab({ maData }: { maData: MARecord[] }) {
-  const totalFam = maData.reduce((s, m) => s + m.ytdFamilies, 0)
-  const totalVol = maData.reduce((s, m) => s + m.ytdVolume, 0)
-  const projFam = Math.round(totalFam * PROJ_FACTOR)
-  const projVol = Math.round(totalVol * PROJ_FACTOR)
-  const branches = groupMAByBranch(maData)
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div style={{ background: 'linear-gradient(135deg, #6d28d9 0%, #0A2540 100%)', borderRadius: 16, padding: '40px 36px', color: '#fff' }}>
-        <div style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>We&#39;re building something special! 🏆</div>
-        <div style={{ fontSize: 16, opacity: 0.85, marginBottom: 6 }}>2026 FinFree Division · YTD results and projected year-end pace</div>
-        <div style={{ fontSize: 13, opacity: 0.6 }}>As of July 15, 2026</div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <KpiTile label="Divisional YTD Families" value={String(totalFam)} sub="Jan–Jul 2026" />
-        <KpiTile label="Divisional YTD Volume" value={fmtVol(totalVol)} sub="Jan–Jul 2026" />
-        <KpiTile label="Projected EOY Families" value={String(projFam)} sub="At current pace" />
-        <KpiTile label="Projected EOY Volume" value={fmtVol(projVol)} sub="At current pace" />
-      </div>
-
-      <Card>
-        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginRight: 8 }}>Status Guide:</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <StatusBadge status="qualified" />
-            <span style={{ fontSize: 12, color: C.dim }}>Proj. ≥$27.5M or ≥75 fam (individual) · ≥$50M or ≥150 (branch)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <StatusBadge status="ontrack" />
-            <span style={{ fontSize: 12, color: C.dim }}>Proj. ≥$14M or ≥38 fam (individual) · ≥$25M or ≥70 (branch)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <StatusBadge status="rising" />
-            <span style={{ fontSize: 12, color: C.dim }}>Keep climbing!</span>
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHead title="Changemakers Standings" subtitle="Projected EOY = YTD × 1.863 (365 ÷ 196 days)" />
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: C.bg }}>
-                {['Name','YTD Families','YTD Volume','Proj. Families','Proj. Volume','Status'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: C.dim, fontWeight: 600, borderBottom: `1px solid ${C.border}` }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {branches.map(branch => {
-                const bFam = branch.members.reduce((s, m) => s + m.ytdFamilies, 0)
-                const bVol = branch.members.reduce((s, m) => s + m.ytdVolume, 0)
-                const bProjFam = Math.round(bFam * PROJ_FACTOR)
-                const bProjVol = Math.round(bVol * PROJ_FACTOR)
-                const bStatus = getBranchStatus(bVol, bFam)
-                return (
-                  <>
-                    <tr key={`br-${branch.name}`} style={{ background: '#F8F9FB', borderBottom: `2px solid ${C.border}` }}>
-                      <td style={{ padding: '10px 12px', fontWeight: 800, color: C.navy, borderLeft: `4px solid ${branch.color}` }}>{branch.name}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{bFam}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{fmtVolFull(bVol)}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{bProjFam}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700 }}>{fmtVolFull(bProjVol)}</td>
-                      <td style={{ padding: '10px 12px' }}><StatusBadge status={bStatus} /></td>
-                    </tr>
-                    {branch.members.map(ma => {
-                      const pFam = Math.round(ma.ytdFamilies * PROJ_FACTOR)
-                      const pVol = Math.round(ma.ytdVolume * PROJ_FACTOR)
-                      const st = getIndivStatus(ma.ytdVolume, ma.ytdFamilies)
-                      return (
-                        <tr key={ma.name} style={{ borderBottom: `1px solid ${C.bg}` }}>
-                          <td style={{ padding: '8px 12px 8px 28px', color: C.text }}>{ma.name}</td>
-                          <td style={{ padding: '8px 12px' }}>{ma.ytdFamilies}</td>
-                          <td style={{ padding: '8px 12px' }}>{fmtVolFull(ma.ytdVolume)}</td>
-                          <td style={{ padding: '8px 12px', color: C.dim }}>{pFam}</td>
-                          <td style={{ padding: '8px 12px', color: C.dim }}>{fmtVolFull(pVol)}</td>
-                          <td style={{ padding: '8px 12px' }}><StatusBadge status={st} /></td>
-                        </tr>
-                      )
-                    })}
-                  </>
-                )
-              })}
-              <tr style={{ background: C.navy }}>
-                <td style={{ padding: '12px 16px', fontWeight: 800, color: '#fff' }}>Division Total</td>
-                <td style={{ padding: '12px 16px', fontWeight: 700, color: '#fff' }}>{totalFam}</td>
-                <td style={{ padding: '12px 16px', fontWeight: 700, color: '#fff' }}>{fmtVolFull(totalVol)}</td>
-                <td style={{ padding: '12px 16px', fontWeight: 700, color: C.accent }}>{projFam}</td>
-                <td style={{ padding: '12px 16px', fontWeight: 700, color: C.accent }}>{fmtVolFull(projVol)}</td>
-                <td style={{ padding: '12px 16px' }} />
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      <Card style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-        <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 8 }}>Qualification Thresholds</div>
-        <div style={{ fontSize: 13, color: '#78350f', lineHeight: 1.7 }}>
-          <strong>Individual — Change Maker Qualified:</strong> Projected EOY ≥ $27.5M or ≥ 75 families<br />
-          <strong>Individual — On Track:</strong> Projected EOY ≥ $14M or ≥ 38 families<br />
-          <strong>Branch — Change Maker Qualified:</strong> Projected EOY ≥ $50M or ≥ 150 families<br />
-          <strong>Branch — On Track:</strong> Projected EOY ≥ $25M or ≥ 70 families<br />
-          <strong>Projection factor:</strong> 365 ÷ 196 ≈ 1.863 (YTD through July 15, 2026)
-        </div>
-      </Card>
-    </div>
-  )
-}
-
 // ─── Root Production component ────────────────────────────────────────────────
 export default function Production() {
   const [maData, setMaData] = useState<MARecord[]>(SEED_MA)
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
-  const [activeTab, setActiveTab] = useState<'branch'|'apps'|'changemakers'>('branch')
+  const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
+  const [activeTab, setActiveTab] = useState<'branch'|'apps'>('branch')
+
+  const handlePrevYearUpload = useCallback(async (file: File) => {
+    const rows = await readRows(file)
+    const sgRows = rows.filter(r => rowSource(r) === 'sg')
+    const d2cRows = rows.filter(r => rowSource(r) === 'd2c')
+    const parsedSG = parseFundingsRows(sgRows.length ? sgRows : rows, sgRows.length ? 'sg' : 'all')
+    const parsedD2C = parseFundingsRows(d2cRows, 'd2c')
+    const merged: MARecord[] = []
+    const all = [...parsedSG, ...parsedD2C]
+    for (const p of all) {
+      const idx = merged.findIndex(m => nameSimilar(m.name, p.name))
+      if (idx >= 0) {
+        merged[idx] = {
+          ...merged[idx],
+          ytdFamilies: merged[idx].ytdFamilies + p.ytdFamilies,
+          ytdVolume: merged[idx].ytdVolume + p.ytdVolume,
+          monthlyFamilies: merged[idx].monthlyFamilies.map((v,i) => v + p.monthlyFamilies[i]),
+          monthlyVolume: merged[idx].monthlyVolume.map((v,i) => v + p.monthlyVolume[i]),
+        }
+      } else {
+        merged.push({ ...p })
+      }
+    }
+    setPrevYearData(merged)
+  }, [])
 
   function rowSource(row: CsvRow): 'sg' | 'd2c' {
     const s = String(row['Lead Source'] ?? row['Source'] ?? row['Channel'] ?? row['Loan Source'] ?? row['Lead Type'] ?? '').toLowerCase()
@@ -1600,10 +1570,9 @@ export default function Production() {
     })))
   }, [])
 
-  const tabOpts: Array<{ id: 'branch'|'apps'|'changemakers'; label: string }> = [
-    { id: 'branch', label: 'Branch Production' },
+  const tabOpts: Array<{ id: 'branch'|'apps'; label: string }> = [
+    { id: 'branch', label: 'Production' },
     { id: 'apps', label: 'Applications' },
-    { id: 'changemakers', label: 'Changemakers Trip' },
   ]
 
   return (
@@ -1627,9 +1596,8 @@ export default function Production() {
         ))}
       </div>
 
-      {activeTab === 'branch' && <BranchProductionTab maData={maData} onFundingsUpload={handleFundingsUpload} />}
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} />}
       {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} />}
-      {activeTab === 'changemakers' && <ChangemakersTab maData={maData} />}
     </div>
   )
 }
