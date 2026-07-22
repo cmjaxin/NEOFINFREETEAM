@@ -871,17 +871,17 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const prodSubject = `${FULL_MONTHS[emailMonth]} Production Numbers`
   const prodBody = buildProductionEmailBody(maData, emailMonth)
 
-  // Trend chip component
-  function TrendChip({ pct }: { pct: number | null }) {
+  function TrendChip({ pct, label }: { pct: number | null; label?: string }) {
     if (pct === null) return <span style={{ fontSize: 11, color: C.muted }}>—</span>
     const up = pct >= 0
     return (
       <span style={{
-        fontSize: 11, fontWeight: 700, padding: '2px 6px', borderRadius: 12,
+        fontSize: 11, fontWeight: 700, padding: '2px 7px', borderRadius: 12,
         background: up ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
         color: up ? C.green : C.red,
+        whiteSpace: 'nowrap',
       }}>
-        {up ? '▲' : '▼'} {Math.abs(pct)}%
+        {up ? '▲' : '▼'} {Math.abs(pct)}%{label ? ` ${label}` : ''}
       </span>
     )
   }
@@ -935,87 +935,81 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       </div>
 
       {/* Leaderboard */}
-      <Card>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <CardHead title="Leaderboard" subtitle={`${periodLabel(period, rangeFrom, rangeTo)} · ranked by volume`} />
-          <div style={{ display: 'flex', gap: 16, fontSize: 11, color: C.muted, fontWeight: 600 }}>
-            <span style={{ color: '#7c3aed' }}>■ Volume</span>
-            <span style={{ color: C.accent }}>■ Families</span>
-          </div>
+      <Card style={{ padding: 0, overflow: 'hidden' }}>
+        {/* Column headers */}
+        <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 160px 140px 140px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>VOLUME</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>FAMILIES</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>CHANGEMAKER</div>
         </div>
+
         {sorted.map((ma, i) => {
           const vol = sumMonths(volArr(ma), fr, to)
           const fam = sumMonths(famArr(ma), fr, to)
-          const volPct = vol / maxVolume
-          const famPct = fam / maxFamilies
+          const volBarPct = vol / maxVolume
           const momVolPct = momTrend(volArr(ma), currentMonth, prevMonth)
           const momFamPct = momTrend(famArr(ma), currentMonth, prevMonth)
           const pyVol = prevYearVal(ma.name, 'vol')
           const pyFam = prevYearVal(ma.name, 'fam')
           const ytyV = ytyPct(vol, pyVol)
           const ytyF = ytyPct(fam, pyFam)
-
-          // Changemaker projection
           const projFam = Math.round(ma.ytdFamilies * PROJ_FACTOR)
           const projVol = Math.round(ma.ytdVolume * PROJ_FACTOR)
           const cmStatus = getIndivStatus(ma.ytdVolume, ma.ytdFamilies)
-
           const rank = i + 1
-          const rankColor = rank === 1 ? '#f59e0b' : rank === 2 ? '#9ca3af' : rank === 3 ? '#b45309' : C.muted
-          const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `#${rank}`
+          const isTop3 = rank <= 3
+          const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank)
+          const rowBg = rank === 1 ? 'rgba(245,158,11,0.04)' : C.white
 
           return (
-            <div key={ma.name} style={{ padding: '14px 0', borderBottom: `1px solid ${C.bg}` }}>
-              {/* Top row: rank + name + Changemaker + MoM trends */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <div style={{ width: 32, fontSize: rank <= 3 ? 18 : 13, fontWeight: 800, color: rankColor, flexShrink: 0, textAlign: 'center' }}>{rankLabel}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>{ma.name}</div>
-                  <div style={{ fontSize: 11, color: C.dim, marginTop: 2 }}>
-                    Proj. EOY: {fmtVol(projVol)} · {projFam} fam
+            <div key={ma.name} style={{ background: rowBg, borderBottom: `1px solid ${C.bg}` }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 160px 140px 140px 160px', gap: 0, padding: '14px 20px', alignItems: 'center' }}>
+
+                {/* Rank */}
+                <div style={{ fontSize: isTop3 ? 20 : 13, fontWeight: 800, color: C.muted, textAlign: 'center' }}>{rankLabel}</div>
+
+                {/* Name + bar */}
+                <div style={{ paddingRight: 24 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 6 }}>{ma.name}</div>
+                  <div style={{ height: 5, background: C.bg, borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${volBarPct * 100}%`, height: '100%', background: isTop3 ? '#7c3aed' : '#a78bfa', borderRadius: 3, transition: 'width 0.4s' }} />
                   </div>
                 </div>
-                <StatusBadge status={cmStatus} />
-                {/* MoM trend */}
+
+                {/* Volume */}
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>vs last month</div>
-                  <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                    <TrendChip pct={momVolPct} />
-                    <span style={{ fontSize: 11, color: C.muted }}>vol</span>
-                    <TrendChip pct={momFamPct} />
-                    <span style={{ fontSize: 11, color: C.muted }}>fam</span>
-                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{fmtVol(vol)}</div>
+                  {hasPrevYear && <div style={{ marginTop: 3 }}><TrendChip pct={ytyV} label="YTY" /></div>}
                 </div>
-                {/* YTY trend (only if prior year loaded) */}
-                {hasPrevYear && (
-                  <div style={{ textAlign: 'right', minWidth: 90 }}>
-                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>vs last year</div>
-                    <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                      <TrendChip pct={ytyV} />
-                      <span style={{ fontSize: 11, color: C.muted }}>vol</span>
-                      <TrendChip pct={ytyF} />
-                      <span style={{ fontSize: 11, color: C.muted }}>fam</span>
+
+                {/* Families */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>{fam}</div>
+                  {hasPrevYear && <div style={{ marginTop: 3 }}><TrendChip pct={ytyF} label="YTY" /></div>}
+                </div>
+
+                {/* MoM */}
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: C.muted }}>Vol</span>
+                      <TrendChip pct={momVolPct} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: C.muted }}>Fam</span>
+                      <TrendChip pct={momFamPct} />
                     </div>
                   </div>
-                )}
-                {/* Numbers */}
-                <div style={{ textAlign: 'right', minWidth: 100 }}>
-                  <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed' }}>{fmtVol(vol)}</div>
-                  <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>{fam} families</div>
                 </div>
-              </div>
-              {/* Dual progress bars */}
-              <div style={{ paddingLeft: 44, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontSize: 10, color: C.muted, width: 40 }}>Vol</div>
-                  <div style={{ flex: 1, height: 8, background: C.bg, borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: `${volPct * 100}%`, height: '100%', background: '#7c3aed', borderRadius: 4, transition: 'width 0.4s' }} />
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontSize: 10, color: C.muted, width: 40 }}>Fam</div>
-                  <div style={{ flex: 1, height: 8, background: C.bg, borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: `${famPct * 100}%`, height: '100%', background: C.accent, borderRadius: 4, transition: 'width 0.4s' }} />
+
+                {/* Changemaker */}
+                <div style={{ textAlign: 'right' }}>
+                  <StatusBadge status={cmStatus} />
+                  <div style={{ fontSize: 11, color: C.dim, marginTop: 5 }}>
+                    {fmtVol(projVol)} · {projFam} fam
                   </div>
                 </div>
               </div>
