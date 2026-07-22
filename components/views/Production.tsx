@@ -199,9 +199,14 @@ function periodRange(p: PeriodStr, from: number, to: number): [number, number] {
   return [Number(p), Number(p)]
 }
 
-function periodLabel(p: PeriodStr, from: number, to: number): string {
+function periodLabel(p: PeriodStr, from: number, to: number, fromYear?: number, toYear?: number): string {
   if (p === 'ytd') return 'YTD'
-  if (p === 'range') return `${MONTHS[from]}–${MONTHS[to]}`
+  if (p === 'range') {
+    const fy = fromYear ?? 2026, ty = toYear ?? 2026
+    const fStr = `${MONTHS[from]} ${fy}`
+    const tStr = `${MONTHS[to]} ${ty}`
+    return fStr === tStr ? fStr : `${fStr} – ${tStr}`
+  }
   return MONTHS[Number(p)]
 }
 
@@ -678,16 +683,28 @@ function ToggleGroup({ options, value, onChange }: { options: ToggleOption[]; va
   )
 }
 
-function RangeSelector({ from, to, onChange }: { from: number; to: number; onChange: (f: number, t: number) => void }) {
+const RANGE_YEARS = [2024, 2025, 2026]
+
+function RangeSelector({ from, fromYear, to, toYear, onChange }: {
+  from: number; fromYear: number; to: number; toYear: number
+  onChange: (f: number, fy: number, t: number, ty: number) => void
+}) {
+  const sel: React.CSSProperties = { padding: '6px 10px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 13, color: C.text, background: C.white, cursor: 'pointer', outline: 'none' }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-      <span style={{ color: C.dim }}>From</span>
-      <select value={from} onChange={e => onChange(Number(e.target.value), to)} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, color: C.text }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.white, border: `1px solid ${C.border}`, borderRadius: 9, padding: '4px 12px' }}>
+      <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>FROM</span>
+      <select value={from} onChange={e => onChange(Number(e.target.value), fromYear, to, toYear)} style={sel}>
         {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
       </select>
-      <span style={{ color: C.dim }}>To</span>
-      <select value={to} onChange={e => onChange(from, Number(e.target.value))} style={{ padding: '4px 8px', borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 13, color: C.text }}>
+      <select value={fromYear} onChange={e => onChange(from, Number(e.target.value), to, toYear)} style={sel}>
+        {RANGE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+      <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 4 }}>TO</span>
+      <select value={to} onChange={e => onChange(from, fromYear, Number(e.target.value), toYear)} style={sel}>
         {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
+      </select>
+      <select value={toYear} onChange={e => onChange(from, fromYear, to, Number(e.target.value))} style={sel}>
+        {RANGE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
       </select>
     </div>
   )
@@ -816,7 +833,9 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [rangeFrom, setRangeFrom] = useState(0)
+  const [rangeFromYear, setRangeFromYear] = useState(2026)
   const [rangeTo, setRangeTo] = useState(6)
+  const [rangeToYear, setRangeToYear] = useState(2026)
   const [source, setSource] = useState<'all'|'sg'|'d2c'>('all')
   const [fundLoading, setFundLoading] = useState(false)
   const [fundMsg, setFundMsg] = useState('')
@@ -830,15 +849,43 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   function famArr(m: MARecord) { return source === 'sg' ? m.monthlyFamiliesSG : source === 'd2c' ? m.monthlyFamiliesD2C : m.monthlyFamilies }
   function volArr(m: MARecord) { return source === 'sg' ? m.monthlyVolumeSG : source === 'd2c' ? m.monthlyVolumeD2C : m.monthlyVolume }
 
-  const totalFamilies = maData.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
-  const totalVolume = maData.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
+  const hasPrevYear = prevYearData.length > 0
 
-  // Sort by volume descending
-  const sorted = [...maData].sort((a, b) => sumMonths(volArr(b), fr, to) - sumMonths(volArr(a), fr, to))
-  const maxVolume = Math.max(...sorted.map(m => sumMonths(volArr(m), fr, to)), 1)
-  const maxFamilies = Math.max(...sorted.map(m => sumMonths(famArr(m), fr, to)), 1)
+  // Map a calendar year to the right MARecord list
+  function dataForYear(year: number): MARecord[] {
+    if (year <= 2025) return prevYearData
+    return maData
+  }
 
-  // MoM trend: compare current month vs previous month (use `to` as current month index)
+  // Sum across a potentially cross-year date range
+  function sumCrossYear(ma: MARecord, frM: number, frY: number, toM: number, toY: number, type: 'fam'|'vol'): number {
+    let total = 0
+    for (let y = frY; y <= toY; y++) {
+      const startM = y === frY ? frM : 0
+      const endM = y === toY ? toM : 11
+      const src = dataForYear(y).find(p => nameSimilar(p.name, ma.name)) ?? ma
+      const arr = type === 'fam' ? famArr(src) : volArr(src)
+      for (let m = startM; m <= endM; m++) total += arr[m] ?? 0
+    }
+    return total
+  }
+
+  // Unified per-MA value respecting period type
+  function maFam(m: MARecord) {
+    return period === 'range' ? sumCrossYear(m, rangeFrom, rangeFromYear, rangeTo, rangeToYear, 'fam') : sumMonths(famArr(m), fr, to)
+  }
+  function maVol(m: MARecord) {
+    return period === 'range' ? sumCrossYear(m, rangeFrom, rangeFromYear, rangeTo, rangeToYear, 'vol') : sumMonths(volArr(m), fr, to)
+  }
+
+  const totalFamilies = maData.reduce((s, m) => s + maFam(m), 0)
+  const totalVolume = maData.reduce((s, m) => s + maVol(m), 0)
+
+  const sorted = [...maData].sort((a, b) => maVol(b) - maVol(a))
+  const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
+  const maxFamilies = Math.max(...sorted.map(m => maFam(m)), 1)
+
+  // MoM trend: most recent active month vs the one before it
   const currentMonth = to
   const prevMonth = currentMonth > 0 ? currentMonth - 1 : null
 
@@ -847,10 +894,14 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return Math.round(((arr[cur] - arr[prev]) / arr[prev]) * 100)
   }
 
-  // YTD prior year: sum same month range (fr..to) from prevYearData
+  // YTY: same period range but from prevYearData
   function prevYearVal(name: string, type: 'vol'|'fam') {
     const py = prevYearData.find(m => nameSimilar(m.name, name))
     if (!py) return null
+    if (period === 'range') {
+      // shift both years back by 1
+      return sumCrossYear(py, rangeFrom, rangeFromYear - 1, rangeTo, rangeToYear - 1, type)
+    }
     return type === 'vol' ? sumMonths(volArr(py), fr, to) : sumMonths(famArr(py), fr, to)
   }
 
@@ -858,8 +909,6 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     if (prev === null || prev === 0) return null
     return Math.round(((cur - prev) / prev) * 100)
   }
-
-  const hasPrevYear = prevYearData.length > 0
 
   const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
 
@@ -891,7 +940,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       {/* Controls */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
-        {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
+        {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} />}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <ToggleGroup options={sourceOpts} value={source} onChange={v => setSource(v as 'all'|'sg'|'d2c')} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${C.border}`, borderRadius: 9, overflow: 'hidden', background: C.white }}>
@@ -905,11 +954,11 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 
       {/* KPI tiles */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-        <KpiTile label="Families Helped" value={String(totalFamilies)} sub={periodLabel(period, rangeFrom, rangeTo)} />
-        <KpiTile label="Total Volume" value={fmtVol(totalVolume)} sub={periodLabel(period, rangeFrom, rangeTo)} />
+        <KpiTile label="Families Helped" value={String(totalFamilies)} sub={periodLabel(period, rangeFrom, rangeTo, rangeFromYear, rangeToYear)} />
+        <KpiTile label="Total Volume" value={fmtVol(totalVolume)} sub={periodLabel(period, rangeFrom, rangeTo, rangeFromYear, rangeToYear)} />
         {hasPrevYear && (() => {
-          const pyFam = prevYearData.reduce((s, m) => s + sumMonths(famArr(m), fr, to), 0)
-          const pyVol = prevYearData.reduce((s, m) => s + sumMonths(volArr(m), fr, to), 0)
+          const pyFam = prevYearData.reduce((s, m) => s + maFam(m), 0)
+          const pyVol = prevYearData.reduce((s, m) => s + maVol(m), 0)
           const famPct = ytyPct(totalFamilies, pyFam)
           const volPct = ytyPct(totalVolume, pyVol)
           return (
@@ -947,8 +996,8 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
         </div>
 
         {sorted.map((ma, i) => {
-          const vol = sumMonths(volArr(ma), fr, to)
-          const fam = sumMonths(famArr(ma), fr, to)
+          const vol = maVol(ma)
+          const fam = maFam(ma)
           const volBarPct = vol / maxVolume
           const momVolPct = momTrend(volArr(ma), currentMonth, prevMonth)
           const momFamPct = momTrend(famArr(ma), currentMonth, prevMonth)
@@ -1062,7 +1111,9 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
   const [subView, setSubView] = useState('branch')
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [rangeFrom, setRangeFrom] = useState(0)
+  const [rangeFromYear, setRangeFromYear] = useState(2026)
   const [rangeTo, setRangeTo] = useState(6)
+  const [rangeToYear, setRangeToYear] = useState(2026)
   const [appMetric, setAppMetric] = useState('both')
   const [appSource, setAppSource] = useState<'all'|'sg'|'d2c'>('all')
   const [weekLoading, setWeekLoading] = useState(false)
@@ -1116,7 +1167,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
             <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
-            {period === 'range' && <RangeSelector from={rangeFrom} to={rangeTo} onChange={(f,t) => { setRangeFrom(f); setRangeTo(t) }} />}
+            {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} />}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <ToggleGroup options={appMetricOpts} value={appMetric} onChange={setAppMetric} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
