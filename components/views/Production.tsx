@@ -885,13 +885,26 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
   const maxFamilies = Math.max(...sorted.map(m => maFam(m)), 1)
 
-  // MoM trend: most recent active month vs the one before it
-  const currentMonth = to
-  const prevMonth = currentMonth > 0 ? currentMonth - 1 : null
+  // MoM: compare the end month of the selected period vs the month before it,
+  // using the correct year's data (not always current year)
+  const momEndMonth = to   // month index at the end of the selected period
+  const momEndYear = period === 'range' ? rangeToYear : 2026
 
-  function momTrend(arr: number[], cur: number, prev: number | null) {
-    if (prev === null || arr[prev] === 0) return null
-    return Math.round(((arr[cur] - arr[prev]) / arr[prev]) * 100)
+  // Previous month: cross year boundary if Jan
+  const momPrevMonth = momEndMonth > 0 ? momEndMonth - 1 : 11
+  const momPrevYear = momEndMonth > 0 ? momEndYear : momEndYear - 1
+
+  const momMonthLabel = `${MONTHS[momPrevMonth]} → ${MONTHS[momEndMonth]}`
+
+  function momCalc(ma: MARecord, type: 'vol'|'fam'): number | null {
+    const curSrc = dataForYear(momEndYear).find(p => nameSimilar(p.name, ma.name)) ?? ma
+    const prevSrc = dataForYear(momPrevYear).find(p => nameSimilar(p.name, ma.name)) ?? ma
+    const curArr = type === 'fam' ? famArr(curSrc) : volArr(curSrc)
+    const prevArr = type === 'fam' ? famArr(prevSrc) : volArr(prevSrc)
+    const curVal = curArr[momEndMonth] ?? 0
+    const prevVal = prevArr[momPrevMonth] ?? 0
+    if (prevVal === 0) return null
+    return Math.round(((curVal - prevVal) / prevVal) * 100)
   }
 
   // YTY: same period range but from prevYearData
@@ -991,7 +1004,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>VOLUME</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>FAMILIES</div>
-          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO ({momMonthLabel})</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>CHANGEMAKER</div>
         </div>
 
@@ -999,8 +1012,8 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           const vol = maVol(ma)
           const fam = maFam(ma)
           const volBarPct = vol / maxVolume
-          const momVolPct = momTrend(volArr(ma), currentMonth, prevMonth)
-          const momFamPct = momTrend(famArr(ma), currentMonth, prevMonth)
+          const momVolPct = momCalc(ma, 'vol')
+          const momFamPct = momCalc(ma, 'fam')
           const pyVol = prevYearVal(ma.name, 'vol')
           const pyFam = prevYearVal(ma.name, 'fam')
           const ytyV = ytyPct(vol, pyVol)
