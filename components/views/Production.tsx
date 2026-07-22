@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import * as XLSX from 'xlsx'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -1420,12 +1420,33 @@ function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
   return 'rising'
 }
 
+// ─── localStorage helpers ─────────────────────────────────────────────────────
+const LS_MA = 'finfree_maData_v1'
+const LS_WEEKLY = 'finfree_weeklyData_v1'
+const LS_PREV = 'finfree_prevYearData_v1'
+
+function lsLoad<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : fallback
+  } catch { return fallback }
+}
+function lsSave(key: string, value: unknown) {
+  if (typeof window === 'undefined') return
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
+}
+
 // ─── Root Production component ────────────────────────────────────────────────
 export default function Production() {
-  const [maData, setMaData] = useState<MARecord[]>(SEED_MA)
-  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
-  const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
+  const [maData, setMaData] = useState<MARecord[]>(() => lsLoad(LS_MA, SEED_MA))
+  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(() => lsLoad(LS_WEEKLY, SEED_WEEKLY))
+  const [prevYearData, setPrevYearData] = useState<MARecord[]>(() => lsLoad(LS_PREV, []))
   const [activeTab, setActiveTab] = useState<'branch'|'apps'>('branch')
+
+  useEffect(() => { lsSave(LS_MA, maData) }, [maData])
+  useEffect(() => { lsSave(LS_WEEKLY, weeklyData) }, [weeklyData])
+  useEffect(() => { lsSave(LS_PREV, prevYearData) }, [prevYearData])
 
   const handlePrevYearUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
@@ -1635,9 +1656,25 @@ export default function Production() {
 
   return (
     <div style={{ background: C.bg, minHeight: '100vh', padding: '24px 32px' }}>
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
-        <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division · YTD through July 15</div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division</div>
+        </div>
+        <button
+          onClick={() => {
+            if (!confirm('Reset all production data? This will clear everything and restore seed data.')) return
+            setMaData(SEED_MA)
+            setWeeklyData(SEED_WEEKLY)
+            setPrevYearData([])
+            lsSave(LS_MA, SEED_MA)
+            lsSave(LS_WEEKLY, SEED_WEEKLY)
+            lsSave(LS_PREV, [])
+          }}
+          style={{ fontSize: 12, color: C.muted, background: 'none', border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}
+        >
+          Reset Data
+        </button>
       </div>
 
       <div style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
