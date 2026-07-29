@@ -684,11 +684,10 @@ function ToggleGroup({ options, value, onChange }: { options: ToggleOption[]; va
   )
 }
 
-const RANGE_YEARS = [2024, 2025, 2026]
-
-function RangeSelector({ from, fromYear, to, toYear, onChange }: {
+function RangeSelector({ from, fromYear, to, toYear, onChange, availableYears }: {
   from: number; fromYear: number; to: number; toYear: number
   onChange: (f: number, fy: number, t: number, ty: number) => void
+  availableYears: number[]
 }) {
   const sel: React.CSSProperties = { padding: '6px 10px', borderRadius: 7, border: `1px solid ${C.border}`, fontSize: 13, color: C.text, background: C.white, cursor: 'pointer', outline: 'none' }
   return (
@@ -698,14 +697,14 @@ function RangeSelector({ from, fromYear, to, toYear, onChange }: {
         {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
       </select>
       <select value={fromYear} onChange={e => onChange(from, Number(e.target.value), to, toYear)} style={sel}>
-        {RANGE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+        {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
       </select>
       <span style={{ fontSize: 12, color: C.muted, fontWeight: 600, marginLeft: 4 }}>TO</span>
       <select value={to} onChange={e => onChange(from, fromYear, Number(e.target.value), toYear)} style={sel}>
         {MONTHS.map((m,i) => <option key={i} value={i}>{m}</option>)}
       </select>
       <select value={toYear} onChange={e => onChange(from, fromYear, to, Number(e.target.value))} style={sel}>
-        {RANGE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+        {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
       </select>
     </div>
   )
@@ -937,16 +936,32 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     const py = prevYearData.find(m => nameSimilar(m.name, name))
     if (!py) return null
     if (period === 'range') {
-      // shift both years back by 1
       return sumCrossYear(py, rangeFrom, rangeFromYear - 1, rangeTo, rangeToYear - 1, type)
     }
-    return type === 'vol' ? sumMonths(volArr(py), fr, to) : sumMonths(famArr(py), fr, to)
+    // For YTD and single-month, use lastDataMonth so we compare identical month spans
+    const pyTo = period === 'ytd' ? lastDataMonth : to
+    return type === 'vol' ? sumMonths(volArr(py), fr, pyTo) : sumMonths(famArr(py), fr, pyTo)
   }
 
   function ytyPct(cur: number, prev: number | null) {
     if (prev === null || prev === 0) return null
     return Math.round(((cur - prev) / prev) * 100)
   }
+
+  // Label showing exactly which period is being compared year-over-year
+  const ytyLabel = (() => {
+    if (period === 'range') {
+      const curFrom = `${MONTHS[rangeFrom]} ${rangeFromYear}`
+      const curTo = `${MONTHS[rangeTo]} ${rangeToYear}`
+      const pyFrom = `${MONTHS[rangeFrom]} ${rangeFromYear - 1}`
+      const pyTo = `${MONTHS[rangeTo]} ${rangeToYear - 1}`
+      return `${curFrom}–${curTo} vs ${pyFrom}–${pyTo}`
+    }
+    if (period === 'ytd') {
+      return `Jan–${MONTHS[lastDataMonth]} 2026 vs Jan–${MONTHS[lastDataMonth]} 2025`
+    }
+    return `${MONTHS[fr]} 2026 vs ${MONTHS[fr]} 2025`
+  })()
 
   const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }]
 
@@ -978,7 +993,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       {/* Controls */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
-        {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} />}
+        {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} availableYears={hasPrevYear ? [2025, 2026] : [2026]} />}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           <ToggleGroup options={sourceOpts} value={source} onChange={v => setSource(v as 'all'|'sg'|'d2c')} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${C.border}`, borderRadius: 9, overflow: 'hidden', background: C.white }}>
@@ -1027,8 +1042,14 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
         <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px, 220px) 160px 130px 130px 200px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
-          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>VOLUME</div>
-          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>FAMILIES</div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>VOLUME</div>
+            {hasPrevYear && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>FAMILIES</div>
+            {hasPrevYear && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
+          </div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO ({momMonthLabel})</div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>CHANGEMAKER</div>
@@ -1224,7 +1245,7 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
             <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
-            {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} />}
+            {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} availableYears={[2026]} />}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <ToggleGroup options={appMetricOpts} value={appMetric} onChange={setAppMetric} />
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1471,36 +1492,40 @@ export default function Production() {
   const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
   const [activeTab, setActiveTab] = useState<'branch'|'apps'>('branch')
   const [dataLoaded, setDataLoaded] = useState(false)
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const maTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const weeklyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const prevTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const supabase = createClient()
 
   // Load from Supabase on mount
   useEffect(() => {
     supabase.from('production_state').select('key, data').then(({ data }) => {
-      if (!data) return
+      if (!data) { setDataLoaded(true); return }
       for (const row of data) {
-        if (row.key === 'ma_data' && Array.isArray(row.data)) setMaData(row.data as MARecord[])
-        if (row.key === 'weekly_data' && Array.isArray(row.data)) setWeeklyData(row.data as WeeklyRow[])
-        if (row.key === 'prev_year_data' && Array.isArray(row.data)) setPrevYearData(row.data as MARecord[])
+        if (row.key === 'ma_data' && Array.isArray(row.data) && (row.data as MARecord[]).length > 0) setMaData(row.data as MARecord[])
+        if (row.key === 'weekly_data' && Array.isArray(row.data) && (row.data as WeeklyRow[]).length > 0) setWeeklyData(row.data as WeeklyRow[])
+        if (row.key === 'prev_year_data' && Array.isArray(row.data) && (row.data as MARecord[]).length > 0) setPrevYearData(row.data as MARecord[])
       }
       setDataLoaded(true)
     })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Debounced save to Supabase whenever data changes (after initial load)
-  function scheduleSave(key: string, value: unknown) {
-    if (!dataLoaded) return
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      await supabase.from('production_state').upsert({ key, data: value, updated_at: new Date().toISOString() })
-    }, 1500)
+  // Separate debounced saves per key so they don't cancel each other
+  function makeSaver(timerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>, key: string) {
+    return (value: unknown, loaded: boolean) => {
+      if (!loaded) return
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(async () => {
+        await supabase.from('production_state').upsert({ key, data: value, updated_at: new Date().toISOString() })
+      }, 1500)
+    }
   }
 
-  useEffect(() => { scheduleSave('ma_data', maData) }, [maData, dataLoaded])
-  useEffect(() => { scheduleSave('weekly_data', weeklyData) }, [weeklyData, dataLoaded])
-  useEffect(() => { scheduleSave('prev_year_data', prevYearData) }, [prevYearData, dataLoaded])
+  useEffect(() => { makeSaver(maTimer, 'ma_data')(maData, dataLoaded) }, [maData, dataLoaded])
+  useEffect(() => { makeSaver(weeklyTimer, 'weekly_data')(weeklyData, dataLoaded) }, [weeklyData, dataLoaded])
+  useEffect(() => { makeSaver(prevTimer, 'prev_year_data')(prevYearData, dataLoaded) }, [prevYearData, dataLoaded])
 
   const handlePrevYearUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
