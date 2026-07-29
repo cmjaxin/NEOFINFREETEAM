@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import * as XLSX from 'xlsx'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -837,6 +838,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const [rangeTo, setRangeTo] = useState(6)
   const [rangeToYear, setRangeToYear] = useState(2026)
   const [source, setSource] = useState<'all'|'sg'|'d2c'>('all')
+  const [showOthers, setShowOthers] = useState(false)
   const [fundLoading, setFundLoading] = useState(false)
   const [fundMsg, setFundMsg] = useState('')
   const [prevLoading, setPrevLoading] = useState(false)
@@ -881,7 +883,20 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const totalFamilies = maData.reduce((s, m) => s + maFam(m), 0)
   const totalVolume = maData.reduce((s, m) => s + maVol(m), 0)
 
+  const FEATURED_NAMES = [
+    'katrinka', 'justin', 'jason', 'skyler', 'drake', 'ross', 'aaron',
+    'matthew smith', 'scott digregorio', 'michael breen', 'edgardo',
+    'michael jones', 'gregory', 'benjamin', 'kaytlin', 'david', 'ashley',
+    'anthony', 'bryon', 'matthew mcnally',
+  ]
+  function isFeatured(name: string) {
+    const n = name.toLowerCase()
+    return FEATURED_NAMES.some(f => n.includes(f) || f.includes(n.split(' ')[0]))
+  }
+
   const sorted = [...maData].sort((a, b) => maVol(b) - maVol(a))
+  const featuredSorted = sorted.filter(m => isFeatured(m.name))
+  const othersSorted = sorted.filter(m => !isFeatured(m.name))
   const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
   const maxFamilies = Math.max(...sorted.map(m => maFam(m)), 1)
 
@@ -1008,7 +1023,8 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>CHANGEMAKER</div>
         </div>
 
-        {sorted.map((ma, i) => {
+        {[...featuredSorted, ...(showOthers ? othersSorted : [])].map((ma, i) => {
+          const globalRank = sorted.indexOf(ma) + 1
           const vol = maVol(ma)
           const fam = maFam(ma)
           const volBarPct = vol / maxVolume
@@ -1021,7 +1037,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           const projFam = Math.round(ma.ytdFamilies * PROJ_FACTOR)
           const projVol = Math.round(ma.ytdVolume * PROJ_FACTOR)
           const cmStatus = getIndivStatus(ma.ytdVolume, ma.ytdFamilies)
-          const rank = i + 1
+          const rank = globalRank
           const isTop3 = rank <= 3
           const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank)
           const rowBg = rank === 1 ? 'rgba(245,158,11,0.04)' : C.white
@@ -1078,6 +1094,19 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
             </div>
           )
         })}
+
+        {othersSorted.length > 0 && (
+          <div
+            onClick={() => setShowOthers(v => !v)}
+            style={{ padding: '12px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, borderTop: `1px solid ${C.border}`, color: C.muted, fontSize: 13, fontWeight: 600, userSelect: 'none', background: C.bg }}
+          >
+            <span style={{ fontSize: 12 }}>{showOthers ? '▲' : '▼'}</span>
+            {showOthers ? 'Hide' : 'Show'} {othersSorted.length} additional advisor{othersSorted.length !== 1 ? 's' : ''}
+            <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 400, color: C.dim }}>
+              included in totals
+            </span>
+          </div>
+        )}
       </Card>
 
       {/* Upload section */}
@@ -1420,33 +1449,43 @@ function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
   return 'rising'
 }
 
-// ─── localStorage helpers ─────────────────────────────────────────────────────
-const LS_MA = 'finfree_maData_v1'
-const LS_WEEKLY = 'finfree_weeklyData_v1'
-const LS_PREV = 'finfree_prevYearData_v1'
-
-function lsLoad<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : fallback
-  } catch { return fallback }
-}
-function lsSave(key: string, value: unknown) {
-  if (typeof window === 'undefined') return
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch {}
-}
-
 // ─── Root Production component ────────────────────────────────────────────────
 export default function Production() {
-  const [maData, setMaData] = useState<MARecord[]>(() => lsLoad(LS_MA, SEED_MA))
-  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(() => lsLoad(LS_WEEKLY, SEED_WEEKLY))
-  const [prevYearData, setPrevYearData] = useState<MARecord[]>(() => lsLoad(LS_PREV, []))
+  const [maData, setMaData] = useState<MARecord[]>(SEED_MA)
+  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
+  const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
   const [activeTab, setActiveTab] = useState<'branch'|'apps'>('branch')
+  const [dataLoaded, setDataLoaded] = useState(false)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => { lsSave(LS_MA, maData) }, [maData])
-  useEffect(() => { lsSave(LS_WEEKLY, weeklyData) }, [weeklyData])
-  useEffect(() => { lsSave(LS_PREV, prevYearData) }, [prevYearData])
+  const supabase = createClient()
+
+  // Load from Supabase on mount
+  useEffect(() => {
+    supabase.from('production_state').select('key, data').then(({ data }) => {
+      if (!data) return
+      for (const row of data) {
+        if (row.key === 'ma_data' && Array.isArray(row.data)) setMaData(row.data as MARecord[])
+        if (row.key === 'weekly_data' && Array.isArray(row.data)) setWeeklyData(row.data as WeeklyRow[])
+        if (row.key === 'prev_year_data' && Array.isArray(row.data)) setPrevYearData(row.data as MARecord[])
+      }
+      setDataLoaded(true)
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Debounced save to Supabase whenever data changes (after initial load)
+  function scheduleSave(key: string, value: unknown) {
+    if (!dataLoaded) return
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(async () => {
+      await supabase.from('production_state').upsert({ key, data: value, updated_at: new Date().toISOString() })
+    }, 1500)
+  }
+
+  useEffect(() => { scheduleSave('ma_data', maData) }, [maData, dataLoaded])
+  useEffect(() => { scheduleSave('weekly_data', weeklyData) }, [weeklyData, dataLoaded])
+  useEffect(() => { scheduleSave('prev_year_data', prevYearData) }, [prevYearData, dataLoaded])
 
   const handlePrevYearUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
@@ -1662,14 +1701,12 @@ export default function Production() {
           <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division</div>
         </div>
         <button
-          onClick={() => {
+          onClick={async () => {
             if (!confirm('Reset all production data? This will clear everything and restore seed data.')) return
             setMaData(SEED_MA)
             setWeeklyData(SEED_WEEKLY)
             setPrevYearData([])
-            lsSave(LS_MA, SEED_MA)
-            lsSave(LS_WEEKLY, SEED_WEEKLY)
-            lsSave(LS_PREV, [])
+            await supabase.from('production_state').delete().in('key', ['ma_data', 'weekly_data', 'prev_year_data'])
           }}
           style={{ fontSize: 12, color: C.muted, background: 'none', border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}
         >
