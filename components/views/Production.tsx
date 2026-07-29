@@ -825,11 +825,12 @@ function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, 
 }
 
 // ─── Branch Production Tab ────────────────────────────────────────────────────
-function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload }: {
+function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload, onClearPrevYear }: {
   maData: MARecord[]
   prevYearData: MARecord[]
   onFundingsUpload: (file: File) => void
   onPrevYearUpload: (file: File) => void
+  onClearPrevYear: () => void
 }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [rangeFrom, setRangeFrom] = useState(0)
@@ -1161,7 +1162,17 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           />
         </Card>
         <Card style={{ flex: 1 }}>
-          <CardHead title="Upload Prior Year" subtitle="Same report format from 2025 — used for YTY trend comparison" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+            <CardHead title="Upload Prior Year" subtitle="Same report format from 2025 — used for YTY trend comparison" />
+            {hasPrevYear && (
+              <button
+                onClick={() => { if (confirm('Remove all 2025 data and hide YTY trends?')) onClearPrevYear() }}
+                style={{ fontSize: 11, color: C.red, background: 'none', border: `1px solid ${C.red}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              >
+                Clear 2025 Data
+              </button>
+            )}
+          </div>
           <UploadZone
             label="Drop 2025 Fundings CSV / XLSX"
             onFile={async (f) => {
@@ -1552,6 +1563,11 @@ export default function Production() {
     setPrevYearData(merged)
   }, [])
 
+  const handleClearPrevYear = useCallback(async () => {
+    setPrevYearData([])
+    await supabase.from('production_state').delete().eq('key', 'prev_year_data')
+  }, [supabase])
+
   function rowSource(row: CsvRow): 'sg' | 'd2c' {
     const s = String(row['Lead Source'] ?? row['Source'] ?? row['Channel'] ?? row['Loan Source'] ?? row['Lead Type'] ?? '').toLowerCase()
     return /d2c|better|direct/.test(s) ? 'd2c' : 'sg'
@@ -1768,7 +1784,7 @@ export default function Production() {
         ))}
       </div>
 
-      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} />}
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} />}
       {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} />}
     </div>
   )
