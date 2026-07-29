@@ -900,9 +900,19 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
   const maxFamilies = Math.max(...sorted.map(m => maFam(m)), 1)
 
-  // MoM: compare the end month of the selected period vs the month before it,
-  // using the correct year's data (not always current year)
-  const momEndMonth = to   // month index at the end of the selected period
+  // Last month in maData that actually has any volume — used to cap MoM so we
+  // never compare against a future zero-data month when YTD overshoots real data
+  const lastDataMonth = (() => {
+    for (let m = 11; m >= 0; m--) {
+      if (maData.some(ma => (ma.monthlyVolume[m] ?? 0) > 0)) return m
+    }
+    return 0
+  })()
+
+  // MoM: the "current" month is whichever is smaller — the period end or the last
+  // month with actual data. This prevents comparing against months with zero data.
+  const momEndMonthRaw = period === 'range' ? rangeTo : to
+  const momEndMonth = Math.min(momEndMonthRaw, lastDataMonth)
   const momEndYear = period === 'range' ? rangeToYear : 2026
 
   // Previous month: cross year boundary if Jan
