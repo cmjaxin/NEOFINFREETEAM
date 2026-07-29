@@ -938,7 +938,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return Math.round(((cur - prev) / prev) * 100)
   }
 
-  const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
+  const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }]
 
   const teamFamilies = MONTHS.map((_, i) => maData.reduce((s, m) => s + famArr(m)[i], 0))
   const teamVolume = MONTHS.map((_, i) => maData.reduce((s, m) => s + volArr(m)[i], 0))
@@ -1020,7 +1020,10 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>VOLUME</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>FAMILIES</div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO ({momMonthLabel})</div>
-          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>CHANGEMAKER</div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>CHANGEMAKER</div>
+            <div style={{ fontSize: 10, color: C.dim, fontWeight: 400, marginTop: 2 }}>36 fam · $18M vol to qualify</div>
+          </div>
         </div>
 
         {[...featuredSorted, ...(showOthers ? othersSorted : [])].map((ma, i) => {
@@ -1086,8 +1089,10 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
                 {/* Changemaker */}
                 <div style={{ textAlign: 'right' }}>
                   <StatusBadge status={cmStatus} />
-                  <div style={{ fontSize: 11, color: C.dim, marginTop: 5 }}>
-                    {fmtVol(projVol)} · {projFam} fam
+                  <div style={{ fontSize: 10, color: C.dim, marginTop: 6, lineHeight: 1.5 }}>
+                    <div style={{ color: C.muted, fontWeight: 600, fontSize: 9, letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 2 }}>Proj. Year-End</div>
+                    <div>{fmtVol(projVol)}</div>
+                    <div>{projFam} families</div>
                   </div>
                 </div>
               </div>
