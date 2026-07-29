@@ -1163,15 +1163,13 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
         </Card>
         <Card style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <CardHead title="Upload Prior Year" subtitle="Same report format from 2025 — used for YTY trend comparison" />
-            {hasPrevYear && (
-              <button
-                onClick={() => { if (confirm('Remove all 2025 data and hide YTY trends?')) onClearPrevYear() }}
-                style={{ fontSize: 11, color: C.red, background: 'none', border: `1px solid ${C.red}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap' }}
-              >
-                Clear 2025 Data
-              </button>
-            )}
+            <CardHead title="Upload Prior Year" subtitle={hasPrevYear ? `✓ 2025 data loaded (${prevYearData.length} advisors)` : 'Same report format from 2025 — used for YTY trend comparison'} />
+            <button
+              onClick={() => { if (confirm('Remove all 2025 data and hide YTY trends?')) onClearPrevYear() }}
+              style={{ fontSize: 11, color: hasPrevYear ? C.red : C.muted, background: 'none', border: `1px solid ${hasPrevYear ? C.red : C.border}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+            >
+              Clear 2025 Data
+            </button>
           </div>
           <UploadZone
             label="Drop 2025 Fundings CSV / XLSX"
