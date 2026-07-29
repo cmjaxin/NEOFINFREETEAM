@@ -1022,7 +1022,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO ({momMonthLabel})</div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>CHANGEMAKER</div>
-            <div style={{ fontSize: 10, color: C.dim, fontWeight: 400, marginTop: 2 }}>36 fam · $18M vol to qualify</div>
+            <div style={{ fontSize: 10, color: C.dim, fontWeight: 400, marginTop: 2 }}>75 fam or $27.5M vol to qualify</div>
           </div>
         </div>
 
