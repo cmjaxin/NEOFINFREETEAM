@@ -1076,11 +1076,9 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>VOLUME</div>
-            {hasPrevYearForSelected && period === 'ytd' && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>FAMILIES</div>
-            {hasPrevYearForSelected && period === 'ytd' && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
           </div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>
             {period === 'ytd' ? '—' : `MO/MO (${momMonthLabel})`}
