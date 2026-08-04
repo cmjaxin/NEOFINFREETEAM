@@ -886,7 +886,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const FEATURED_NAMES = [
     'katrinka', 'justin', 'jason', 'skyler', 'drake', 'ross', 'aaron',
     'matthew smith', 'scott digregorio', 'michael breen', 'edgardo',
-    'michael jones', 'gregory', 'benjamin', 'kaytlin', 'david', 'ashley',
+    'michael jones', 'benjamin', 'kaytlin', 'david', 'ashley',
     'anthony', 'bryon', 'matthew mcnally',
   ]
   function isFeatured(name: string) {
