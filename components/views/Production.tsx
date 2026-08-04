@@ -311,72 +311,116 @@ function parseFundingsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, { 
   return result
 }
 
-function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): Map<string, { respa: number[]; initial: number[]; respaBySource: { sg: number[]; d2c: number[] }; initialBySource: { sg: number[]; d2c: number[] } }> {
-  const map = new Map<string, { respa: number[]; initial: number[]; respaBySource: { sg: number[]; d2c: number[] }; initialBySource: { sg: number[]; d2c: number[] } }>()
+// LCs whose records should be credited to "Assigned MA Support" instead
+const LC_EXCEPTIONS_SET = new Set([
+  'michael madonna', 'jacky vuong', 'megan mcdermott',
+  'jake schroader', 'jake schroeder', 'valerie miller', 'ashley gould martinez',
+])
+
+function resolveAppOwner(row: CsvRow): string {
+  const lc = String(row['Assigned LC'] ?? '').trim()
+  const maSupport = String(row['Assigned MA Support'] ?? '').trim()
+  // If the LC is a coordinator (not an MA), use the MA Support field instead
+  const ownerRaw = LC_EXCEPTIONS_SET.has(lc.toLowerCase()) ? maSupport : lc
+  // Normalize hyphens so "Alfonso-Soto" matches "Alfonso Soto"
+  return ownerRaw.replace(/-/g, ' ')
+}
+
+type AppEntry = {
+  respa: number[]; initial: number[]
+  respaBySource: { sg: number[]; d2c: number[] }
+  initialBySource: { sg: number[]; d2c: number[] }
+}
+function makeAppEntry(): AppEntry {
+  return {
+    respa: Array(12).fill(0) as number[], initial: Array(12).fill(0) as number[],
+    respaBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
+    initialBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
+  }
+}
+
+// Returns two maps: cur = 2026, prev = 2025
+// Rules:
+//   "Application created at"  → Initial app (date when app was created)
+//   "Loan file created at"    → RESPA app   (date the loan file was opened)
+//   Owner = Assigned LC, unless LC is in LC_EXCEPTIONS_SET → use Assigned MA Support
+function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): { cur: Map<string, AppEntry>; prev: Map<string, AppEntry> } {
+  const cur = new Map<string, AppEntry>()
+  const prev = new Map<string, AppEntry>()
+  const getOrCreate = (map: Map<string, AppEntry>, key: string) => {
+    if (!map.has(key)) map.set(key, makeAppEntry())
+    return map.get(key)!
+  }
+
   for (const row of rows) {
-    const maSupport = String(row['Assigned MA Support'] ?? '').trim()
-    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
-    if (!lc) continue
-    const maKey = normName(lc)
-    if (!map.has(maKey)) map.set(maKey, {
-      respa: Array(12).fill(0) as number[],
-      initial: Array(12).fill(0) as number[],
-      respaBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
-      initialBySource: { sg: Array(12).fill(0) as number[], d2c: Array(12).fill(0) as number[] },
-    })
-    const rec = map.get(maKey)!
-    // If Application created at is filled → RESPA. Otherwise → Initial (Loan File Created date).
-    const respaDateRaw = String(row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '').trim()
+    const owner = resolveAppOwner(row)
+    if (!owner) continue
+    const maKey = normName(owner)
+
+    // "Application created at" → Initial app
+    const initDateRaw = String(row['Application created at'] ?? '').trim()
+    if (initDateRaw) {
+      const dt = parseDate(initDateRaw)
+      if (dt) {
+        const mo = dt.getMonth(), yr = dt.getFullYear()
+        const rec = getOrCreate(yr >= 2026 ? cur : prev, maKey)
+        rec.initial[mo] += 1
+        if (source) rec.initialBySource[source][mo] += 1
+      }
+    }
+
+    // "Loan file created at" → RESPA app
+    const respaDateRaw = String(row['Loan file created at'] ?? '').trim()
     if (respaDateRaw) {
       const dt = parseDate(respaDateRaw)
-      const mo = dt ? dt.getMonth() : -1
-      if (mo >= 0) {
+      if (dt) {
+        const mo = dt.getMonth(), yr = dt.getFullYear()
+        const rec = getOrCreate(yr >= 2026 ? cur : prev, maKey)
         rec.respa[mo] += 1
         if (source) rec.respaBySource[source][mo] += 1
       }
-    } else {
-      const initDateRaw = String(row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '').trim()
-      if (initDateRaw) {
-        const dt = parseDate(initDateRaw)
-        const mo = dt ? dt.getMonth() : -1
-        if (mo >= 0) {
-          rec.initial[mo] += 1
-          if (source) rec.initialBySource[source][mo] += 1
-        }
-      }
     }
   }
-  return map
+  return { cur, prev }
 }
 
 function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, MaWeekEntry[]> {
-  // Returns: weekKey -> array of MA entries with respa+initial counts for that week
   const map = new Map<string, { [maName: string]: { respa: number; initial: number } }>()
   for (const row of rows) {
-    const maSupport = String(row['Assigned MA Support'] ?? '').trim()
-    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
-    if (!lc) continue
-    const appDateRaw = String(row['Application created at'] ?? row['Application Date'] ?? row['App Date'] ?? '').trim()
-    const loanDateRaw = String(row['Loan File Created'] ?? row['Loan file created at'] ?? row['File Created'] ?? row['Loan Created'] ?? '').trim()
-    // RESPA if app date filled; Initial if app date empty and loan date filled
-    const isRespa = !!appDateRaw
-    const dateRaw = isRespa ? appDateRaw : loanDateRaw
-    if (!dateRaw) continue
-    const dt = parseDate(dateRaw)
-    if (!dt) continue
-    const wk = isoWeekKey(dt)
-    if (!map.has(wk)) map.set(wk, {})
-    const wkEntry = map.get(wk)!
-    if (!wkEntry[lc]) wkEntry[lc] = { respa: 0, initial: 0 }
-    if (isRespa) wkEntry[lc].respa += 1
-    else wkEntry[lc].initial += 1
+    const owner = resolveAppOwner(row)
+    if (!owner) continue
+
+    // Initial app
+    const initDateRaw = String(row['Application created at'] ?? '').trim()
+    if (initDateRaw) {
+      const dt = parseDate(initDateRaw)
+      if (dt && dt.getFullYear() >= 2026) {
+        const wk = isoWeekKey(dt)
+        if (!map.has(wk)) map.set(wk, {})
+        const e = map.get(wk)!
+        if (!e[owner]) e[owner] = { respa: 0, initial: 0 }
+        e[owner].initial += 1
+      }
+    }
+
+    // RESPA app
+    const respaDateRaw = String(row['Loan file created at'] ?? '').trim()
+    if (respaDateRaw) {
+      const dt = parseDate(respaDateRaw)
+      if (dt && dt.getFullYear() >= 2026) {
+        const wk = isoWeekKey(dt)
+        if (!map.has(wk)) map.set(wk, {})
+        const e = map.get(wk)!
+        if (!e[owner]) e[owner] = { respa: 0, initial: 0 }
+        e[owner].respa += 1
+      }
+    }
   }
   const result = new Map<string, MaWeekEntry[]>()
   for (const [wk, byMA] of map.entries()) {
-    const entries = Object.entries(byMA)
+    result.set(wk, Object.entries(byMA)
       .map(([name, v]) => ({ name, respa: v.respa, initial: v.initial }))
-      .sort((a, b) => (b.respa + b.initial) - (a.respa + a.initial))
-    result.set(wk, entries)
+      .sort((a, b) => (b.respa + b.initial) - (a.respa + a.initial)))
   }
   return result
 }
@@ -1675,36 +1719,37 @@ export default function Production() {
 
   const handleAppsUpload = useCallback(async (file: File, source: 'sg'|'d2c') => {
     const rows = await readRows(file)
-    const parsed = parseAppsRows(rows, source)
-    setMaData(prev => {
-      const next = [...prev]
+    const { cur, prev: prevParsed } = parseAppsRows(rows, source)
+
+    function applyApps(list: MARecord[], parsed: Map<string, AppEntry>): MARecord[] {
+      const next = [...list]
       parsed.forEach((appData, maKey) => {
         const idx = next.findIndex(m => normName(m.name) === maKey || nameSimilar(m.name, maKey))
-        if (idx >= 0) {
-          const existingSG = source === 'sg'
-          const sgRespa = existingSG ? appData.respaBySource.sg : next[idx].monthlyRespaAppsSG
-          const d2cRespa = existingSG ? next[idx].monthlyRespaAppsD2C : appData.respaBySource.d2c
-          const sgInit = existingSG ? appData.initialBySource.sg : next[idx].monthlyInitialAppsSG
-          const d2cInit = existingSG ? next[idx].monthlyInitialAppsD2C : appData.initialBySource.d2c
-          next[idx] = {
-            ...next[idx],
-            monthlyRespaAppsSG: sgRespa,
-            monthlyRespaAppsD2C: d2cRespa,
-            monthlyInitialAppsSG: sgInit,
-            monthlyInitialAppsD2C: d2cInit,
-            monthlyRespaApps: sgRespa.map((v, i) => v + d2cRespa[i]),
-            monthlyInitialApps: sgInit.map((v, i) => v + d2cInit[i]),
-            ytdRespaAppsSG: sgRespa.reduce((a,b)=>a+b,0),
-            ytdRespaAppsD2C: d2cRespa.reduce((a,b)=>a+b,0),
-            ytdInitialAppsSG: sgInit.reduce((a,b)=>a+b,0),
-            ytdInitialAppsD2C: d2cInit.reduce((a,b)=>a+b,0),
-            ytdRespaApps: sgRespa.reduce((a,b)=>a+b,0) + d2cRespa.reduce((a,b)=>a+b,0),
-            ytdInitialApps: sgInit.reduce((a,b)=>a+b,0) + d2cInit.reduce((a,b)=>a+b,0),
-          }
+        if (idx < 0) return
+        const isSG = source === 'sg'
+        const sgRespa = isSG ? appData.respaBySource.sg : next[idx].monthlyRespaAppsSG
+        const d2cRespa = isSG ? next[idx].monthlyRespaAppsD2C : appData.respaBySource.d2c
+        const sgInit = isSG ? appData.initialBySource.sg : next[idx].monthlyInitialAppsSG
+        const d2cInit = isSG ? next[idx].monthlyInitialAppsD2C : appData.initialBySource.d2c
+        next[idx] = {
+          ...next[idx],
+          monthlyRespaAppsSG: sgRespa, monthlyRespaAppsD2C: d2cRespa,
+          monthlyInitialAppsSG: sgInit, monthlyInitialAppsD2C: d2cInit,
+          monthlyRespaApps: sgRespa.map((v, i) => v + d2cRespa[i]),
+          monthlyInitialApps: sgInit.map((v, i) => v + d2cInit[i]),
+          ytdRespaAppsSG: sgRespa.reduce((a,b)=>a+b,0),
+          ytdRespaAppsD2C: d2cRespa.reduce((a,b)=>a+b,0),
+          ytdInitialAppsSG: sgInit.reduce((a,b)=>a+b,0),
+          ytdInitialAppsD2C: d2cInit.reduce((a,b)=>a+b,0),
+          ytdRespaApps: sgRespa.reduce((a,b)=>a+b,0) + d2cRespa.reduce((a,b)=>a+b,0),
+          ytdInitialApps: sgInit.reduce((a,b)=>a+b,0) + d2cInit.reduce((a,b)=>a+b,0),
         }
       })
       return next
-    })
+    }
+
+    setMaData(prev => applyApps(prev, cur))
+    setPrevYearData(prev => applyApps(prev, prevParsed))
     const weeklyMA = parseAppsWeekly(rows, source)
     setWeeklyData(prev => {
       const next = prev.map(w => ({ ...w }))
