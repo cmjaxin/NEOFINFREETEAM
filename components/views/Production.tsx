@@ -860,6 +860,14 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return 0
   })()
 
+  // For YTY trend comparisons, only compare through the last COMPLETE month.
+  // If the current calendar month equals lastDataMonth, that month is partial
+  // (e.g. Aug 4 data exists but Aug isn't done), so compare through the prior month.
+  const currentCalendarMonth = new Date().getMonth()
+  const ytyToMonth = (selectedYear === new Date().getFullYear() && lastDataMonth === currentCalendarMonth && lastDataMonth > 0)
+    ? lastDataMonth - 1
+    : lastDataMonth
+
   // For YTD, use lastDataMonth so totals include all uploaded data rather than
   // a hardcoded July cutoff. Everything else uses periodRange as normal.
   const [fr, to] = period === 'ytd'
@@ -942,16 +950,25 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return Math.round(((curVal - prevVal) / prevVal) * 100)
   }
 
-  // YTY: same period range but from prevYearData
+  // YTY: same period range but from prevYearData.
+  // For YTD, use ytyToMonth (last COMPLETE month) so both sides of the comparison
+  // use the same fully-populated month — avoids partial-month distortion.
   function prevYearVal(name: string, type: 'vol'|'fam') {
     const py = prevYearData.find(m => nameSimilar(m.name, name))
     if (!py) return null
     if (period === 'range') {
       return sumCrossYear(py, rangeFrom, rangeFromYear - 1, rangeTo, rangeToYear - 1, type)
     }
-    // `to` is now dynamic (equals lastDataMonth for YTD), so both years use
-    // exactly the same month span
-    return type === 'vol' ? sumMonths(volArr(py), fr, to) : sumMonths(famArr(py), fr, to)
+    const endM = period === 'ytd' ? ytyToMonth : to
+    return type === 'vol' ? sumMonths(volArr(py), fr, endM) : sumMonths(famArr(py), fr, endM)
+  }
+
+  // For the YTY numerator (current year), also use ytyToMonth on YTD so both sides match
+  function ytyCurrentVal(ma: MARecord, type: 'vol'|'fam'): number {
+    if (period === 'ytd') {
+      return type === 'vol' ? sumMonths(volArr(ma), 0, ytyToMonth) : sumMonths(famArr(ma), 0, ytyToMonth)
+    }
+    return type === 'vol' ? maVol(ma) : maFam(ma)
   }
 
   function ytyPct(cur: number, prev: number | null) {
@@ -969,7 +986,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       return `${curFrom}–${curTo} vs ${pyFrom}–${pyTo}`
     }
     if (period === 'ytd') {
-      return `Jan–${MONTHS[lastDataMonth]} ${selectedYear} vs Jan–${MONTHS[lastDataMonth]} ${selectedYear - 1}`
+      return `Jan–${MONTHS[ytyToMonth]} ${selectedYear} vs Jan–${MONTHS[ytyToMonth]} ${selectedYear - 1}`
     }
     return `${MONTHS[fr]} ${selectedYear} vs ${MONTHS[fr]} ${selectedYear - 1}`
   })()
@@ -1059,13 +1076,15 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>VOLUME</div>
-            {hasPrevYearForSelected && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
+            {hasPrevYearForSelected && period === 'ytd' && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>FAMILIES</div>
-            {hasPrevYearForSelected && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
+            {hasPrevYearForSelected && period === 'ytd' && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
           </div>
-          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO ({momMonthLabel})</div>
+          <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>
+            {period === 'ytd' ? '—' : `MO/MO (${momMonthLabel})`}
+          </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>CHANGEMAKER</div>
             <div style={{ fontSize: 10, color: C.dim, fontWeight: 400, marginTop: 2 }}>75 fam or $27.5M vol to qualify</div>
@@ -1081,8 +1100,11 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           const momFamPct = momCalc(ma, 'fam')
           const pyVol = prevYearVal(ma.name, 'vol')
           const pyFam = prevYearVal(ma.name, 'fam')
-          const ytyV = ytyPct(vol, pyVol)
-          const ytyF = ytyPct(fam, pyFam)
+          const ytyV = ytyPct(ytyCurrentVal(ma, 'vol'), pyVol)
+          const ytyF = ytyPct(ytyCurrentVal(ma, 'fam'), pyFam)
+          // YTY shown on YTD only; MoM shown on single-month only
+          const showYTY = hasPrevYearForSelected && period === 'ytd'
+          const showMoM = period !== 'ytd'
           const projFam = Math.round(ma.ytdFamilies * PROJ_FACTOR)
           const projVol = Math.round(ma.ytdVolume * PROJ_FACTOR)
           const cmStatus = getIndivStatus(ma.ytdVolume, ma.ytdFamilies)
@@ -1109,27 +1131,31 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
                 {/* Volume */}
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{fmtVol(vol)}</div>
-                  {hasPrevYearForSelected && <div style={{ marginTop: 3 }}><TrendChip pct={ytyV} label="YTY" /></div>}
+                  {showYTY && <div style={{ marginTop: 3 }}><TrendChip pct={ytyV} label="YTY" /></div>}
                 </div>
 
                 {/* Families */}
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>{fam}</div>
-                  {hasPrevYearForSelected && <div style={{ marginTop: 3 }}><TrendChip pct={ytyF} label="YTY" /></div>}
+                  {showYTY && <div style={{ marginTop: 3 }}><TrendChip pct={ytyF} label="YTY" /></div>}
                 </div>
 
-                {/* MoM */}
+                {/* MoM — only shown on single-month views */}
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 11, color: C.muted }}>Vol</span>
-                      <TrendChip pct={momVolPct} />
+                  {showMoM ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: C.muted }}>Vol</span>
+                        <TrendChip pct={momVolPct} />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 11, color: C.muted }}>Fam</span>
+                        <TrendChip pct={momFamPct} />
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 11, color: C.muted }}>Fam</span>
-                      <TrendChip pct={momFamPct} />
-                    </div>
-                  </div>
+                  ) : (
+                    <span style={{ fontSize: 11, color: C.muted }}>—</span>
+                  )}
                 </div>
 
                 {/* Changemaker */}
