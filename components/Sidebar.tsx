@@ -28,10 +28,31 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   const inits = initials(profile?.full_name ?? '')
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins') {
+  const isColin = profile?.email?.toLowerCase() === 'colin.jenson@neohomeloans.com'
+  const isAdmin = profile?.role === 'admin' || isColin
+
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing') {
     setView(id)
     onClose()
   }
+
+  const adminNavItems = [
+    { id: 'dashboard' as const,   label: 'Onboarding' },
+    { id: 'directory' as const,   label: 'Team Directory' },
+    { id: 'production' as const,  label: 'Production' },
+    { id: 'wins' as const,        label: 'Monthly Wins' },
+    { id: 'marketing' as const,   label: 'Marketing' },
+    { id: 'terminated' as const,  label: 'Terminated' },
+    { id: 'templates' as const,   label: 'Templates' },
+  ]
+
+  const advisorNavItems = [
+    { id: 'production' as const,  label: 'Production' },
+    { id: 'wins' as const,        label: 'Monthly Wins' },
+    { id: 'marketing' as const,   label: 'Marketing' },
+  ]
+
+  const navItems = isAdmin ? adminNavItems : advisorNavItems
 
   return (
     <aside className={`sidebar${isOpen ? ' sidebar--open' : ''}`} style={{ width: 250, flexShrink: 0, background: '#0A2540', height: '100vh', display: 'flex', flexDirection: 'column', padding: '22px 20px' }}>
@@ -42,14 +63,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         FinFree Division · Team HQ
       </div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {([
-          { id: 'dashboard', label: 'Onboarding' },
-          { id: 'directory', label: 'Team Directory' },
-          { id: 'production', label: 'Production' },
-          { id: 'wins', label: 'Monthly Wins' },
-          { id: 'terminated', label: 'Terminated' },
-          { id: 'templates', label: 'Templates' },
-        ] as const).map(({ id, label }) => (
+        {navItems.map(({ id, label }) => (
           <button key={id} onClick={() => handleNav(id)} style={navStyle(view === id)}>
             <span style={{ width: 7, height: 7, borderRadius: 2, background: 'currentColor', opacity: .75, flexShrink: 0 }} />
             {label}

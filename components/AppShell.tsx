@@ -8,6 +8,7 @@ import Terminated from '@/components/views/Terminated'
 import Templates from '@/components/views/Templates'
 import Production from '@/components/views/Production'
 import Wins from '@/components/views/Wins'
+import Marketing from '@/components/views/Marketing'
 import EmployeeProfile from '@/components/views/EmployeeProfile'
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal'
 import SettingsModal from '@/components/modals/SettingsModal'
@@ -53,6 +54,7 @@ function Shell() {
           {view === 'production' && <Production />}
           {view === 'wins' && <Wins />}
           {view === 'profile' && <EmployeeProfile />}
+          {view === 'marketing' && <Marketing />}
         </div>
       </main>
 
