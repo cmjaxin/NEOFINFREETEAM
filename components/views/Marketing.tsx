@@ -1047,6 +1047,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
       id: uid(), type, x, y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true,
       rectW: meta.isCircle ? 0.12 : 0.35,
       rectH: meta.isCircle ? 0.12 : 0.22,
+      fontColor: '#000000',
     }
     updatePage(pageIdx, { fields: [...page.fields, f] })
     setSelectedId(f.id)
