@@ -588,7 +588,15 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
           <span style={{ width: 7, height: 7, borderRadius: 2, background: meta.color, display: 'inline-block', flexShrink: 0 }} />
           {meta.label}
         </label>
-        {meta.isMultiline ? (
+        {ft === 'pa_date' ? (
+          <input type="date" onChange={e => {
+            if (!e.target.value) { setValues(v => ({ ...v, [ft]: '' })); return }
+            const [y, m, d] = e.target.value.split('-').map(Number)
+            const formatted = new Date(y, m - 1, d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+            setValues(v => ({ ...v, [ft]: formatted }))
+          }}
+            style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
+        ) : meta.isMultiline ? (
           <textarea value={values[ft]} onChange={e => setValues(v => ({ ...v, [ft]: e.target.value }))} placeholder={meta.placeholder} rows={3}
             style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
         ) : (
