@@ -66,7 +66,9 @@ interface TplField {
   type: FieldType
   x: number
   y: number
-  fontSize: number   // fraction of canvas height — also controls image "size"
+  fontSize: number   // fraction of canvas height — text size; also legacy image size
+  rectW: number      // fraction of canvas width  — rect/circle fields only
+  rectH: number      // fraction of canvas height — rect/circle fields only
   fontColor: string
   bold: boolean
 }
@@ -156,7 +158,7 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
       if (!val) continue
       try {
         const img = await loadImage(val)
-        const r = fs * 2.5
+        const r = (f.rectW || f.fontSize * 2.5) * Math.min(w, h)
         ctx.save()
         ctx.beginPath(); ctx.arc(px, py, r / 2, 0, Math.PI * 2); ctx.clip()
         ctx.drawImage(img, px - r / 2, py - r / 2, r, r)
@@ -166,9 +168,8 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
       if (!val) continue
       try {
         const img = await loadImage(val)
-        const targetW = fs * (w / h) * 7
-        const ar = img.naturalWidth / img.naturalHeight
-        const dw = targetW, dh = targetW / ar
+        const dw = (f.rectW || 0.3) * w
+        const dh = (f.rectH || 0.2) * h
         ctx.drawImage(img, px - dw / 2, py - dh / 2, dw, dh)
       } catch {}
     } else if (meta.isMultiline) {
@@ -898,7 +899,7 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddA
       const isSel = f.id === selectedRef.current
 
       if (meta.isCircle) {
-        const r = Math.max(28, fs * 2.5)
+        const r = Math.max(28, (f.rectW || f.fontSize * 2.5) * Math.min(dispW, dispH))
         ctx.save(); ctx.globalAlpha = 0.28; ctx.fillStyle = meta.color
         ctx.beginPath(); ctx.arc(px, py, r / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore()
         ctx.strokeStyle = meta.color; ctx.lineWidth = 2.5; ctx.setLineDash([])
@@ -907,14 +908,14 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddA
         ctx.textAlign = 'center'; ctx.fillText(meta.label, px, py + 4); ctx.textAlign = 'left'
         boundsRef.current.set(f.id, { x: px - r / 2, y: py - r / 2, w: r, h: r })
       } else if (meta.isRect) {
-        const rw = Math.max(90, fs * (dispW / dispH) * 5)
-        const rh = Math.max(32, fs * 2)
+        const rw = Math.max(40, (f.rectW || 0.3) * dispW)
+        const rh = Math.max(20, (f.rectH || 0.2) * dispH)
         ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = meta.color
         ctx.fillRect(px - rw / 2, py - rh / 2, rw, rh); ctx.restore()
         ctx.strokeStyle = meta.color; ctx.lineWidth = 2; ctx.setLineDash([6, 3])
         ctx.strokeRect(px - rw / 2, py - rh / 2, rw, rh); ctx.setLineDash([])
-        ctx.fillStyle = meta.color; ctx.font = `bold ${Math.max(9, Math.round(rh * 0.35))}px Inter,Arial`
-        ctx.textAlign = 'center'; ctx.fillText(meta.label, px, py + 5); ctx.textAlign = 'left'
+        ctx.fillStyle = meta.color; ctx.font = `bold ${Math.max(9, Math.round(rh * 0.18))}px Inter,Arial`
+        ctx.textAlign = 'center'; ctx.fillText(meta.label, px, py + 4); ctx.textAlign = 'left'
         boundsRef.current.set(f.id, { x: px - rw / 2, y: py - rh / 2, w: rw, h: rh })
       } else {
         // Text: WYSIWYG — shows placeholder at actual configured size & color
@@ -1041,7 +1042,12 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
   }
 
   function addField(x: number, y: number, type: FieldType) {
-    const f: TplField = { id: uid(), type, x, y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true }
+    const meta = FIELD_META[type]
+    const f: TplField = {
+      id: uid(), type, x, y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true,
+      rectW: meta.isCircle ? 0.12 : 0.35,
+      rectH: meta.isCircle ? 0.12 : 0.22,
+    }
     updatePage(pageIdx, { fields: [...page.fields, f] })
     setSelectedId(f.id)
   }
@@ -1180,12 +1186,36 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
               <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
                 <div style={{ width: 9, height: 9, borderRadius: 3, background: meta.color }} />{meta.label}
               </div>
-              <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
-                {meta.isCircle || meta.isRect ? 'Size' : 'Font size'} — <strong>{Math.round(selected.fontSize * 100)}%</strong>
-              </label>
-              <input type="range" min={1} max={15} step={0.5} value={Math.round(selected.fontSize * 100)}
-                onChange={e => updateField(selected.id, { fontSize: Number(e.target.value) / 100 })}
-                style={{ width: '100%', marginBottom: 12 }} />
+              {(meta.isRect) && (<>
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Width — <strong>{Math.round((selected.rectW || 0.3) * 100)}%</strong>
+                </label>
+                <input type="range" min={3} max={100} step={1} value={Math.round((selected.rectW || 0.3) * 100)}
+                  onChange={e => updateField(selected.id, { rectW: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Height — <strong>{Math.round((selected.rectH || 0.2) * 100)}%</strong>
+                </label>
+                <input type="range" min={3} max={100} step={1} value={Math.round((selected.rectH || 0.2) * 100)}
+                  onChange={e => updateField(selected.id, { rectH: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 12 }} />
+              </>)}
+              {(meta.isCircle) && (<>
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Size — <strong>{Math.round((selected.rectW || 0.12) * 100)}%</strong>
+                </label>
+                <input type="range" min={3} max={60} step={1} value={Math.round((selected.rectW || 0.12) * 100)}
+                  onChange={e => updateField(selected.id, { rectW: Number(e.target.value) / 100, rectH: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 12 }} />
+              </>)}
+              {(!meta.isCircle && !meta.isRect) && (<>
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Font size — <strong>{Math.round(selected.fontSize * 100)}%</strong>
+                </label>
+                <input type="range" min={1} max={15} step={0.5} value={Math.round(selected.fontSize * 100)}
+                  onChange={e => updateField(selected.id, { fontSize: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 12 }} />
+              </>)}
               {!meta.isCircle && !meta.isRect && (
                 <>
                   <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 5 }}>Color</label>
