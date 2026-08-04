@@ -639,14 +639,42 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
               <>
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('Co-Brand Partner')}
-                {partners.length > 0 && (
+                {partners.length === 0 ? (
+                  <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 14, padding: '10px 12px', background: '#F9FAFB', borderRadius: 8 }}>
+                    No saved partners yet — go to the Partners tab to add one, or fill in manually below.
+                  </div>
+                ) : (
                   <div style={{ marginBottom: 14 }}>
-                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Select saved partner</label>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Select a partner</label>
                     <select value={selectedPartner} onChange={e => handlePartnerSelect(e.target.value)}
-                      style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '9px 12px', fontSize: 13, background: '#fff', marginBottom: 10 }}>
-                      <option value="">— No partner / enter manually —</option>
+                      style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 8, padding: '10px 12px', fontSize: 13, background: '#fff', marginBottom: 10, fontWeight: selectedPartner ? 600 : 400 }}>
+                      <option value="">— Choose a partner —</option>
                       {partners.map(p => <option key={p.id} value={p.id}>{p.name}{p.company ? ` · ${p.company}` : ''}</option>)}
                     </select>
+                    {selectedPartner && (() => {
+                      const p = partners.find(x => x.id === selectedPartner)
+                      if (!p) return null
+                      return (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 8, padding: '10px 12px', marginBottom: 10 }}>
+                          {p.headshot_url
+                            // eslint-disable-next-line @next/next/no-img-element
+                            ? <img src={p.headshot_url} alt="" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                            : <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#BAE6FD', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 }}>👤</div>}
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#0A2540' }}>{p.name}</div>
+                            <div style={{ fontSize: 11, color: '#6B7280' }}>{[p.title, p.company].filter(Boolean).join(' · ')}</div>
+                          </div>
+                          {p.logo_url && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.logo_url} alt="" style={{ height: 28, maxWidth: 70, objectFit: 'contain', marginLeft: 'auto', flexShrink: 0 }} />
+                          )}
+                        </div>
+                      )
+                    })()}
+                    <button onClick={() => handlePartnerSelect('')}
+                      style={{ fontSize: 11, color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                      Clear partner
+                    </button>
                   </div>
                 )}
                 {(['partner_name','partner_title','partner_company','partner_phone','partner_email'] as FieldType[]).map(ft => fieldInput(ft))}
