@@ -183,7 +183,7 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     } else if (meta.isMultiline) {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
       ctx.fillStyle = f.fontColor
-      wrapText(ctx, val, px, py, w * 0.45, fs * 1.45)
+      wrapText(ctx, val, px, py, (f.rectW || 0.45) * w, fs * 1.45)
     } else {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
       ctx.fillStyle = f.fontColor
@@ -932,8 +932,30 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
         ctx.fillStyle = meta.color; ctx.font = `bold ${Math.max(9, Math.round(rh * 0.18))}px Inter,Arial`
         ctx.textAlign = 'center'; ctx.fillText(meta.label, px, py + 4); ctx.textAlign = 'left'
         boundsRef.current.set(f.id, { x: px - rw / 2, y: py - rh / 2, w: rw, h: rh })
+      } else if (meta.isMultiline) {
+        // Multiline text: show bounding box so it can be resized
+        const rw = Math.max(40, (f.rectW || 0.45) * dispW)
+        const rh = Math.max(20, (f.rectH || 0.18) * dispH)
+        ctx.save(); ctx.globalAlpha = 0.1; ctx.fillStyle = meta.color
+        ctx.fillRect(px, py - fs, rw, rh); ctx.restore()
+        ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3])
+        ctx.strokeRect(px, py - fs, rw, rh); ctx.setLineDash([])
+        // Draw wrapped placeholder text inside box
+        ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter,Arial`
+        ctx.fillStyle = f.fontColor
+        const lines = (meta.placeholder || meta.label).split(' ')
+        let line = '', cy = py
+        for (const word of lines) {
+          const test = line + word + ' '
+          if (ctx.measureText(test).width > rw - 6 && line) {
+            ctx.fillText(line.trim(), px + 4, cy); line = word + ' '; cy += fs * 1.35
+            if (cy > py - fs + rh) break
+          } else { line = test }
+        }
+        if (line.trim() && cy <= py - fs + rh) ctx.fillText(line.trim(), px + 4, cy)
+        boundsRef.current.set(f.id, { x: px, y: py - fs, w: rw, h: rh })
       } else {
-        // Text: WYSIWYG — shows placeholder at actual configured size & color
+        // Single-line text: WYSIWYG — shows placeholder at actual configured size & color
         ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter,Arial`
         const text = meta.placeholder || meta.label
         const tw = ctx.measureText(text).width
@@ -972,7 +994,7 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
     const f = fieldsRef.current.find(f => f.id === selectedRef.current)
     if (!f) return null
     const meta = FIELD_META[f.type]
-    if (!meta.isRect && !meta.isCircle) return null
+    if (!meta.isRect && !meta.isCircle && !meta.isMultiline) return null
     const b = boundsRef.current.get(f.id)
     if (!b) return null
     const pad = 5, hs = 10
@@ -1000,8 +1022,8 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
       dragRef.current = {
         mode: 'resize', id: f.id, corner: cornerHit.corner,
         cx: f.x * dispW, cy: f.y * dispH,
-        origRW: (f.rectW || (meta.isCircle ? 0.12 : 0.3)) * dispW,
-        origRH: (f.rectH || (meta.isCircle ? 0.12 : 0.2)) * dispH,
+        origRW: (f.rectW || (meta.isCircle ? 0.12 : meta.isMultiline ? 0.45 : 0.3)) * dispW,
+        origRH: (f.rectH || (meta.isCircle ? 0.12 : meta.isMultiline ? 0.18 : 0.2)) * dispH,
       }
       setPicker(null); e.preventDefault(); return
     }
@@ -1118,8 +1140,8 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
     const meta = FIELD_META[type]
     const f: TplField = {
       id: uid(), type, x, y, fontSize: 0.04, fontColor: '#000000', bold: true,
-      rectW: meta.isCircle ? 0.12 : 0.35,
-      rectH: meta.isCircle ? 0.12 : 0.22,
+      rectW: meta.isCircle ? 0.12 : meta.isMultiline ? 0.45 : 0.35,
+      rectH: meta.isCircle ? 0.12 : meta.isMultiline ? 0.18 : 0.22,
     }
     updatePage(pageIdx, { fields: [...page.fields, f] })
     setSelectedId(f.id)
@@ -1292,6 +1314,20 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                 </label>
                 <input type="range" min={1} max={15} step={0.5} value={Math.round(selected.fontSize * 100)}
                   onChange={e => updateField(selected.id, { fontSize: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 12 }} />
+              </>)}
+              {(meta.isMultiline) && (<>
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Width — <strong>{Math.round((selected.rectW || 0.45) * 100)}%</strong>
+                </label>
+                <input type="range" min={10} max={100} step={1} value={Math.round((selected.rectW || 0.45) * 100)}
+                  onChange={e => updateField(selected.id, { rectW: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Height — <strong>{Math.round((selected.rectH || 0.18) * 100)}%</strong>
+                </label>
+                <input type="range" min={5} max={100} step={1} value={Math.round((selected.rectH || 0.18) * 100)}
+                  onChange={e => updateField(selected.id, { rectH: Number(e.target.value) / 100 })}
                   style={{ width: '100%', marginBottom: 12 }} />
               </>)}
               {!meta.isCircle && !meta.isRect && (
