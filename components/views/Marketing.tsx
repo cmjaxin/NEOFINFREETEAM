@@ -77,6 +77,8 @@ interface TplField {
   fontSize: number   // fraction of canvas height — text size; also legacy image size
   rectW: number      // fraction of canvas width  — rect/circle fields only
   rectH: number      // fraction of canvas height — rect/circle fields only
+  panX: number       // 0–1 horizontal pan within box, 0.5 = centered
+  panY: number       // 0–1 vertical pan within box, 0.5 = centered
   fontColor: string
   bold: boolean
 }
@@ -168,9 +170,14 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
       try {
         const img = await loadImage(val)
         const r = (f.rectW || f.fontSize * 2.5) * Math.min(w, h)
+        const bx = px - r / 2, by = py - r / 2
+        const scale = Math.max(r / img.naturalWidth, r / img.naturalHeight)
+        const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale
+        const ox = (f.panX ?? 0.5) * Math.max(0, iw - r)
+        const oy = (f.panY ?? 0.5) * Math.max(0, ih - r)
         ctx.save()
         ctx.beginPath(); ctx.arc(px, py, r / 2, 0, Math.PI * 2); ctx.clip()
-        ctx.drawImage(img, px - r / 2, py - r / 2, r, r)
+        ctx.drawImage(img, bx - ox, by - oy, iw, ih)
         ctx.restore()
       } catch {}
     } else if (meta.isRect) {
@@ -179,7 +186,15 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
         const img = await loadImage(val)
         const dw = (f.rectW || 0.3) * w
         const dh = (f.rectH || 0.2) * h
-        ctx.drawImage(img, px - dw / 2, py - dh / 2, dw, dh)
+        const bx = px - dw / 2, by = py - dh / 2
+        const scale = Math.max(dw / img.naturalWidth, dh / img.naturalHeight)
+        const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale
+        const ox = (f.panX ?? 0.5) * Math.max(0, iw - dw)
+        const oy = (f.panY ?? 0.5) * Math.max(0, ih - dh)
+        ctx.save()
+        ctx.beginPath(); ctx.rect(bx, by, dw, dh); ctx.clip()
+        ctx.drawImage(img, bx - ox, by - oy, iw, ih)
+        ctx.restore()
       } catch {}
     } else if (meta.isMultiline) {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
@@ -954,6 +969,11 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
           } else { line = test }
         }
         if (line.trim() && cy <= py - fs + rh) ctx.fillText(line.trim(), px + 4, cy)
+        // Bottom-right resize grip
+        const gx = px + rw - 12, gy = py - fs + rh - 12
+        ctx.save(); ctx.globalAlpha = 0.55; ctx.strokeStyle = meta.color; ctx.lineWidth = 2; ctx.setLineDash([])
+        for (const off of [3, 7, 11]) { ctx.beginPath(); ctx.moveTo(gx + off, gy + 12); ctx.lineTo(gx + 12, gy + off); ctx.stroke() }
+        ctx.restore()
         boundsRef.current.set(f.id, { x: px, y: py - fs, w: rw, h: rh })
       } else {
         // Single-line text: WYSIWYG — shows placeholder at actual configured size & color
@@ -1146,6 +1166,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
       id: uid(), type, x, y, fontSize: 0.04, fontColor: '#000000', bold: true,
       rectW: meta.isCircle ? 0.12 : meta.isMultiline ? 0.45 : 0.35,
       rectH: meta.isCircle ? 0.12 : meta.isMultiline ? 0.18 : 0.22,
+      panX: 0.5, panY: 0.5,
     }
     updatePage(pageIdx, { fields: [...page.fields, f] })
     setSelectedId(f.id)
@@ -1322,6 +1343,18 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                 </label>
                 <input type="range" min={3} max={100} step={1} value={Math.round((selected.rectH || 0.2) * 100)}
                   onChange={e => updateField(selected.id, { rectH: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Pan X — <strong>{Math.round((selected.panX ?? 0.5) * 100)}%</strong>
+                </label>
+                <input type="range" min={0} max={100} step={1} value={Math.round((selected.panX ?? 0.5) * 100)}
+                  onChange={e => updateField(selected.id, { panX: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Pan Y — <strong>{Math.round((selected.panY ?? 0.5) * 100)}%</strong>
+                </label>
+                <input type="range" min={0} max={100} step={1} value={Math.round((selected.panY ?? 0.5) * 100)}
+                  onChange={e => updateField(selected.id, { panY: Number(e.target.value) / 100 })}
                   style={{ width: '100%', marginBottom: 12 }} />
               </>)}
               {(meta.isCircle) && (<>
@@ -1330,6 +1363,18 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                 </label>
                 <input type="range" min={3} max={60} step={1} value={Math.round((selected.rectW || 0.12) * 100)}
                   onChange={e => updateField(selected.id, { rectW: Number(e.target.value) / 100, rectH: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Pan X — <strong>{Math.round((selected.panX ?? 0.5) * 100)}%</strong>
+                </label>
+                <input type="range" min={0} max={100} step={1} value={Math.round((selected.panX ?? 0.5) * 100)}
+                  onChange={e => updateField(selected.id, { panX: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Pan Y — <strong>{Math.round((selected.panY ?? 0.5) * 100)}%</strong>
+                </label>
+                <input type="range" min={0} max={100} step={1} value={Math.round((selected.panY ?? 0.5) * 100)}
+                  onChange={e => updateField(selected.id, { panY: Number(e.target.value) / 100 })}
                   style={{ width: '100%', marginBottom: 12 }} />
               </>)}
               {(!meta.isCircle && !meta.isRect) && (<>
