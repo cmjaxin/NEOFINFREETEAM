@@ -491,6 +491,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const [rendering, setRendering] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [headshotUploading, setHeadshotUploading] = useState(false)
+  const [mobileTab, setMobileTab] = useState<'preview' | 'fill'>('fill')
   const previewRef = useRef<HTMLCanvasElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -658,9 +659,15 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+      <div className="mkt-modal-body" onClick={e => e.stopPropagation()}>
+        {/* Mobile tab switcher */}
+        <div className="mkt-modal-switcher">
+          <button className={mobileTab === 'fill' ? 'active' : ''} onClick={() => setMobileTab('fill')}>✏ Fill In</button>
+          <button className={mobileTab === 'preview' ? 'active' : ''} onClick={() => setMobileTab('preview')}>👁 Preview</button>
+        </div>
+
         {/* Canvas preview */}
-        <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', background: '#111827', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 32 }}>
+        <div ref={containerRef} className="mkt-modal-canvas" data-hidden={mobileTab !== 'preview' ? 'true' : undefined}>
           <div style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
             <canvas ref={previewRef} style={{ width: '100%', aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.7)', opacity: rendering ? 0.5 : 1, transition: 'opacity .15s' }} />
             {rendering && (
@@ -672,7 +679,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
         </div>
 
         {/* Fields panel */}
-        <div style={{ width: 340, flexShrink: 0, background: '#fff', borderLeft: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
+        <div className="mkt-modal-panel" data-hidden={mobileTab !== 'fill' ? 'true' : undefined}>
           <div style={{ flex: 1, overflowY: 'auto', padding: 22 }}>
 
             {/* Advisor */}
@@ -832,7 +839,7 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
           {!search && isAdmin && <div style={{ fontSize: 13, color: '#9CA3AF' }}>Upload templates in the "Upload & Edit" tab.</div>}
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
+        <div className="mkt-grid">
           {visible.map(t => {
             const thumb = t.thumbnail_url ?? t.pages?.[0]?.bg_url ?? ''
             const hovered = hoverId === t.id
@@ -1621,13 +1628,13 @@ export default function Marketing() {
   }
 
   return (
-    <div style={{ padding: '32px 40px', maxWidth: 1400, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, gap: 16, flexWrap: 'wrap' }}>
+    <div className="mkt-page" style={{ maxWidth: 1400, margin: '0 auto' }}>
+      <div className="mkt-header">
         <div>
           <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0A2540', margin: '0 0 6px' }}>Marketing Templates</h1>
-          <p style={{ color: '#6B7280', fontSize: 14, margin: 0 }}>Click any template to personalize and download</p>
+          <p style={{ color: '#6B7280', fontSize: 14, margin: 0 }}>Tap any template to personalize and download</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="mkt-tabs">
           {tabBtn('library', '📚 Library')}
           {tabBtn('partners', '🤝 Partners')}
           {isAdmin && <button onClick={() => { setEditingTemplate(undefined); setTab('admin') }} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: tab === 'admin' ? '#0A2540' : '#F3F4F6', color: tab === 'admin' ? '#fff' : '#6B7280' }}>⬆ Upload & Edit</button>}

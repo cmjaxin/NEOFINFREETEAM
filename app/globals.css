@@ -58,6 +58,37 @@ input:focus, textarea:focus { outline: none; }
   }
 }
 
+/* ── Marketing mobile ───────────────────────────────────────────── */
+.mkt-page { padding: 32px 40px; }
+.mkt-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 16px; flex-wrap: wrap; }
+.mkt-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.mkt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+
+/* Personalise modal */
+.mkt-modal-body { flex: 1; display: flex; overflow: hidden; }
+.mkt-modal-canvas { flex: 1; overflow-y: auto; background: #111827; display: flex; align-items: flex-start; justify-content: center; padding: 32px; }
+.mkt-modal-panel { width: 340px; flex-shrink: 0; background: #fff; border-left: 1px solid #E5E7EB; display: flex; flex-direction: column; }
+.mkt-modal-switcher { display: none; }
+
+@media (max-width: 768px) {
+  .mkt-page { padding: 16px; }
+  .mkt-header { margin-bottom: 16px; }
+  .mkt-tabs button { font-size: 12px !important; padding: 7px 12px !important; }
+  .mkt-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+
+  /* Stack modal vertically */
+  .mkt-modal-body { flex-direction: column; }
+  .mkt-modal-canvas { padding: 16px; flex: none; }
+  .mkt-modal-panel { width: 100% !important; flex: 1; border-left: none; border-top: 1px solid #E5E7EB; }
+
+  /* Show/hide via data-tab */
+  .mkt-modal-switcher { display: flex; gap: 0; border-bottom: 1px solid #E5E7EB; flex-shrink: 0; }
+  .mkt-modal-switcher button { flex: 1; padding: 11px 0; font-size: 13px; font-weight: 700; border: none; background: none; cursor: pointer; color: #6B7280; border-bottom: 3px solid transparent; }
+  .mkt-modal-switcher button.active { color: #0A2540; border-bottom-color: #0A2540; }
+  .mkt-modal-canvas[data-hidden="true"] { display: none; }
+  .mkt-modal-panel[data-hidden="true"] { display: none; }
+}
+
 @keyframes fadein {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: none; }
