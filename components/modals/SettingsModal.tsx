@@ -1,27 +1,64 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useApp } from '@/lib/appContext'
 import Modal from '@/components/ui/Modal'
 import { Input, Label } from '@/components/ui/Input'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
+async function uploadFile(supabase: any, file: File): Promise<string> {
+  const ext = file.name.split('.').pop()
+  const path = `profile-headshots/${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('marketing-assets').upload(path, file, { contentType: file.type, upsert: true })
+  if (error) throw error
+  const { data } = supabase.storage.from('marketing-assets').getPublicUrl(path)
+  return data.publicUrl
+}
+
 export default function SettingsModal() {
   const { profile, setShowSettings, pendingProfiles, reload } = useApp()
   const supabase = createClient()
   const router = useRouter()
-  const [form, setForm] = useState({ name: profile?.full_name ?? '', title: profile?.title ?? '', email: profile?.email ?? '', password: '' })
+  const [form, setForm] = useState({
+    name: profile?.full_name ?? '',
+    title: profile?.title ?? '',
+    email: profile?.email ?? '',
+    nmls: profile?.nmls ?? '',
+    phone: profile?.phone ?? '',
+    headshot_url: profile?.headshot_url ?? '',
+    password: '',
+  })
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   function set(k: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [k]: e.target.value }))
   }
 
+  async function handleHeadshotFile(file: File) {
+    setUploading(true)
+    try {
+      const url = await uploadFile(supabase, file)
+      setForm(f => ({ ...f, headshot_url: url }))
+    } catch (e: any) {
+      setError(`Headshot upload failed: ${e.message}`)
+    }
+    setUploading(false)
+  }
+
   async function save() {
     setError(''); setSaved(false)
     try {
-      await supabase.from('profiles').update({ full_name: form.name.trim(), title: form.title.trim(), email: form.email.trim() }).eq('id', profile!.id)
+      await supabase.from('profiles').update({
+        full_name: form.name.trim(),
+        title: form.title.trim(),
+        email: form.email.trim(),
+        nmls: form.nmls.trim(),
+        phone: form.phone.trim(),
+        headshot_url: form.headshot_url,
+      }).eq('id', profile!.id)
       if (form.password) {
         const { error: pwErr } = await supabase.auth.updateUser({ password: form.password })
         if (pwErr) { setError(pwErr.message); return }
@@ -53,17 +90,51 @@ export default function SettingsModal() {
 
   return (
     <Modal onClose={() => setShowSettings(false)}>
-      <div className="animate-fadein-fast" style={{ background: '#fff', borderRadius: 18, width: 480, maxWidth: '100%', maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: '0 24px 60px rgba(10,25,45,0.3)', zIndex: 60 }}>
+      <div className="animate-fadein-fast" style={{ background: '#fff', borderRadius: 18, width: 520, maxWidth: '100%', maxHeight: '90vh', overflow: 'auto', padding: 28, boxShadow: '0 24px 60px rgba(10,25,45,0.3)', zIndex: 60 }}>
         <h2 style={{ fontWeight: 800, fontSize: 22, margin: '0 0 4px', color: '#0A2540' }}>Account Settings</h2>
-        <div style={{ fontSize: 13, color: '#858889', marginBottom: 20 }}>Update your login and how your name appears on stamps.</div>
+        <div style={{ fontSize: 13, color: '#858889', marginBottom: 22 }}>Your info here auto-fills into marketing templates.</div>
 
-        <div style={{ marginBottom: 14 }}><Label>Display name</Label><Input value={form.name} onChange={set('name')} /></div>
-        <div style={{ marginBottom: 14 }}><Label>Job title</Label><Input value={form.title} onChange={set('title')} placeholder="e.g. Administrative Assistant" /></div>
-        <div style={{ marginBottom: 14 }}><Label>Email</Label><Input value={form.email} onChange={set('email')} /></div>
-        <div><Label>New password</Label><Input type="password" value={form.password} onChange={set('password')} placeholder="Leave blank to keep current" /></div>
+        {/* Headshot */}
+        <div style={{ marginBottom: 20 }}>
+          <Label>Headshot</Label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 6 }}>
+            {form.headshot_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={form.headshot_url} alt="" style={{ width: 68, height: 68, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB' }} />
+            ) : (
+              <div style={{ width: 68, height: 68, borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#9CA3AF', border: '2px dashed #D1D5DB' }}>
+                {initials(form.name) || '?'}
+              </div>
+            )}
+            <div>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleHeadshotFile(f); e.target.value = '' }} />
+              <button onClick={() => fileRef.current?.click()} disabled={uploading}
+                style={{ background: '#0A2540', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: uploading ? 'default' : 'pointer', opacity: uploading ? 0.6 : 1 }}>
+                {uploading ? 'Uploading…' : form.headshot_url ? 'Replace Photo' : 'Upload Photo'}
+              </button>
+              {form.headshot_url && (
+                <button onClick={() => setForm(f => ({ ...f, headshot_url: '' }))}
+                  style={{ marginLeft: 8, background: 'none', border: 'none', color: '#EF4444', fontSize: 12, cursor: 'pointer' }}>
+                  Remove
+                </button>
+              )}
+              <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>JPG or PNG · appears on flyers &amp; social posts</div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div><Label>Full name</Label><Input value={form.name} onChange={set('name')} /></div>
+          <div><Label>Job title</Label><Input value={form.title} onChange={set('title')} placeholder="Mortgage Advisor" /></div>
+          <div><Label>NMLS #</Label><Input value={form.nmls} onChange={set('nmls')} placeholder="123456" /></div>
+          <div><Label>Phone</Label><Input value={form.phone} onChange={set('phone')} placeholder="(801) 555-0100" /></div>
+          <div><Label>Email</Label><Input value={form.email} onChange={set('email')} /></div>
+          <div><Label>New password</Label><Input type="password" value={form.password} onChange={set('password')} placeholder="Leave blank to keep" /></div>
+        </div>
 
         {error && <div style={{ fontSize: 13, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>{error}</div>}
-        {saved && <div style={{ fontSize: 13, color: '#2E7D57', background: '#F0F7F3', border: '1px solid #D6E8DE', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>Saved.</div>}
+        {saved && <div style={{ fontSize: 13, color: '#2E7D57', background: '#F0F7F3', border: '1px solid #D6E8DE', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>Saved — your info will pre-fill on your next template.</div>}
 
         {profile?.role === 'admin' && (
           <div style={{ marginTop: 22, borderTop: '1px solid #EEF1F4', paddingTop: 18 }}>

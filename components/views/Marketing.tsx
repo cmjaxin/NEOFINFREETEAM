@@ -187,12 +187,14 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
 
 function uid() { return Math.random().toString(36).slice(2) }
 
-function initValues(emp: Employee | undefined, headshot: string): FieldValues {
+function initValues(profile: { full_name: string; title: string; email: string; nmls?: string; phone?: string; headshot_url?: string } | null, emp: Employee | undefined): FieldValues {
   return {
-    name: emp?.name ?? '', title: emp?.title ?? '',
-    nmls: emp?.nmls_number ? `NMLS# ${emp.nmls_number}` : '',
-    email: emp?.work_email ?? '', phone: emp?.phone ?? '',
-    headshot: headshot || emp?.headshot_url || '',
+    name: profile?.full_name || emp?.name || '',
+    title: profile?.title || emp?.title || '',
+    nmls: profile?.nmls ? `NMLS# ${profile.nmls}` : emp?.nmls_number ? `NMLS# ${emp.nmls_number}` : '',
+    email: profile?.email || emp?.work_email || '',
+    phone: profile?.phone || emp?.phone || '',
+    headshot: profile?.headshot_url || emp?.headshot_url || '',
     partner_name: '', partner_title: '', partner_company: '',
     partner_phone: '', partner_email: '', partner_headshot: '', partner_logo: '',
     property_address: '', property_price: '', property_description: '',
@@ -295,31 +297,33 @@ function PartnerModal({ partner, supabase, ownerEmail, onSaved, onClose }: {
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9CA3AF' }}>✕</button>
         </div>
 
-        <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 20, marginBottom: 20 }}>
           {/* Headshot */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: '#F3F4F6', border: '2px solid #E5E7EB', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>Headshot</div>
+            <div style={{ width: '100%', height: 100, borderRadius: 10, overflow: 'hidden', background: '#F3F4F6', border: '2px dashed #D1D5DB', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {form.headshot_url
                 // eslint-disable-next-line @next/next/no-img-element
                 ? <img src={form.headshot_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : '👤'}
+                : <span style={{ fontSize: 32 }}>👤</span>}
             </div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#0A2540', cursor: 'pointer' }}>
-              {uploading === 'headshot_url' ? 'Uploading…' : 'Photo'}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('headshot_url', f) }} />
+            <label style={{ display: 'block', background: '#0A2540', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: uploading === 'headshot_url' ? 'default' : 'pointer', textAlign: 'center', opacity: uploading === 'headshot_url' ? 0.6 : 1 }}>
+              {uploading === 'headshot_url' ? 'Uploading…' : form.headshot_url ? 'Replace Photo' : '⬆ Upload Photo'}
+              <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} disabled={!!uploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('headshot_url', f); e.currentTarget.value = '' }} />
             </label>
           </div>
           {/* Logo */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ width: 120, height: 72, borderRadius: 10, overflow: 'hidden', background: '#F3F4F6', border: '2px solid #E5E7EB', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#9CA3AF' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '.06em' }}>Company Logo</div>
+            <div style={{ width: '100%', height: 100, borderRadius: 10, overflow: 'hidden', background: '#F3F4F6', border: '2px dashed #D1D5DB', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {form.logo_url
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={form.logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                : 'Company Logo'}
+                ? <img src={form.logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 8 }} />
+                : <span style={{ fontSize: 13, color: '#9CA3AF' }}>No logo yet</span>}
             </div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: '#0A2540', cursor: 'pointer' }}>
-              {uploading === 'logo_url' ? 'Uploading…' : 'Logo'}
-              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('logo_url', f) }} />
+            <label style={{ display: 'block', background: '#0A2540', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: uploading === 'logo_url' ? 'default' : 'pointer', textAlign: 'center', opacity: uploading === 'logo_url' ? 0.6 : 1 }}>
+              {uploading === 'logo_url' ? 'Uploading…' : form.logo_url ? 'Replace Logo' : '⬆ Upload Logo'}
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" style={{ display: 'none' }} disabled={!!uploading} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('logo_url', f); e.currentTarget.value = '' }} />
             </label>
           </div>
         </div>
@@ -438,12 +442,13 @@ function PartnersTab({ supabase, ownerEmail }: { supabase: any; ownerEmail: stri
 
 // ─── Personalization Modal ────────────────────────────────────────────────────
 
-function PersonalizationModal({ template, emp, initialHeadshot, supabase, partners, onClose }: {
-  template: MktTemplate; emp: Employee | undefined; initialHeadshot: string
+function PersonalizationModal({ template, emp, profile, supabase, partners, onClose }: {
+  template: MktTemplate; emp: Employee | undefined
+  profile: { full_name: string; title: string; email: string; nmls?: string; phone?: string; headshot_url?: string } | null
   supabase: any; partners: Partner[]; onClose: () => void
 }) {
   const size = CANVAS_SIZES[template.canvas_size] ?? CANVAS_SIZES.custom
-  const [values, setValues] = useState<FieldValues>(() => initValues(emp, initialHeadshot))
+  const [values, setValues] = useState<FieldValues>(() => initValues(profile, emp))
   const [selectedPartner, setSelectedPartner] = useState<string>('')
   const [pageIdx, setPageIdx] = useState(0)
   const [rendering, setRendering] = useState(false)
@@ -688,9 +693,9 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, partne
 
 // ─── Library ──────────────────────────────────────────────────────────────────
 
-function LibraryView({ templates, loading, myEmployee, headshot, supabase, partners, onRefresh, isAdmin }: {
+function LibraryView({ templates, loading, myEmployee, profile, supabase, partners, onRefresh, isAdmin }: {
   templates: MktTemplate[]; loading: boolean; myEmployee: Employee | undefined
-  headshot: string; supabase: any; partners: Partner[]; onRefresh: () => void; isAdmin: boolean
+  profile: any; supabase: any; partners: Partner[]; onRefresh: () => void; isAdmin: boolean
 }) {
   const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -790,7 +795,8 @@ function LibraryView({ templates, loading, myEmployee, headshot, supabase, partn
         </div>
       )}
 
-      {open && <PersonalizationModal template={open} emp={myEmployee} initialHeadshot={headshot} supabase={supabase} partners={partners} onClose={() => setOpen(null)} />}
+      {open && <PersonalizationModal template={open} emp={myEmployee} profile={profile} supabase={supabase} partners={partners} onClose={() => setOpen(null)} />}
+
     </>
   )
 }
@@ -1191,11 +1197,8 @@ export default function Marketing() {
   const [templates, setTemplates] = useState<MktTemplate[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
-  const [headshot, setHeadshot] = useState('')
 
   const myEmployee = employees.find(e => e.work_email?.toLowerCase() === profile?.email?.toLowerCase())
-
-  useEffect(() => { if (myEmployee?.headshot_url) setHeadshot(myEmployee.headshot_url) }, [myEmployee?.headshot_url])
 
   const loadTemplates = useCallback(async () => {
     setLoading(true)
@@ -1235,7 +1238,7 @@ export default function Marketing() {
       </div>
 
       {tab === 'library' && (
-        <LibraryView templates={templates} loading={loading} myEmployee={myEmployee} headshot={headshot}
+        <LibraryView templates={templates} loading={loading} myEmployee={myEmployee} profile={profile}
           supabase={supabase} partners={partners} onRefresh={loadTemplates} isAdmin={isAdmin} />
       )}
       {tab === 'partners' && (

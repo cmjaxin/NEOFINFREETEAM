@@ -11,6 +11,9 @@ export interface Profile {
   role: ProfileRole
   status: ProfileStatus
   created_at: string
+  nmls: string
+  phone: string
+  headshot_url: string
 }
 
 export interface Employee {
