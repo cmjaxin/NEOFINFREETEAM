@@ -693,9 +693,9 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
 
 // ─── Library ──────────────────────────────────────────────────────────────────
 
-function LibraryView({ templates, loading, myEmployee, profile, supabase, partners, onRefresh, isAdmin }: {
+function LibraryView({ templates, loading, myEmployee, profile, supabase, partners, onRefresh, onEdit, isAdmin }: {
   templates: MktTemplate[]; loading: boolean; myEmployee: Employee | undefined
-  profile: any; supabase: any; partners: Partner[]; onRefresh: () => void; isAdmin: boolean
+  profile: any; supabase: any; partners: Partner[]; onRefresh: () => void; onEdit: (t: MktTemplate) => void; isAdmin: boolean
 }) {
   const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -777,14 +777,20 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
                 <div style={{ padding: '12px 14px 14px' }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#0A2540', marginBottom: 10 }}>{t.name}</div>
                   {isAdmin && (
-                    <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }} onClick={e => e.stopPropagation()}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => onEdit(t)}
+                          style={{ flex: 1, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 7, padding: '6px 0', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                          ✏ Edit Fields
+                        </button>
+                        <button onClick={() => del(t.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✕</button>
+                      </div>
                       <select value={t.category} onChange={e => moveCategory(t.id, e.target.value as Category)}
-                        style={{ flex: 1, border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 8px', fontSize: 11, background: '#F9FAFB', cursor: 'pointer' }}>
+                        style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 8px', fontSize: 11, background: '#F9FAFB', cursor: 'pointer' }}>
                         <option value="flyer">📄 Flyer</option>
                         <option value="social">📱 Social</option>
                         <option value="other">📁 Other</option>
                       </select>
-                      <button onClick={() => del(t.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✕</button>
                     </div>
                   )}
                   {!isAdmin && <div style={{ fontSize: 11, color: '#9CA3AF' }}>{new Date(t.created_at).toLocaleDateString()}</div>}
@@ -980,11 +986,15 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddA
   )
 }
 
-function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
-  const [canvasSize, setCanvasSize] = useState('flyer_letter')
-  const [category, setCategory] = useState<Category>('flyer')
-  const [tplName, setTplName] = useState('')
-  const [pages, setPages] = useState<EditorPage[]>([{ bgFile: null, bgUrl: '', fields: [] }])
+function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: () => void; editTemplate?: MktTemplate }) {
+  const [canvasSize, setCanvasSize] = useState(editTemplate?.canvas_size ?? 'flyer_letter')
+  const [category, setCategory] = useState<Category>(editTemplate?.category ?? 'flyer')
+  const [tplName, setTplName] = useState(editTemplate?.name ?? '')
+  const [pages, setPages] = useState<EditorPage[]>(
+    editTemplate?.pages?.length
+      ? editTemplate.pages.map(p => ({ bgFile: null, bgUrl: p.bg_url, fields: p.fields }))
+      : [{ bgFile: null, bgUrl: '', fields: [] }]
+  )
   const [pageIdx, setPageIdx] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -1031,9 +1041,16 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
         if (p.bgFile) { bgUrl = await uploadFile(supabase, p.bgFile, 'templates') }
         savedPages.push({ bg_url: bgUrl, fields: p.fields })
       }
-      const { error } = await supabase.from('marketing_templates').insert({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages })
-      if (error) throw error
-      setMsg('✓ Published to library!'); setTimeout(onDone, 700)
+      if (editTemplate) {
+        const { error } = await supabase.from('marketing_templates').update({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages }).eq('id', editTemplate.id)
+        if (error) throw error
+        setMsg('✓ Saved!')
+      } else {
+        const { error } = await supabase.from('marketing_templates').insert({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages })
+        if (error) throw error
+        setMsg('✓ Published to library!')
+      }
+      setTimeout(onDone, 700)
     } catch (e: any) { setMsg(`Error: ${e.message}`) }
     setSaving(false)
   }
@@ -1177,7 +1194,7 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
           {msg && <div style={{ fontSize: 12, color: msg.startsWith('Error') ? '#EF4444' : '#10B981', marginBottom: 10 }}>{msg}</div>}
           <button onClick={handleSave} disabled={saving || !tplName.trim()}
             style={{ width: '100%', background: (saving || !tplName.trim()) ? '#D1D5DB' : '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13, cursor: (saving || !tplName.trim()) ? 'default' : 'pointer' }}>
-            {saving ? 'Saving…' : 'Publish to Library'}
+            {saving ? 'Saving…' : editTemplate ? 'Save Changes' : 'Publish to Library'}
           </button>
         </div>
       </div>
@@ -1197,6 +1214,7 @@ export default function Marketing() {
   const [templates, setTemplates] = useState<MktTemplate[]>([])
   const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
+  const [editingTemplate, setEditingTemplate] = useState<MktTemplate | undefined>(undefined)
 
   const myEmployee = employees.find(e => e.work_email?.toLowerCase() === profile?.email?.toLowerCase())
 
@@ -1233,19 +1251,22 @@ export default function Marketing() {
         <div style={{ display: 'flex', gap: 8 }}>
           {tabBtn('library', '📚 Library')}
           {tabBtn('partners', '🤝 Partners')}
-          {isAdmin && tabBtn('admin', '⬆ Upload & Edit')}
+          {isAdmin && <button onClick={() => { setEditingTemplate(undefined); setTab('admin') }} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: tab === 'admin' ? '#0A2540' : '#F3F4F6', color: tab === 'admin' ? '#fff' : '#6B7280' }}>⬆ Upload & Edit</button>}
         </div>
       </div>
 
       {tab === 'library' && (
         <LibraryView templates={templates} loading={loading} myEmployee={myEmployee} profile={profile}
-          supabase={supabase} partners={partners} onRefresh={loadTemplates} isAdmin={isAdmin} />
+          supabase={supabase} partners={partners} onRefresh={loadTemplates}
+          onEdit={t => { setEditingTemplate(t); setTab('admin') }}
+          isAdmin={isAdmin} />
       )}
       {tab === 'partners' && (
         <PartnersTab supabase={supabase} ownerEmail={profile?.email ?? ''} />
       )}
       {tab === 'admin' && isAdmin && (
-        <AdminTab supabase={supabase} onDone={() => { loadTemplates(); setTab('library') }} />
+        <AdminTab key={editingTemplate?.id ?? 'new'} supabase={supabase} editTemplate={editingTemplate}
+          onDone={() => { setEditingTemplate(undefined); loadTemplates(); setTab('library') }} />
       )}
     </div>
   )

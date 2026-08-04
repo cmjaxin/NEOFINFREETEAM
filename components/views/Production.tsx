@@ -878,13 +878,13 @@ function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, 
 }
 
 // ─── Branch Production Tab ────────────────────────────────────────────────────
-function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload, onClearPrevYear, isColin }: {
+function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload, onClearPrevYear, isAdmin }: {
   maData: MARecord[]
   prevYearData: MARecord[]
   onFundingsUpload: (file: File) => void
   onPrevYearUpload: (file: File) => void
   onClearPrevYear: () => void
-  isColin: boolean
+  isAdmin: boolean
 }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [selectedYear, setSelectedYear] = useState(2026)
@@ -1241,33 +1241,35 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
         )}
       </Card>
 
-      {/* Upload section */}
-      <Card style={{ maxWidth: 480 }}>
-        <CardHead title="Upload Previous Month Fundings" subtitle="Drop last month's fundings export — numbers merge into the correct month automatically" />
-        <UploadZone
-          label="Drop Fundings CSV / XLSX"
-          onFile={async (f) => {
-            setFundLoading(true)
-            try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
-            catch { setFundMsg('Error reading file') }
-            setFundLoading(false)
-          }}
-          loading={fundLoading} message={fundMsg}
-        />
-      </Card>
+      {/* Upload section — admin only */}
+      {isAdmin && (
+        <Card style={{ maxWidth: 480 }}>
+          <CardHead title="Upload Previous Month Fundings" subtitle="Drop last month's fundings export — numbers merge into the correct month automatically" />
+          <UploadZone
+            label="Drop Fundings CSV / XLSX"
+            onFile={async (f) => {
+              setFundLoading(true)
+              try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
+              catch { setFundMsg('Error reading file') }
+              setFundLoading(false)
+            }}
+            loading={fundLoading} message={fundMsg}
+          />
+        </Card>
+      )}
     </div>
   )
 }
 
 // ─── Applications Tab ─────────────────────────────────────────────────────────
-function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWeekUpload, onClearApps, isColin }: {
+function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWeekUpload, onClearApps, isAdmin }: {
   maData: MARecord[]
   prevYearData: MARecord[]
   weeklyData: WeeklyRow[]
   onAppsUpload: (file: File, source: 'sg'|'d2c') => void
   onWeekUpload: (file: File) => void
   onClearApps: () => void
-  isColin: boolean
+  isAdmin: boolean
 }) {
   const [subView, setSubView] = useState('branch')
   const [period, setPeriod] = useState<PeriodStr>('ytd')
@@ -1425,7 +1427,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <ToggleGroup options={subViewOpts} value={subView} onChange={setSubView} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {isColin && <button
+          {isAdmin && <button
             onClick={() => { if (confirm('Clear all application data? This cannot be undone.')) onClearApps() }}
             style={{ padding: '8px 14px', background: '#fff', border: '1px solid #E4E8EC', borderRadius: 8, fontSize: 13, color: '#B0504A', fontWeight: 600, cursor: 'pointer' }}
           >Clear All</button>}
@@ -1579,35 +1581,37 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
             )}
           </Card>
 
-          {/* Upload section */}
-          <div style={{ display: 'flex', gap: 16 }}>
-            <Card style={{ flex: 1, borderTop: '3px solid #16a34a' }}>
-              <CardHead title="Upload Self-Gen Applications" subtitle="One report for all SG apps — RESPA and Initial pulled by date field" />
-              <UploadZone
-                label="Drop Self-Gen Applications CSV / XLSX"
-                onFile={async (f) => {
-                  setSgLoading(true)
-                  try { await onAppsUpload(f, 'sg'); setSgMsg(`Loaded ${f.name}`) }
-                  catch { setSgMsg('Error reading file') }
-                  setSgLoading(false)
-                }}
-                loading={sgLoading} message={sgMsg}
-              />
-            </Card>
-            <Card style={{ flex: 1, borderTop: '3px solid #7c3aed' }}>
-              <CardHead title="Upload D2C Applications" subtitle="One report for all D2C apps — RESPA and Initial pulled by date field" />
-              <UploadZone
-                label="Drop D2C Applications CSV / XLSX"
-                onFile={async (f) => {
-                  setD2cLoading(true)
-                  try { await onAppsUpload(f, 'd2c'); setD2cMsg(`Loaded ${f.name}`) }
-                  catch { setD2cMsg('Error reading file') }
-                  setD2cLoading(false)
-                }}
-                loading={d2cLoading} message={d2cMsg}
-              />
-            </Card>
-          </div>
+          {/* Upload section — admin only */}
+          {isAdmin && (
+            <div style={{ display: 'flex', gap: 16 }}>
+              <Card style={{ flex: 1, borderTop: '3px solid #16a34a' }}>
+                <CardHead title="Upload Self-Gen Applications" subtitle="One report for all SG apps — RESPA and Initial pulled by date field" />
+                <UploadZone
+                  label="Drop Self-Gen Applications CSV / XLSX"
+                  onFile={async (f) => {
+                    setSgLoading(true)
+                    try { await onAppsUpload(f, 'sg'); setSgMsg(`Loaded ${f.name}`) }
+                    catch { setSgMsg('Error reading file') }
+                    setSgLoading(false)
+                  }}
+                  loading={sgLoading} message={sgMsg}
+                />
+              </Card>
+              <Card style={{ flex: 1, borderTop: '3px solid #7c3aed' }}>
+                <CardHead title="Upload D2C Applications" subtitle="One report for all D2C apps — RESPA and Initial pulled by date field" />
+                <UploadZone
+                  label="Drop D2C Applications CSV / XLSX"
+                  onFile={async (f) => {
+                    setD2cLoading(true)
+                    try { await onAppsUpload(f, 'd2c'); setD2cMsg(`Loaded ${f.name}`) }
+                    catch { setD2cMsg('Error reading file') }
+                    setD2cLoading(false)
+                  }}
+                  loading={d2cLoading} message={d2cMsg}
+                />
+              </Card>
+            </div>
+          )}
         </>
       )}
 
@@ -1794,6 +1798,7 @@ function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
 export default function Production() {
   const { profile } = useApp()
   const isColin = profile?.email?.toLowerCase() === 'colin.jenson@neohomeloans.com'
+  const isAdmin = profile?.role === 'admin' || isColin
 
   const [maData, setMaData] = useState<MARecord[]>([])
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>([])
@@ -2069,7 +2074,7 @@ export default function Production() {
           <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division</div>
         </div>
-        {isColin && <button
+        {isAdmin && <button
           onClick={async () => {
             if (!confirm('Reset all production data? This will clear everything and restore seed data.')) return
             setMaData(SEED_MA)
@@ -2097,8 +2102,8 @@ export default function Production() {
         ))}
       </div>
 
-      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} isColin={isColin} />}
-      {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} isColin={isColin} />}
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} isAdmin={isAdmin} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} isAdmin={isAdmin} />}
     </div>
   )
 }
