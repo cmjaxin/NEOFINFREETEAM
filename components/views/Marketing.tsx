@@ -6,7 +6,8 @@ import { Employee } from '@/lib/types'
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CANVAS_SIZES: Record<string, { label: string; w: number; h: number; category: Category }> = {
-  flyer_letter:     { label: '8.5" × 11" Flyer',           w: 1275, h: 1650, category: 'flyer'  },
+  pre_approval:     { label: 'Pre-Approval Letter (8.5×11)', w: 1275, h: 1650, category: 'pre_approval' },
+  flyer_letter:     { label: '8.5" × 11" Flyer',            w: 1275, h: 1650, category: 'flyer'  },
   social_square:    { label: 'Social Square (1080×1080)',   w: 1080, h: 1080, category: 'social' },
   social_story:     { label: 'Story / Reel (1080×1920)',    w: 1080, h: 1920, category: 'social' },
   social_landscape: { label: 'Social Landscape (1200×628)', w: 1200, h: 628,  category: 'social' },
@@ -14,12 +15,13 @@ const CANVAS_SIZES: Record<string, { label: string; w: number; h: number; catego
   custom:           { label: 'Custom',                      w: 1080, h: 1080, category: 'other'  },
 }
 
-type Category = 'flyer' | 'social' | 'other'
+type Category = 'pre_approval' | 'flyer' | 'social' | 'other'
 
 const CATEGORY_LABELS: Record<Category, string> = {
-  flyer:  '📄 Flyers',
-  social: '📱 Social Posts',
-  other:  '📁 Other',
+  pre_approval: '📋 Pre-Approval',
+  flyer:        '📄 Flyers',
+  social:       '📱 Social Posts',
+  other:        '📁 Other',
 }
 
 type FieldType =
@@ -776,7 +778,7 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
   const [open, setOpen] = useState<MktTemplate | null>(null)
   const [hoverId, setHoverId] = useState<string | null>(null)
 
-  const categories: (Category | 'all')[] = ['all', 'flyer', 'social', 'other']
+  const categories: (Category | 'all')[] = ['all', 'pre_approval', 'flyer', 'social', 'other']
   const counts: Record<string, number> = { all: templates.length }
   for (const t of templates) counts[t.category] = (counts[t.category] ?? 0) + 1
 
@@ -861,6 +863,7 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
                       </div>
                       <select value={t.category} onChange={e => moveCategory(t.id, e.target.value as Category)}
                         style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 8px', fontSize: 11, background: '#F9FAFB', cursor: 'pointer' }}>
+                        <option value="pre_approval">📋 Pre-Approval</option>
                         <option value="flyer">📄 Flyer</option>
                         <option value="social">📱 Social</option>
                         <option value="other">📁 Other</option>
@@ -1250,7 +1253,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
           <label style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>Category</label>
           <select value={category} onChange={e => setCategory(e.target.value as Category)}
             style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 7, padding: '6px 8px', fontSize: 12, background: '#fff', marginBottom: 12 }}>
-            <option value="flyer">📄 Flyer</option><option value="social">📱 Social</option><option value="other">📁 Other</option>
+            <option value="pre_approval">📋 Pre-Approval</option><option value="flyer">📄 Flyer</option><option value="social">📱 Social</option><option value="other">📁 Other</option>
           </select>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>Thumbnail</label>
           <input ref={thumbInputRef} type="file" accept="image/*" style={{ display: 'none' }}
