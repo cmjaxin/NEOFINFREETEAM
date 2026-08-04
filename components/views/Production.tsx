@@ -670,9 +670,17 @@ function buildProductionEmailBody(maData: MARecord[], mo: number): string {
 }
 
 function EmailReportButton({ subject, body, label }: { subject: string; body: string; label: string }) {
-  function handleClick() {
-    const href = `mailto:${TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    window.open(href, '_blank')
+  const [copied, setCopied] = useState(false)
+  async function handleClick() {
+    try { await navigator.clipboard.writeText(body) } catch {}
+    // mailto with body in URL often silently truncates for long reports;
+    // copy body to clipboard first, then open a blank compose window
+    const short = encodeURIComponent(body)
+    const href = short.length < 1800
+      ? `mailto:${TO}?subject=${encodeURIComponent(subject)}&body=${short}`
+      : `mailto:${TO}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('(Paste from clipboard — Ctrl+V / Cmd+V)')}`
+    window.location.href = href
+    if (short.length >= 1800) { setCopied(true); setTimeout(() => setCopied(false), 4000) }
   }
   return (
     <button onClick={handleClick} style={{
@@ -688,7 +696,7 @@ function EmailReportButton({ subject, body, label }: { subject: string; body: st
         <rect x="2" y="4" width="20" height="16" rx="2" />
         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
       </svg>
-      {label}
+      {copied ? 'Body copied — paste in email' : label}
     </button>
   )
 }
