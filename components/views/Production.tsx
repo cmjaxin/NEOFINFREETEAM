@@ -1242,42 +1242,19 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       </Card>
 
       {/* Upload section */}
-      <div style={{ display: 'flex', gap: 16 }}>
-        <Card style={{ flex: 1 }}>
-          <CardHead title="Upload Fundings" subtitle="YTD fundings export — source detected from Lead Source field" />
-          <UploadZone
-            label="Drop YTD Fundings CSV / XLSX"
-            onFile={async (f) => {
-              setFundLoading(true)
-              try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
-              catch { setFundMsg('Error reading file') }
-              setFundLoading(false)
-            }}
-            loading={fundLoading} message={fundMsg}
-          />
-        </Card>
-        <Card style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <CardHead title="Upload Prior Year" subtitle={hasPrevYear ? `✓ 2025 data loaded (${prevYearData.length} advisors)` : 'Same report format from 2025 — used for YTY trend comparison'} />
-            {isColin && <button
-              onClick={() => { if (confirm('Remove all 2025 data and hide YTY trends?')) onClearPrevYear() }}
-              style={{ fontSize: 11, color: hasPrevYear ? C.red : C.muted, background: 'none', border: `1px solid ${hasPrevYear ? C.red : C.border}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-            >
-              Clear 2025 Data
-            </button>}
-          </div>
-          <UploadZone
-            label="Drop 2025 Fundings CSV / XLSX"
-            onFile={async (f) => {
-              setPrevLoading(true)
-              try { await onPrevYearUpload(f); setPrevMsg(`Loaded ${f.name}`) }
-              catch { setPrevMsg('Error reading file') }
-              setPrevLoading(false)
-            }}
-            loading={prevLoading} message={prevMsg}
-          />
-        </Card>
-      </div>
+      <Card style={{ maxWidth: 480 }}>
+        <CardHead title="Upload Previous Month Fundings" subtitle="Drop last month's fundings export — numbers merge into the correct month automatically" />
+        <UploadZone
+          label="Drop Fundings CSV / XLSX"
+          onFile={async (f) => {
+            setFundLoading(true)
+            try { await onFundingsUpload(f); setFundMsg(`Loaded ${f.name}`) }
+            catch { setFundMsg('Error reading file') }
+            setFundLoading(false)
+          }}
+          loading={fundLoading} message={fundMsg}
+        />
+      </Card>
     </div>
   )
 }
@@ -1683,19 +1660,19 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
 
             {/* KPI row */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <KpiTile label="RESPA Apps" value={String(totalRespa)} sub={
-                prevWeek ? (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>{totalRespa - prevTotalRespa >= 0 ? '+' : ''}{totalRespa - prevTotalRespa} WoW</span>
-                    <WowChip cur={totalRespa} prev={prevTotalRespa} />
-                  </span>
-                ) : selWeek.weekLabel
-              } />
-              <KpiTile label="Initial Apps" value={String(totalInit)} sub={
+              <KpiTile label="RESPA Apps" value={String(totalInit)} sub={
                 prevWeek ? (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <span>{totalInit - prevTotalInit >= 0 ? '+' : ''}{totalInit - prevTotalInit} WoW</span>
                     <WowChip cur={totalInit} prev={prevTotalInit} />
+                  </span>
+                ) : selWeek.weekLabel
+              } />
+              <KpiTile label="Initial Apps" value={String(totalRespa)} sub={
+                prevWeek ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>{totalRespa - prevTotalRespa >= 0 ? '+' : ''}{totalRespa - prevTotalRespa} WoW</span>
+                    <WowChip cur={totalRespa} prev={prevTotalRespa} />
                   </span>
                 ) : selWeek.weekLabel
               } />
@@ -1704,8 +1681,10 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
 
             {/* Leaderboard */}
             {activeList.length > 0 ? (() => {
-              const wkFiltered = activeList.filter(e => !APPS_HIDDEN_NAMES.some(h => normName(e.name) === h || normName(e.name).includes(h) || h.includes(normName(e.name))))
-              const maxWkRespa = Math.max(...wkFiltered.map(e => e.respa), 1)
+              const wkFiltered = activeList
+                .filter(e => !APPS_HIDDEN_NAMES.some(h => normName(e.name) === h || normName(e.name).includes(h) || h.includes(normName(e.name))))
+                .sort((a, b) => b.initial !== a.initial ? b.initial - a.initial : b.respa - a.respa)
+              const maxWkRespa = Math.max(...wkFiltered.map(e => e.initial), 1)
               return (
                 <Card style={{ padding: 0, overflow: 'hidden' }}>
                   {/* Headers */}
@@ -1714,7 +1693,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>RESPA APPS</div>
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>INITIAL APPS</div>
-                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>WoW RESPA</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>WoW</div>
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>SOURCE SPLIT</div>
                   </div>
                   {wkFiltered.map((ma, i) => {
@@ -1724,7 +1703,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                     const prev = prevActiveList.find(p => nameSimilar(p.name, ma.name))
                     const sgEntry = weeklySource === 'all' ? sgList.find(e => nameSimilar(e.name, ma.name)) : null
                     const d2cEntry = weeklySource === 'all' ? d2cList.find(e => nameSimilar(e.name, ma.name)) : null
-                    const barPct = ma.respa / maxWkRespa
+                    const barPct = ma.initial / maxWkRespa
                     const rowBg = rank === 1 ? 'rgba(124,58,237,0.03)' : C.white
                     return (
                       <div key={ma.name} style={{ background: rowBg, borderBottom: `1px solid ${C.bg}` }}>
@@ -1738,13 +1717,13 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                               <div style={{ width: `${barPct * 100}%`, height: '100%', background: isTop3 ? '#7c3aed' : '#a78bfa', borderRadius: 2, transition: 'width 0.4s' }} />
                             </div>
                           </div>
-                          {/* RESPA */}
+                          {/* RESPA (stored as .initial in weekly data) */}
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed' }}>{ma.respa}</div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed' }}>{ma.initial}</div>
                           </div>
-                          {/* Initial */}
+                          {/* Initial (stored as .respa in weekly data) */}
                           <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>{ma.initial}</div>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>{ma.respa}</div>
                           </div>
                           {/* WoW */}
                           <div style={{ textAlign: 'right' }}>
@@ -1752,11 +1731,11 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <span style={{ fontSize: 11, color: C.muted }}>RESPA</span>
-                                  <WowChip cur={ma.respa} prev={prev?.respa ?? 0} />
+                                  <WowChip cur={ma.initial} prev={prev?.initial ?? 0} />
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                   <span style={{ fontSize: 11, color: C.muted }}>Initial</span>
-                                  <WowChip cur={ma.initial} prev={prev?.initial ?? 0} />
+                                  <WowChip cur={ma.respa} prev={prev?.respa ?? 0} />
                                 </div>
                               </div>
                             ) : <span style={{ fontSize: 11, color: C.muted }}>—</span>}
