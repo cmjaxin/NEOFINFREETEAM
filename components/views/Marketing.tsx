@@ -25,7 +25,9 @@ const CATEGORY_LABELS: Record<Category, string> = {
 type FieldType =
   | 'name' | 'title' | 'nmls' | 'email' | 'phone' | 'headshot'
   | 'partner_name' | 'partner_title' | 'partner_company' | 'partner_phone' | 'partner_email' | 'partner_headshot' | 'partner_logo'
-  | 'property_address' | 'property_price' | 'property_description' | 'property_image' | 'property_image_2' | 'property_image_3' | 'open_house_date' | 'open_house_time'
+  | 'property_address' | 'property_price' | 'property_beds' | 'property_baths' | 'property_sqft' | 'property_extras' | 'property_header' | 'property_description'
+  | 'property_image' | 'property_image_2' | 'property_image_3' | 'property_image_4'
+  | 'open_house_date' | 'open_house_time'
 
 interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
 
@@ -43,12 +45,18 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   partner_email:        { label: 'Partner Email',     color: '#059669', placeholder: 'john@abc.com' },
   partner_headshot:     { label: 'Partner Headshot',  color: '#DB2777', placeholder: '', isCircle: true },
   partner_logo:         { label: 'Partner Logo',      color: '#D97706', placeholder: '', isRect: true },
-  property_address:     { label: 'Address',           color: '#6366F1', placeholder: '123 Main St, Salt Lake City' },
+  property_address:     { label: 'Address',           color: '#6366F1', placeholder: '123 Main St, Salt Lake City, UT 84101' },
   property_price:       { label: 'List Price',        color: '#16A34A', placeholder: '$450,000' },
-  property_description: { label: 'Description',       color: '#9333EA', placeholder: '4 bed · 2 bath · 2,100 sq ft', isMultiline: true },
+  property_beds:        { label: 'Bedrooms',          color: '#7C3AED', placeholder: '4 Beds' },
+  property_baths:       { label: 'Bathrooms',         color: '#0891B2', placeholder: '3 Baths' },
+  property_sqft:        { label: 'Sq Ft',             color: '#0D9488', placeholder: '2,100 Sq Ft' },
+  property_extras:      { label: 'Extras',            color: '#B45309', placeholder: '3-Car Garage · Pool' },
+  property_header:      { label: 'Headline',          color: '#DC2626', placeholder: 'Stunning Home in Prime Location!', isMultiline: true },
+  property_description: { label: 'Description',       color: '#9333EA', placeholder: 'Welcome to this beautifully updated home featuring an open floor plan, gourmet kitchen, and spacious backyard perfect for entertaining.', isMultiline: true },
   property_image:       { label: 'Photo 1',           color: '#EA580C', placeholder: '', isRect: true },
   property_image_2:     { label: 'Photo 2',           color: '#C2410C', placeholder: '', isRect: true },
   property_image_3:     { label: 'Photo 3',           color: '#9A3412', placeholder: '', isRect: true },
+  property_image_4:     { label: 'Photo 4',           color: '#7C2D12', placeholder: '', isRect: true },
   open_house_date:      { label: 'Open House Date',   color: '#0369A1', placeholder: 'Saturday, January 18' },
   open_house_time:      { label: 'Open House Time',   color: '#0284C7', placeholder: '1:00 PM – 4:00 PM' },
 }
@@ -56,7 +64,7 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
 const FIELD_GROUPS: Record<string, FieldType[]> = {
   'Advisor':  ['name', 'title', 'nmls', 'email', 'phone', 'headshot'],
   'Partner':  ['partner_name', 'partner_title', 'partner_company', 'partner_phone', 'partner_email', 'partner_headshot', 'partner_logo'],
-  'Property': ['property_address', 'property_price', 'property_description', 'property_image', 'property_image_2', 'property_image_3', 'open_house_date', 'open_house_time'],
+  'Property': ['property_address', 'property_price', 'property_beds', 'property_baths', 'property_sqft', 'property_extras', 'property_header', 'property_description', 'property_image', 'property_image_2', 'property_image_3', 'property_image_4', 'open_house_date', 'open_house_time'],
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -198,8 +206,9 @@ function initValues(profile: { full_name: string; title: string; email: string; 
     headshot: profile?.headshot_url || emp?.headshot_url || '',
     partner_name: '', partner_title: '', partner_company: '',
     partner_phone: '', partner_email: '', partner_headshot: '', partner_logo: '',
-    property_address: '', property_price: '', property_description: '',
-    property_image: '', property_image_2: '', property_image_3: '', open_house_date: '', open_house_time: '',
+    property_address: '', property_price: '', property_beds: '', property_baths: '', property_sqft: '', property_extras: '',
+    property_header: '', property_description: '',
+    property_image: '', property_image_2: '', property_image_3: '', property_image_4: '', open_house_date: '', open_house_time: '',
   }
 }
 
@@ -463,7 +472,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   template.pages.forEach(p => p.fields.forEach(f => usedFields.has(f.type) || usedFields.add(f.type)))
 
   const hasPartnerFields = ['partner_name','partner_title','partner_company','partner_phone','partner_email','partner_headshot','partner_logo'].some(t => usedFields.has(t as FieldType))
-  const hasPropertyFields = ['property_address','property_price','property_description','property_image','property_image_2','property_image_3','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
+  const hasPropertyFields = ['property_address','property_price','property_beds','property_baths','property_sqft','property_extras','property_header','property_description','property_image','property_image_2','property_image_3','property_image_4','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -524,7 +533,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     setHeadshotUploading(false)
   }
 
-  function handlePropertyImageFile(file: File, slot: 'property_image' | 'property_image_2' | 'property_image_3' = 'property_image') {
+  function handlePropertyImageFile(file: File, slot: 'property_image' | 'property_image_2' | 'property_image_3' | 'property_image_4' = 'property_image') {
     setValues(v => ({ ...v, [slot]: URL.createObjectURL(file) }))
   }
 
@@ -693,10 +702,11 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
               <>
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('Property Info')}
-                {(['property_address','property_price','property_description','open_house_date','open_house_time'] as FieldType[]).map(ft => fieldInput(ft))}
+                {(['property_address','property_price','property_header','property_beds','property_baths','property_sqft','property_extras','property_description','open_house_date','open_house_time'] as FieldType[]).filter(ft => usedFields.has(ft)).map(ft => fieldInput(ft))}
                 {usedFields.has('property_image') && imageUploadRow('property_image', values.property_image, (f) => handlePropertyImageFile(f, 'property_image'), false, false)}
                 {usedFields.has('property_image_2') && imageUploadRow('property_image_2', values.property_image_2, (f) => handlePropertyImageFile(f, 'property_image_2'), false, false)}
                 {usedFields.has('property_image_3') && imageUploadRow('property_image_3', values.property_image_3, (f) => handlePropertyImageFile(f, 'property_image_3'), false, false)}
+                {usedFields.has('property_image_4') && imageUploadRow('property_image_4', values.property_image_4, (f) => handlePropertyImageFile(f, 'property_image_4'), false, false)}
               </>
             )}
           </div>
@@ -842,17 +852,22 @@ interface EditorPage { bgFile: File | null; bgUrl: string; fields: TplField[] }
 
 // ─── Canvas-based WYSIWYG editor ─────────────────────────────────────────────
 
-function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddAtPos }: {
+type DragState =
+  | { mode: 'move'; id: string; ox: number; oy: number; sx: number; sy: number }
+  | { mode: 'resize'; id: string; corner: 'tl'|'tr'|'bl'|'br'; cx: number; cy: number; origRW: number; origRH: number }
+
+function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResize, onAddAtPos }: {
   page: EditorPage; dispW: number; dispH: number; selectedId: string | null
   onSelect: (id: string | null) => void
   onMove: (id: string, x: number, y: number) => void
+  onResize: (id: string, rectW: number, rectH: number) => void
   onAddAtPos: (x: number, y: number, type: FieldType) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bgRef = useRef<HTMLCanvasElement | null>(null)
   const fieldsRef = useRef(page.fields)
   const selectedRef = useRef(selectedId)
-  const dragRef = useRef<{ id: string; ox: number; oy: number; sx: number; sy: number } | null>(null)
+  const dragRef = useRef<DragState | null>(null)
   const boundsRef = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map())
   const [picker, setPicker] = useState<{ px: number; py: number; rx: number; ry: number } | null>(null)
 
@@ -951,14 +966,51 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddA
     return null
   }
 
+  // Returns which resize corner the mouse is near, for the selected rect/circle field
+  function cornerHitTest(mx: number, my: number): { id: string; corner: 'tl'|'tr'|'bl'|'br' } | null {
+    if (!selectedRef.current) return null
+    const f = fieldsRef.current.find(f => f.id === selectedRef.current)
+    if (!f) return null
+    const meta = FIELD_META[f.type]
+    if (!meta.isRect && !meta.isCircle) return null
+    const b = boundsRef.current.get(f.id)
+    if (!b) return null
+    const pad = 5, hs = 10
+    const corners: [number, number, 'tl'|'tr'|'bl'|'br'][] = [
+      [b.x - pad, b.y - pad, 'tl'],
+      [b.x + b.w + pad, b.y - pad, 'tr'],
+      [b.x - pad, b.y + b.h + pad, 'bl'],
+      [b.x + b.w + pad, b.y + b.h + pad, 'br'],
+    ]
+    for (const [hx, hy, corner] of corners) {
+      if (Math.abs(mx - hx) <= hs && Math.abs(my - hy) <= hs) return { id: f.id, corner }
+    }
+    return null
+  }
+
   function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
     const mx = e.clientX - rect.left, my = e.clientY - rect.top
+
+    // Check resize corners first (only for selected rect/circle fields)
+    const cornerHit = cornerHitTest(mx, my)
+    if (cornerHit) {
+      const f = fieldsRef.current.find(f => f.id === cornerHit.id)!
+      const meta = FIELD_META[f.type]
+      dragRef.current = {
+        mode: 'resize', id: f.id, corner: cornerHit.corner,
+        cx: f.x * dispW, cy: f.y * dispH,
+        origRW: (f.rectW || (meta.isCircle ? 0.12 : 0.3)) * dispW,
+        origRH: (f.rectH || (meta.isCircle ? 0.12 : 0.2)) * dispH,
+      }
+      setPicker(null); e.preventDefault(); return
+    }
+
     const hit = hitTest(mx, my)
     if (hit) {
       const f = fieldsRef.current.find(f => f.id === hit)!
       onSelect(hit); setPicker(null)
-      dragRef.current = { id: hit, ox: f.x, oy: f.y, sx: mx, sy: my }
+      dragRef.current = { mode: 'move', id: hit, ox: f.x, oy: f.y, sx: mx, sy: my }
       e.preventDefault()
     } else {
       onSelect(null)
@@ -970,16 +1022,37 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddA
     if (!dragRef.current) return
     const rect = e.currentTarget.getBoundingClientRect()
     const mx = e.clientX - rect.left, my = e.clientY - rect.top
-    const nx = Math.max(0.01, Math.min(0.99, dragRef.current.ox + (mx - dragRef.current.sx) / dispW))
-    const ny = Math.max(0.01, Math.min(0.99, dragRef.current.oy + (my - dragRef.current.sy) / dispH))
-    fieldsRef.current = fieldsRef.current.map(f => f.id === dragRef.current!.id ? { ...f, x: nx, y: ny } : f)
+    const d = dragRef.current
+
+    if (d.mode === 'move') {
+      const nx = Math.max(0.01, Math.min(0.99, d.ox + (mx - d.sx) / dispW))
+      const ny = Math.max(0.01, Math.min(0.99, d.oy + (my - d.sy) / dispH))
+      fieldsRef.current = fieldsRef.current.map(f => f.id === d.id ? { ...f, x: nx, y: ny } : f)
+    } else {
+      // Resize: new half-size is distance from center to mouse
+      const newHalfW = Math.max(10, Math.abs(mx - d.cx))
+      const newHalfH = Math.max(10, Math.abs(my - d.cy))
+      const newRW = Math.min(1, (newHalfW * 2) / dispW)
+      const newRH = Math.min(1, (newHalfH * 2) / dispH)
+      const f = fieldsRef.current.find(f => f.id === d.id)
+      if (f && FIELD_META[f.type].isCircle) {
+        // Keep circle square — use the larger dimension
+        const s = Math.max(newRW, newRH)
+        fieldsRef.current = fieldsRef.current.map(f => f.id === d.id ? { ...f, rectW: s, rectH: s } : f)
+      } else {
+        fieldsRef.current = fieldsRef.current.map(f => f.id === d.id ? { ...f, rectW: newRW, rectH: newRH } : f)
+      }
+    }
     draw()
   }
 
   function handleMouseUp() {
     if (dragRef.current) {
       const f = fieldsRef.current.find(f => f.id === dragRef.current!.id)
-      if (f) onMove(f.id, f.x, f.y)
+      if (f) {
+        if (dragRef.current.mode === 'move') onMove(f.id, f.x, f.y)
+        else onResize(f.id, f.rectW, f.rectH)
+      }
     }
     dragRef.current = null
   }
@@ -1065,6 +1138,10 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
     updatePage(pageIdx, { fields: page.fields.map(f => f.id === id ? { ...f, x, y } : f) })
   }
 
+  function resizeField(id: string, rectW: number, rectH: number) {
+    updatePage(pageIdx, { fields: page.fields.map(f => f.id === id ? { ...f, rectW, rectH } : f) })
+  }
+
   async function handleSave() {
     if (!tplName.trim()) { setMsg('Enter a template name.'); return }
     setSaving(true); setMsg('')
@@ -1148,6 +1225,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
           selectedId={selectedId}
           onSelect={setSelectedId}
           onMove={moveField}
+          onResize={resizeField}
           onAddAtPos={addField}
         />
       </div>
