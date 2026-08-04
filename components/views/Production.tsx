@@ -1496,8 +1496,8 @@ function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
 
 // ─── Root Production component ────────────────────────────────────────────────
 export default function Production() {
-  const [maData, setMaData] = useState<MARecord[]>(SEED_MA)
-  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>(SEED_WEEKLY)
+  const [maData, setMaData] = useState<MARecord[]>([])
+  const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>([])
   const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
   const [activeTab, setActiveTab] = useState<'branch'|'apps'>('branch')
   const [dataLoaded, setDataLoaded] = useState(false)
