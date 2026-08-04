@@ -1202,6 +1202,23 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
     setSelectedId(f.id)
   }
 
+  function addPreset(preset: { type: FieldType; x: number; y: number; fontSize?: number; rectW?: number; rectH?: number }[]) {
+    const newFields: TplField[] = preset.map(p => {
+      const meta = FIELD_META[p.type]
+      return {
+        id: uid(), type: p.type,
+        x: p.x, y: p.y,
+        fontSize: p.fontSize ?? 0.04,
+        fontColor: '#000000', bold: true,
+        rectW: p.rectW ?? (meta.isCircle ? 0.12 : meta.isMultiline ? 0.45 : 0.35),
+        rectH: p.rectH ?? (meta.isCircle ? 0.12 : meta.isMultiline ? 0.18 : 0.22),
+        panX: 0.5, panY: 0.5,
+      }
+    })
+    updatePage(pageIdx, { fields: [...page.fields, ...newFields] })
+    setSelectedId(newFields[newFields.length - 1].id)
+  }
+
   function updateField(id: string, patch: Partial<TplField>) {
     updatePage(pageIdx, { fields: page.fields.map(f => f.id === id ? { ...f, ...patch } : f) })
   }
@@ -1281,6 +1298,53 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                 style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✕</button>
             )}
           </div>
+        </div>
+        <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14, marginBottom: 12 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Quick Add</div>
+          <div style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 8 }}>Drops a pre-built block — drag to reposition</div>
+          {([
+            {
+              label: '👤 My Info Block',
+              desc: 'Headshot + Name + Title + NMLS + Phone + Email',
+              fields: [
+                { type: 'headshot' as FieldType,  x: 0.13, y: 0.87, rectW: 0.10, rectH: 0.10 },
+                { type: 'name'     as FieldType,  x: 0.26, y: 0.80, fontSize: 0.045 },
+                { type: 'title'    as FieldType,  x: 0.26, y: 0.85, fontSize: 0.032 },
+                { type: 'nmls'     as FieldType,  x: 0.26, y: 0.89, fontSize: 0.028 },
+                { type: 'phone'    as FieldType,  x: 0.26, y: 0.93, fontSize: 0.028 },
+                { type: 'email'    as FieldType,  x: 0.26, y: 0.97, fontSize: 0.028 },
+              ],
+            },
+            {
+              label: '🤝 Partner Block',
+              desc: 'Headshot + Name + Title + Company + Phone + Email',
+              fields: [
+                { type: 'partner_headshot' as FieldType, x: 0.63, y: 0.87, rectW: 0.10, rectH: 0.10 },
+                { type: 'partner_name'    as FieldType,  x: 0.76, y: 0.80, fontSize: 0.045 },
+                { type: 'partner_title'   as FieldType,  x: 0.76, y: 0.85, fontSize: 0.032 },
+                { type: 'partner_company' as FieldType,  x: 0.76, y: 0.89, fontSize: 0.028 },
+                { type: 'partner_phone'   as FieldType,  x: 0.76, y: 0.93, fontSize: 0.028 },
+                { type: 'partner_email'   as FieldType,  x: 0.76, y: 0.97, fontSize: 0.028 },
+              ],
+            },
+            {
+              label: '📋 My Info (No Photo)',
+              desc: 'Name + Title + NMLS + Phone + Email stacked',
+              fields: [
+                { type: 'name'  as FieldType,  x: 0.08, y: 0.80, fontSize: 0.045 },
+                { type: 'title' as FieldType,  x: 0.08, y: 0.85, fontSize: 0.032 },
+                { type: 'nmls'  as FieldType,  x: 0.08, y: 0.89, fontSize: 0.028 },
+                { type: 'phone' as FieldType,  x: 0.08, y: 0.93, fontSize: 0.028 },
+                { type: 'email' as FieldType,  x: 0.08, y: 0.97, fontSize: 0.028 },
+              ],
+            },
+          ] as { label: string; desc: string; fields: { type: FieldType; x: number; y: number; fontSize?: number; rectW?: number; rectH?: number }[] }[]).map(preset => (
+            <button key={preset.label} onClick={() => addPreset(preset.fields)} title={preset.desc}
+              style={{ width: '100%', background: '#fff', border: '1px solid #D1D5DB', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 700, color: '#374151', cursor: 'pointer', marginBottom: 6, textAlign: 'left' }}>
+              {preset.label}
+              <div style={{ fontSize: 9, fontWeight: 400, color: '#9CA3AF', marginTop: 2 }}>{preset.desc}</div>
+            </button>
+          ))}
         </div>
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pages</div>
