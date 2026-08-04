@@ -846,7 +846,19 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const [emailMonth, setEmailMonth] = useState(5)
   const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-  const [fr, to] = periodRange(period, rangeFrom, rangeTo)
+  // Detect the last month that has any real volume — makes YTD dynamic
+  const lastDataMonth = (() => {
+    for (let m = 11; m >= 0; m--) {
+      if (maData.some(ma => (ma.monthlyVolume[m] ?? 0) > 0)) return m
+    }
+    return 0
+  })()
+
+  // For YTD, use lastDataMonth so totals include all uploaded data rather than
+  // a hardcoded July cutoff. Everything else uses periodRange as normal.
+  const [fr, to] = period === 'ytd'
+    ? [0, lastDataMonth]
+    : periodRange(period, rangeFrom, rangeTo)
 
   function famArr(m: MARecord) { return source === 'sg' ? m.monthlyFamiliesSG : source === 'd2c' ? m.monthlyFamiliesD2C : m.monthlyFamilies }
   function volArr(m: MARecord) { return source === 'sg' ? m.monthlyVolumeSG : source === 'd2c' ? m.monthlyVolumeD2C : m.monthlyVolume }
@@ -900,17 +912,8 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
   const maxFamilies = Math.max(...sorted.map(m => maFam(m)), 1)
 
-  // Last month in maData that actually has any volume — used to cap MoM so we
-  // never compare against a future zero-data month when YTD overshoots real data
-  const lastDataMonth = (() => {
-    for (let m = 11; m >= 0; m--) {
-      if (maData.some(ma => (ma.monthlyVolume[m] ?? 0) > 0)) return m
-    }
-    return 0
-  })()
-
-  // MoM: the "current" month is whichever is smaller — the period end or the last
-  // month with actual data. This prevents comparing against months with zero data.
+  // MoM: for range periods, cap at lastDataMonth so we never compare against
+  // a zero-data month. For ytd/single-month, `to` is already capped correctly.
   const momEndMonthRaw = period === 'range' ? rangeTo : to
   const momEndMonth = Math.min(momEndMonthRaw, lastDataMonth)
   const momEndYear = period === 'range' ? rangeToYear : 2026
@@ -939,9 +942,9 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     if (period === 'range') {
       return sumCrossYear(py, rangeFrom, rangeFromYear - 1, rangeTo, rangeToYear - 1, type)
     }
-    // For YTD and single-month, use lastDataMonth so we compare identical month spans
-    const pyTo = period === 'ytd' ? lastDataMonth : to
-    return type === 'vol' ? sumMonths(volArr(py), fr, pyTo) : sumMonths(famArr(py), fr, pyTo)
+    // `to` is now dynamic (equals lastDataMonth for YTD), so both years use
+    // exactly the same month span
+    return type === 'vol' ? sumMonths(volArr(py), fr, to) : sumMonths(famArr(py), fr, to)
   }
 
   function ytyPct(cur: number, prev: number | null) {
