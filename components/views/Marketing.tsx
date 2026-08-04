@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useApp } from '@/lib/appContext'
 import { Employee } from '@/lib/types'
 
@@ -22,18 +22,40 @@ const CATEGORY_LABELS: Record<Category, string> = {
   other:  '📁 Other',
 }
 
-type FieldType = 'name' | 'title' | 'nmls' | 'email' | 'phone' | 'headshot'
+type FieldType =
+  | 'name' | 'title' | 'nmls' | 'email' | 'phone' | 'headshot'
+  | 'partner_name' | 'partner_title' | 'partner_company' | 'partner_phone' | 'partner_email' | 'partner_headshot' | 'partner_logo'
+  | 'property_address' | 'property_price' | 'property_description' | 'property_image' | 'open_house_date' | 'open_house_time'
 
-const FIELD_META: Record<FieldType, { label: string; color: string; placeholder: string }> = {
-  name:     { label: 'Full Name',  color: '#3B82F6', placeholder: 'Jane Smith' },
-  title:    { label: 'Job Title',  color: '#8B5CF6', placeholder: 'Mortgage Advisor' },
-  nmls:     { label: 'NMLS #',    color: '#F59E0B', placeholder: 'NMLS# 123456' },
-  email:    { label: 'Email',     color: '#10B981', placeholder: 'jane@neohomeloans.com' },
-  phone:    { label: 'Phone',     color: '#EF4444', placeholder: '(801) 555-0100' },
-  headshot: { label: 'Headshot',  color: '#EC4899', placeholder: '' },
+interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
+
+const FIELD_META: Record<FieldType, FieldMeta> = {
+  name:                 { label: 'My Name',           color: '#3B82F6', placeholder: 'Jane Smith' },
+  title:                { label: 'My Title',          color: '#8B5CF6', placeholder: 'Mortgage Advisor' },
+  nmls:                 { label: 'My NMLS #',         color: '#F59E0B', placeholder: 'NMLS# 123456' },
+  email:                { label: 'My Email',          color: '#10B981', placeholder: 'jane@neohomeloans.com' },
+  phone:                { label: 'My Phone',          color: '#EF4444', placeholder: '(801) 555-0100' },
+  headshot:             { label: 'My Headshot',       color: '#EC4899', placeholder: '', isCircle: true },
+  partner_name:         { label: 'Partner Name',      color: '#0EA5E9', placeholder: 'John Doe' },
+  partner_title:        { label: 'Partner Title',     color: '#7C3AED', placeholder: 'REALTOR®' },
+  partner_company:      { label: 'Partner Company',   color: '#0D9488', placeholder: 'ABC Realty' },
+  partner_phone:        { label: 'Partner Phone',     color: '#DC2626', placeholder: '(801) 555-0200' },
+  partner_email:        { label: 'Partner Email',     color: '#059669', placeholder: 'john@abc.com' },
+  partner_headshot:     { label: 'Partner Headshot',  color: '#DB2777', placeholder: '', isCircle: true },
+  partner_logo:         { label: 'Partner Logo',      color: '#D97706', placeholder: '', isRect: true },
+  property_address:     { label: 'Address',           color: '#6366F1', placeholder: '123 Main St, Salt Lake City' },
+  property_price:       { label: 'List Price',        color: '#16A34A', placeholder: '$450,000' },
+  property_description: { label: 'Description',       color: '#9333EA', placeholder: '4 bed · 2 bath · 2,100 sq ft', isMultiline: true },
+  property_image:       { label: 'Property Photo',    color: '#EA580C', placeholder: '', isRect: true },
+  open_house_date:      { label: 'Open House Date',   color: '#0369A1', placeholder: 'Saturday, January 18' },
+  open_house_time:      { label: 'Open House Time',   color: '#0284C7', placeholder: '1:00 PM – 4:00 PM' },
 }
 
-const FIELD_TYPES = Object.keys(FIELD_META) as FieldType[]
+const FIELD_GROUPS: Record<string, FieldType[]> = {
+  'Advisor':  ['name', 'title', 'nmls', 'email', 'phone', 'headshot'],
+  'Partner':  ['partner_name', 'partner_title', 'partner_company', 'partner_phone', 'partner_email', 'partner_headshot', 'partner_logo'],
+  'Property': ['property_address', 'property_price', 'property_description', 'property_image', 'open_house_date', 'open_house_time'],
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,7 +64,7 @@ interface TplField {
   type: FieldType
   x: number
   y: number
-  fontSize: number  // fraction of canvas height
+  fontSize: number   // fraction of canvas height — also controls image "size"
   fontColor: string
   bold: boolean
 }
@@ -58,74 +80,103 @@ interface MktTemplate {
   created_at: string
 }
 
-type FieldValues = Record<FieldType, string>
-
-// ─── Shared render logic ──────────────────────────────────────────────────────
-
-const bgCache = new Map<string, string>()  // url → blob object URL
-
-async function getBlobUrl(url: string): Promise<string> {
-  if (bgCache.has(url)) return bgCache.get(url)!
-  const resp = await fetch(url)
-  const blob = await resp.blob()
-  const obj = URL.createObjectURL(blob)
-  bgCache.set(url, obj)
-  return obj
+interface Partner {
+  id: string
+  owner_email: string
+  name: string
+  title: string
+  company: string
+  phone: string
+  email: string
+  headshot_url: string
+  logo_url: string
+  created_at: string
 }
 
-async function renderPageToCanvas(
-  canvas: HTMLCanvasElement,
-  page: TplPage,
-  values: FieldValues,
-  w: number,
-  h: number,
-) {
-  canvas.width = w
-  canvas.height = h
+type FieldValues = Record<FieldType, string>
+
+// ─── Canvas renderer ──────────────────────────────────────────────────────────
+
+const bgCache = new Map<string, string>()
+
+async function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((res, rej) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => res(img)
+    img.onerror = rej
+    if (url.startsWith('blob:') || url.startsWith('data:')) {
+      img.src = url
+    } else {
+      const cached = bgCache.get(url)
+      if (cached) { img.src = cached; return }
+      fetch(url).then(r => r.blob()).then(b => {
+        const obj = URL.createObjectURL(b)
+        bgCache.set(url, obj)
+        img.src = obj
+      }).catch(rej)
+    }
+  })
+}
+
+function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number) {
+  const words = text.split(' ')
+  let line = '', cy = y
+  for (const word of words) {
+    const test = line + word + ' '
+    if (ctx.measureText(test).width > maxW && line) {
+      ctx.fillText(line.trim(), x, cy); line = word + ' '; cy += lineH
+    } else { line = test }
+  }
+  if (line.trim()) ctx.fillText(line.trim(), x, cy)
+}
+
+async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, values: FieldValues, w: number, h: number) {
+  canvas.width = w; canvas.height = h
   const ctx = canvas.getContext('2d')!
 
   if (page.bg_url) {
-    const objUrl = await getBlobUrl(page.bg_url)
-    await new Promise<void>((res, rej) => {
-      const img = new Image()
-      img.onload = () => { ctx.drawImage(img, 0, 0, w, h); res() }
-      img.onerror = rej
-      img.src = objUrl
-    })
+    try {
+      const img = await loadImage(page.bg_url)
+      ctx.drawImage(img, 0, 0, w, h)
+    } catch {}
   } else {
-    ctx.fillStyle = '#f3f4f6'
-    ctx.fillRect(0, 0, w, h)
+    ctx.fillStyle = '#f3f4f6'; ctx.fillRect(0, 0, w, h)
   }
 
   for (const f of page.fields) {
-    const px = f.x * w
-    const py = f.y * h
+    const px = f.x * w, py = f.y * h
     const fs = Math.max(8, Math.round(f.fontSize * h))
+    const meta = FIELD_META[f.type]
+    const val = values[f.type] ?? ''
 
-    if (f.type === 'headshot') {
-      const url = values.headshot
-      if (url) {
-        await new Promise<void>(res => {
-          const hi = new Image()
-          hi.crossOrigin = 'anonymous'
-          hi.onload = () => {
-            const r = fs * 3
-            ctx.save()
-            ctx.beginPath()
-            ctx.arc(px, py, r / 2, 0, Math.PI * 2)
-            ctx.clip()
-            ctx.drawImage(hi, px - r / 2, py - r / 2, r, r)
-            ctx.restore()
-            res()
-          }
-          hi.onerror = () => res()
-          hi.src = url
-        })
-      }
+    if (meta.isCircle) {
+      if (!val) continue
+      try {
+        const img = await loadImage(val)
+        const r = fs * 2.5
+        ctx.save()
+        ctx.beginPath(); ctx.arc(px, py, r / 2, 0, Math.PI * 2); ctx.clip()
+        ctx.drawImage(img, px - r / 2, py - r / 2, r, r)
+        ctx.restore()
+      } catch {}
+    } else if (meta.isRect) {
+      if (!val) continue
+      try {
+        const img = await loadImage(val)
+        const targetW = fs * (w / h) * 7
+        const ar = img.naturalWidth / img.naturalHeight
+        const dw = targetW, dh = targetW / ar
+        ctx.drawImage(img, px - dw / 2, py - dh / 2, dw, dh)
+      } catch {}
+    } else if (meta.isMultiline) {
+      ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
+      ctx.fillStyle = f.fontColor
+      wrapText(ctx, val, px, py, w * 0.45, fs * 1.45)
     } else {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
       ctx.fillStyle = f.fontColor
-      ctx.fillText(values[f.type] ?? '', px, py)
+      ctx.fillText(val, px, py)
     }
   }
 }
@@ -136,19 +187,30 @@ function uid() { return Math.random().toString(36).slice(2) }
 
 function initValues(emp: Employee | undefined, headshot: string): FieldValues {
   return {
-    name:     emp?.name ?? '',
-    title:    emp?.title ?? '',
-    nmls:     emp?.nmls_number ? `NMLS# ${emp.nmls_number}` : '',
-    email:    emp?.work_email ?? '',
-    phone:    emp?.phone ?? '',
+    name: emp?.name ?? '', title: emp?.title ?? '',
+    nmls: emp?.nmls_number ? `NMLS# ${emp.nmls_number}` : '',
+    email: emp?.work_email ?? '', phone: emp?.phone ?? '',
     headshot: headshot || emp?.headshot_url || '',
+    partner_name: '', partner_title: '', partner_company: '',
+    partner_phone: '', partner_email: '', partner_headshot: '', partner_logo: '',
+    property_address: '', property_price: '', property_description: '',
+    property_image: '', open_house_date: '', open_house_time: '',
+  }
+}
+
+function applyPartner(values: FieldValues, p: Partner): FieldValues {
+  return {
+    ...values,
+    partner_name: p.name, partner_title: p.title, partner_company: p.company,
+    partner_phone: p.phone, partner_email: p.email,
+    partner_headshot: p.headshot_url, partner_logo: p.logo_url,
   }
 }
 
 // ─── Drop Zone ────────────────────────────────────────────────────────────────
 
-function DropZone({ onFile, label = 'Drop image here or click to browse', small = false }: {
-  onFile: (f: File) => void; label?: string; small?: boolean
+function DropZone({ onFile, label = 'Drop image here or click to browse', small = false, accept = 'image/jpeg,image/png' }: {
+  onFile: (f: File) => void; label?: string; small?: boolean; accept?: string
 }) {
   const [drag, setDrag] = useState(false)
   const ref = useRef<HTMLInputElement>(null)
@@ -158,32 +220,229 @@ function DropZone({ onFile, label = 'Drop image here or click to browse', small 
       onDragLeave={() => setDrag(false)}
       onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) onFile(f) }}
       onClick={() => ref.current?.click()}
-      style={{
-        border: `2px dashed ${drag ? '#3B82F6' : '#D1D5DB'}`,
-        borderRadius: small ? 10 : 14, padding: small ? '18px 14px' : '48px 32px',
-        textAlign: 'center', cursor: 'pointer', background: drag ? '#EFF6FF' : '#F9FAFB', transition: 'all 0.15s',
-      }}
+      style={{ border: `2px dashed ${drag ? '#3B82F6' : '#D1D5DB'}`, borderRadius: small ? 10 : 14, padding: small ? '14px' : '44px 32px', textAlign: 'center', cursor: 'pointer', background: drag ? '#EFF6FF' : '#F9FAFB', transition: 'all .15s' }}
     >
-      {!small && <div style={{ fontSize: 32, marginBottom: 8 }}>🖼️</div>}
+      {!small && <div style={{ fontSize: 30, marginBottom: 8 }}>🖼️</div>}
       <div style={{ fontSize: small ? 12 : 14, fontWeight: 600, color: '#374151', marginBottom: small ? 0 : 4 }}>{label}</div>
       {!small && <div style={{ fontSize: 12, color: '#9CA3AF' }}>JPEG or PNG</div>}
-      <input ref={ref} type="file" accept="image/jpeg,image/png" style={{ display: 'none' }}
-        onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
+      <input ref={ref} type="file" accept={accept} style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onFile(f) }} />
     </div>
   )
 }
 
-// ─── Personalization Modal (MAXA-style) ───────────────────────────────────────
+// ─── Image upload helper ──────────────────────────────────────────────────────
 
-function PersonalizationModal({ template, emp, initialHeadshot, supabase, onClose }: {
-  template: MktTemplate
-  emp: Employee | undefined
-  initialHeadshot: string
+async function uploadFile(supabase: any, file: File, folder: string): Promise<string> {
+  const path = `${folder}/${uid()}.${file.name.split('.').pop()}`
+  const { error } = await supabase.storage.from('marketing-assets').upload(path, file, { contentType: file.type })
+  if (error) throw error
+  const { data } = supabase.storage.from('marketing-assets').getPublicUrl(path)
+  return data.publicUrl
+}
+
+// ─── Partner Form Modal ───────────────────────────────────────────────────────
+
+function PartnerModal({ partner, supabase, ownerEmail, onSaved, onClose }: {
+  partner: Partner | null
   supabase: any
+  ownerEmail: string
+  onSaved: () => void
   onClose: () => void
+}) {
+  const [form, setForm] = useState({
+    name: partner?.name ?? '', title: partner?.title ?? '', company: partner?.company ?? '',
+    phone: partner?.phone ?? '', email: partner?.email ?? '',
+    headshot_url: partner?.headshot_url ?? '', logo_url: partner?.logo_url ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
+  const [msg, setMsg] = useState('')
+
+  async function handleImageUpload(field: 'headshot_url' | 'logo_url', file: File) {
+    setUploading(field)
+    try {
+      const url = await uploadFile(supabase, file, field === 'headshot_url' ? 'partner-headshots' : 'partner-logos')
+      setForm(f => ({ ...f, [field]: url }))
+    } catch (e: any) { setMsg(`Upload error: ${e.message}`) }
+    setUploading(null)
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setMsg('Name is required.'); return }
+    setSaving(true)
+    try {
+      if (partner) {
+        const { error } = await supabase.from('marketing_partners').update({ ...form }).eq('id', partner.id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('marketing_partners').insert({ ...form, owner_email: ownerEmail })
+        if (error) throw error
+      }
+      onSaved()
+    } catch (e: any) { setMsg(`Error: ${e.message}`) }
+    setSaving(false)
+  }
+
+  const inputStyle: React.CSSProperties = { width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none', marginBottom: 12 }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 18, padding: 28, width: 480, maxHeight: '90vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#0A2540' }}>{partner ? 'Edit Partner' : 'Add Partner'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9CA3AF' }}>✕</button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 20, marginBottom: 16 }}>
+          {/* Headshot */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: 72, height: 72, borderRadius: '50%', overflow: 'hidden', background: '#F3F4F6', border: '2px solid #E5E7EB', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+              {form.headshot_url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={form.headshot_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : '👤'}
+            </div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#0A2540', cursor: 'pointer' }}>
+              {uploading === 'headshot_url' ? 'Uploading…' : 'Photo'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('headshot_url', f) }} />
+            </label>
+          </div>
+          {/* Logo */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ width: 120, height: 72, borderRadius: 10, overflow: 'hidden', background: '#F3F4F6', border: '2px solid #E5E7EB', marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: '#9CA3AF' }}>
+              {form.logo_url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={form.logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                : 'Company Logo'}
+            </div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: '#0A2540', cursor: 'pointer' }}>
+              {uploading === 'logo_url' ? 'Uploading…' : 'Logo'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('logo_url', f) }} />
+            </label>
+          </div>
+        </div>
+
+        <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full Name *" style={inputStyle} />
+        <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Title (e.g. REALTOR®)" style={inputStyle} />
+        <input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="Company / Brokerage" style={inputStyle} />
+        <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" style={inputStyle} />
+        <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="Email" style={inputStyle} />
+
+        {msg && <div style={{ fontSize: 13, color: '#EF4444', marginBottom: 12 }}>{msg}</div>}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={handleSave} disabled={saving} style={{ flex: 1, background: saving ? '#D1D5DB' : '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+            {saving ? 'Saving…' : partner ? 'Save Changes' : 'Add Partner'}
+          </button>
+          <button onClick={onClose} style={{ flex: 1, background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Partners Tab ─────────────────────────────────────────────────────────────
+
+function PartnersTab({ supabase, ownerEmail }: { supabase: any; ownerEmail: string }) {
+  const [partners, setPartners] = useState<Partner[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<Partner | null | 'new'>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const { data } = await supabase.from('marketing_partners').select('*').order('name')
+    setPartners(data ?? [])
+    setLoading(false)
+  }, [supabase])
+
+  useEffect(() => { load() }, [load])
+
+  async function del(id: string) {
+    if (!confirm('Remove this partner?')) return
+    await supabase.from('marketing_partners').delete().eq('id', id)
+    load()
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: '#0A2540' }}>Co-Branding Partners</div>
+          <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>Save partners once — select them when generating any template</div>
+        </div>
+        <button onClick={() => setEditing('new')} style={{ background: '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+          + Add Partner
+        </button>
+      </div>
+
+      {loading && <div style={{ padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>}
+
+      {!loading && partners.length === 0 && (
+        <div style={{ padding: 80, textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🤝</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#374151', marginBottom: 6 }}>No partners yet</div>
+          <div style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 20 }}>Add a real estate agent, title rep, or anyone you co-brand with</div>
+          <button onClick={() => setEditing('new')} style={{ background: '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 24px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Add Your First Partner</button>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+        {partners.map(p => (
+          <div key={p.id} style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,.05)' }}>
+            {/* Logo bar */}
+            <div style={{ background: '#F9FAFB', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #F3F4F6' }}>
+              {p.logo_url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={p.logo_url} alt="" style={{ maxHeight: 44, maxWidth: '80%', objectFit: 'contain' }} />
+                : <div style={{ fontSize: 12, color: '#D1D5DB', fontWeight: 600 }}>No logo</div>
+              }
+            </div>
+            <div style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div style={{ width: 44, height: 44, borderRadius: '50%', overflow: 'hidden', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, border: '2px solid #E5E7EB' }}>
+                  {p.headshot_url
+                    // eslint-disable-next-line @next/next/no-img-element
+                    ? <img src={p.headshot_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : '👤'}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#0A2540', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
+                  <div style={{ fontSize: 12, color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}{p.company ? ` · ${p.company}` : ''}</div>
+                </div>
+              </div>
+              {p.phone && <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 2 }}>📞 {p.phone}</div>}
+              {p.email && <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>✉ {p.email}</div>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setEditing(p)} style={{ flex: 1, background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 8, padding: '7px 0', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Edit</button>
+                <button onClick={() => del(p.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>✕</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {editing && (
+        <PartnerModal
+          partner={editing === 'new' ? null : editing}
+          supabase={supabase}
+          ownerEmail={ownerEmail}
+          onSaved={() => { load(); setEditing(null) }}
+          onClose={() => setEditing(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Personalization Modal ────────────────────────────────────────────────────
+
+function PersonalizationModal({ template, emp, initialHeadshot, supabase, partners, onClose }: {
+  template: MktTemplate; emp: Employee | undefined; initialHeadshot: string
+  supabase: any; partners: Partner[]; onClose: () => void
 }) {
   const size = CANVAS_SIZES[template.canvas_size] ?? CANVAS_SIZES.custom
   const [values, setValues] = useState<FieldValues>(() => initValues(emp, initialHeadshot))
+  const [selectedPartner, setSelectedPartner] = useState<string>('')
   const [pageIdx, setPageIdx] = useState(0)
   const [rendering, setRendering] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -192,104 +451,146 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, onClos
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Collect which field types are actually used across all pages
   const usedFields = new Set<FieldType>()
-  template.pages.forEach(p => p.fields.forEach(f => usedFields.add(f.type)))
+  template.pages.forEach(p => p.fields.forEach(f => usedFields.has(f.type) || usedFields.add(f.type)))
 
-  // Re-render preview whenever values or page changes
+  const hasPartnerFields = ['partner_name','partner_title','partner_company','partner_phone','partner_email','partner_headshot','partner_logo'].some(t => usedFields.has(t as FieldType))
+  const hasPropertyFields = ['property_address','property_price','property_description','property_image','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => renderPreview(), 180)
+    debounceRef.current = setTimeout(renderPreview, 200)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [values, pageIdx])
 
   async function renderPreview() {
-    const canvas = previewRef.current
-    const container = containerRef.current
+    const canvas = previewRef.current, container = containerRef.current
     if (!canvas || !container) return
     setRendering(true)
-    const maxW = Math.min(container.clientWidth, 580)
+    const maxW = Math.min(container.clientWidth, 560)
     const previewH = Math.round(maxW * (size.h / size.w))
-    try {
-      await renderPageToCanvas(canvas, template.pages[pageIdx], values, maxW, previewH)
-    } catch {}
+    try { await renderPageToCanvas(canvas, template.pages[pageIdx], values, maxW, previewH) } catch {}
     setRendering(false)
   }
 
   async function downloadPNG() {
     setDownloading(true)
-    try {
-      for (let i = 0; i < template.pages.length; i++) {
-        const c = document.createElement('canvas')
-        await renderPageToCanvas(c, template.pages[i], values, size.w, size.h)
-        const a = document.createElement('a')
-        const suffix = template.pages.length > 1 ? `_p${i + 1}` : ''
-        a.href = c.toDataURL('image/png')
-        a.download = `${template.name.replace(/\s+/g, '_')}${suffix}.png`
-        a.click()
-      }
-    } catch {}
+    for (let i = 0; i < template.pages.length; i++) {
+      const c = document.createElement('canvas')
+      await renderPageToCanvas(c, template.pages[i], values, size.w, size.h)
+      const a = document.createElement('a')
+      const suffix = template.pages.length > 1 ? `_p${i + 1}` : ''
+      a.href = c.toDataURL('image/png')
+      a.download = `${template.name.replace(/\s+/g, '_')}${suffix}.png`
+      a.click()
+    }
     setDownloading(false)
   }
 
   async function downloadPDF() {
     setDownloading(true)
-    try {
-      const images: string[] = []
-      for (let i = 0; i < template.pages.length; i++) {
-        const c = document.createElement('canvas')
-        await renderPageToCanvas(c, template.pages[i], values, size.w, size.h)
-        images.push(c.toDataURL('image/png'))
-      }
-      const isLetter = template.canvas_size === 'flyer_letter'
-      const pw = isLetter ? '8.5in' : `${size.w}px`
-      const ph = isLetter ? '11in' : `${size.h}px`
-      const win = window.open('', '_blank')!
-      win.document.write(`<!DOCTYPE html><html><head><style>
-        @page { size: ${pw} ${ph}; margin: 0; }
-        body { margin: 0; padding: 0; }
-        img { width: 100vw; height: 100vh; object-fit: fill; display: block; page-break-after: always; }
-      </style></head><body>
-        ${images.map(src => `<img src="${src}" />`).join('')}
-      </body></html>`)
-      win.document.close()
-      setTimeout(() => { win.print() }, 400)
-    } catch {}
+    const images: string[] = []
+    for (let i = 0; i < template.pages.length; i++) {
+      const c = document.createElement('canvas')
+      await renderPageToCanvas(c, template.pages[i], values, size.w, size.h)
+      images.push(c.toDataURL('image/png'))
+    }
+    const isLetter = template.canvas_size === 'flyer_letter'
+    const pw = isLetter ? '8.5in' : `${size.w}px`, ph = isLetter ? '11in' : `${size.h}px`
+    const win = window.open('', '_blank')!
+    win.document.write(`<!DOCTYPE html><html><head><style>
+      @page{size:${pw} ${ph};margin:0}body{margin:0;padding:0}img{width:100vw;height:100vh;object-fit:fill;display:block;page-break-after:always}
+    </style></head><body>${images.map(src => `<img src="${src}"/>`).join('')}</body></html>`)
+    win.document.close()
+    setTimeout(() => win.print(), 400)
     setDownloading(false)
   }
 
-  async function handleHeadshotFile(f: File) {
+  async function handleHeadshotFile(file: File) {
     setHeadshotUploading(true)
     try {
-      const path = `headshots/${uid()}.${f.name.split('.').pop()}`
-      const { error } = await supabase.storage.from('marketing-assets').upload(path, f, { contentType: f.type, upsert: true })
-      if (error) throw error
-      const { data } = supabase.storage.from('marketing-assets').getPublicUrl(path)
-      if (emp) await supabase.from('employees').update({ headshot_url: data.publicUrl }).eq('id', emp.id)
-      setValues(v => ({ ...v, headshot: data.publicUrl }))
+      const url = await uploadFile(supabase, file, 'headshots')
+      if (emp) await supabase.from('employees').update({ headshot_url: url }).eq('id', emp.id)
+      setValues(v => ({ ...v, headshot: url }))
     } catch {}
     setHeadshotUploading(false)
   }
 
+  function handlePropertyImageFile(file: File) {
+    setValues(v => ({ ...v, property_image: URL.createObjectURL(file) }))
+  }
+
+  function handlePartnerSelect(id: string) {
+    setSelectedPartner(id)
+    if (!id) return
+    const p = partners.find(p => p.id === id)
+    if (p) setValues(v => applyPartner(v, p))
+  }
+
   const isFlyer = template.canvas_size === 'flyer_letter'
-  const canvasAspect = size.h / size.w
+
+  const sectionHead = (label: string) => (
+    <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12, marginTop: 4 }}>{label}</div>
+  )
+
+  const fieldInput = (ft: FieldType) => {
+    if (!usedFields.has(ft)) return null
+    const meta = FIELD_META[ft]
+    if (meta.isCircle || meta.isRect) return null // handled separately
+    return (
+      <div key={ft} style={{ marginBottom: 12 }}>
+        <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: meta.color, display: 'inline-block', flexShrink: 0 }} />
+          {meta.label}
+        </label>
+        {meta.isMultiline ? (
+          <textarea value={values[ft]} onChange={e => setValues(v => ({ ...v, [ft]: e.target.value }))} placeholder={meta.placeholder} rows={3}
+            style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none', resize: 'vertical', fontFamily: 'inherit' }} />
+        ) : (
+          <input value={values[ft]} onChange={e => setValues(v => ({ ...v, [ft]: e.target.value }))} placeholder={meta.placeholder}
+            style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
+        )}
+      </div>
+    )
+  }
+
+  const imageUploadRow = (ft: FieldType, currentUrl: string, onUpload: (f: File) => void, uploading = false, circle = false) => {
+    if (!usedFields.has(ft)) return null
+    const meta = FIELD_META[ft]
+    return (
+      <div key={ft} style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 2, background: meta.color, display: 'inline-block' }} />
+          {meta.label}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {currentUrl
+            ? circle
+              // eslint-disable-next-line @next/next/no-img-element
+              ? <img src={currentUrl} alt="" style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', flexShrink: 0 }} />
+              // eslint-disable-next-line @next/next/no-img-element
+              : <img src={currentUrl} alt="" style={{ height: 44, maxWidth: 100, objectFit: 'contain', borderRadius: 6, border: '1px solid #E5E7EB', flexShrink: 0 }} />
+            : <div style={{ width: circle ? 48 : 80, height: 44, borderRadius: circle ? '50%' : 6, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{circle ? '👤' : '🖼️'}</div>
+          }
+          <label style={{ flex: 1, cursor: 'pointer' }}>
+            <div style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#374151', textAlign: 'center' }}>
+              {uploading ? 'Uploading…' : currentUrl ? 'Change' : 'Upload'}
+            </div>
+            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f) }} />
+          </label>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.75)', zIndex: 1000, display: 'flex', flexDirection: 'column' }}
-      onClick={onClose}
-    >
-      {/* Header bar */}
-      <div
-        style={{ background: '#0A2540', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }}
-        onClick={e => e.stopPropagation()}
-      >
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.8)', zIndex: 1000, display: 'flex', flexDirection: 'column' }} onClick={onClose}>
+      {/* Header */}
+      <div style={{ background: '#0A2540', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.6)', cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 0 }}>✕</button>
-          <div>
-            <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{template.name}</span>
-            <span style={{ color: 'rgba(255,255,255,.45)', fontSize: 13, marginLeft: 10 }}>{size.label}</span>
-          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 20, padding: 0 }}>✕</button>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{template.name}</span>
+          <span style={{ color: 'rgba(255,255,255,.4)', fontSize: 13 }}>{size.label}</span>
         </div>
         {template.pages.length > 1 && (
           <div style={{ display: 'flex', gap: 6 }}>
@@ -305,81 +606,75 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, onClos
 
       {/* Body */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-
-        {/* Left: canvas preview */}
-        <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', background: '#1a1a2e', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 32 }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 580 }}>
-            <canvas
-              ref={previewRef}
-              style={{ width: '100%', aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.6)', opacity: rendering ? 0.6 : 1, transition: 'opacity .15s' }}
-            />
+        {/* Canvas preview */}
+        <div ref={containerRef} style={{ flex: 1, overflowY: 'auto', background: '#111827', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 32 }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
+            <canvas ref={previewRef} style={{ width: '100%', aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.7)', opacity: rendering ? 0.5 : 1, transition: 'opacity .15s' }} />
             {rendering && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: 'rgba(0,0,0,.5)', color: '#fff', borderRadius: 8, padding: '8px 16px', fontSize: 13 }}>Updating…</div>
+                <div style={{ background: 'rgba(0,0,0,.55)', color: '#fff', borderRadius: 8, padding: '8px 18px', fontSize: 13 }}>Updating…</div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Right: fields + download */}
-        <div style={{ width: 320, flexShrink: 0, background: '#fff', borderLeft: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <div style={{ padding: 24, flex: 1 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 16 }}>Your Info</div>
+        {/* Fields panel */}
+        <div style={{ width: 340, flexShrink: 0, background: '#fff', borderLeft: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 22 }}>
 
-            {(FIELD_TYPES.filter(ft => ft !== 'headshot' && usedFields.has(ft)) as FieldType[]).map(ft => (
-              <div key={ft} style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: FIELD_META[ft].color, display: 'inline-block', flexShrink: 0 }} />
-                  {FIELD_META[ft].label}
-                </label>
-                <input
-                  value={values[ft]}
-                  onChange={e => setValues(v => ({ ...v, [ft]: e.target.value }))}
-                  placeholder={FIELD_META[ft].placeholder}
-                  style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '9px 12px', fontSize: 13, boxSizing: 'border-box', outline: 'none', color: '#111827' }}
-                />
-              </div>
-            ))}
+            {/* Advisor */}
+            {sectionHead('Your Info')}
+            {(['name','title','nmls','email','phone'] as FieldType[]).map(ft => fieldInput(ft))}
+            {imageUploadRow('headshot', values.headshot, handleHeadshotFile, headshotUploading, true)}
 
-            {usedFields.has('headshot') && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 2, background: FIELD_META.headshot.color, display: 'inline-block' }} />
-                  Photo
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  {values.headshot
-                    // eslint-disable-next-line @next/next/no-img-element
-                    ? <img src={values.headshot} alt="" style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid #E5E7EB', flexShrink: 0 }} />
-                    : <div style={{ width: 52, height: 52, borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>👤</div>
-                  }
-                  <label style={{ flex: 1 }}>
-                    <div style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer', textAlign: 'center' }}>
-                      {headshotUploading ? 'Uploading…' : values.headshot ? 'Change Photo' : 'Upload Photo'}
-                    </div>
-                    <input type="file" accept="image/jpeg,image/png" style={{ display: 'none' }}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleHeadshotFile(f) }} />
-                  </label>
-                </div>
-              </div>
+            {/* Partner */}
+            {hasPartnerFields && (
+              <>
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
+                {sectionHead('Co-Brand Partner')}
+                {partners.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Select saved partner</label>
+                    <select value={selectedPartner} onChange={e => handlePartnerSelect(e.target.value)}
+                      style={{ width: '100%', border: '1px solid #E5E7EB', borderRadius: 8, padding: '9px 12px', fontSize: 13, background: '#fff', marginBottom: 10 }}>
+                      <option value="">— No partner / enter manually —</option>
+                      {partners.map(p => <option key={p.id} value={p.id}>{p.name}{p.company ? ` · ${p.company}` : ''}</option>)}
+                    </select>
+                  </div>
+                )}
+                {(['partner_name','partner_title','partner_company','partner_phone','partner_email'] as FieldType[]).map(ft => fieldInput(ft))}
+                {imageUploadRow('partner_headshot', values.partner_headshot, async (f) => {
+                  const url = URL.createObjectURL(f); setValues(v => ({ ...v, partner_headshot: url }))
+                }, false, true)}
+                {imageUploadRow('partner_logo', values.partner_logo, async (f) => {
+                  const url = URL.createObjectURL(f); setValues(v => ({ ...v, partner_logo: url }))
+                }, false, false)}
+              </>
+            )}
+
+            {/* Property */}
+            {hasPropertyFields && (
+              <>
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
+                {sectionHead('Property Info')}
+                {(['property_address','property_price','property_description','open_house_date','open_house_time'] as FieldType[]).map(ft => fieldInput(ft))}
+                {imageUploadRow('property_image', values.property_image, handlePropertyImageFile, false, false)}
+              </>
             )}
           </div>
 
-          {/* Download actions */}
-          <div style={{ padding: '16px 24px 24px', borderTop: '1px solid #E5E7EB' }}>
+          {/* Download */}
+          <div style={{ padding: '16px 22px 22px', borderTop: '1px solid #E5E7EB' }}>
             <button onClick={downloadPNG} disabled={downloading}
               style={{ width: '100%', background: downloading ? '#D1D5DB' : '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontWeight: 700, fontSize: 14, cursor: downloading ? 'default' : 'pointer', marginBottom: 10 }}>
               ⬇ {template.pages.length > 1 ? `Download All Pages (PNG)` : 'Download PNG'}
             </button>
             {(isFlyer || template.pages.length > 1) && (
               <button onClick={downloadPDF} disabled={downloading}
-                style={{ width: '100%', background: downloading ? '#D1D5DB' : '#F3F4F6', color: downloading ? '#fff' : '#374151', border: '1px solid #E5E7EB', borderRadius: 10, padding: '13px 0', fontWeight: 700, fontSize: 14, cursor: downloading ? 'default' : 'pointer' }}>
-                🖨 {isFlyer ? 'Print / Save as PDF' : 'Download PDF'}
+                style={{ width: '100%', background: '#F3F4F6', color: '#374151', border: '1px solid #E5E7EB', borderRadius: 10, padding: '13px 0', fontWeight: 700, fontSize: 14, cursor: downloading ? 'default' : 'pointer' }}>
+                🖨 Print / Save as PDF
               </button>
             )}
-            <p style={{ fontSize: 11, color: '#9CA3AF', textAlign: 'center', marginTop: 10, marginBottom: 0, lineHeight: 1.5 }}>
-              {isFlyer ? 'PDF opens print dialog — choose "Save as PDF" in your printer settings.' : 'PNG is ready to post directly to any platform.'}
-            </p>
           </div>
         </div>
       </div>
@@ -387,16 +682,11 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, onClos
   )
 }
 
-// ─── Library card grid ────────────────────────────────────────────────────────
+// ─── Library ──────────────────────────────────────────────────────────────────
 
-function LibraryView({ templates, loading, myEmployee, headshot, supabase, onRefresh, isAdmin }: {
-  templates: MktTemplate[]
-  loading: boolean
-  myEmployee: Employee | undefined
-  headshot: string
-  supabase: any
-  onRefresh: () => void
-  isAdmin: boolean
+function LibraryView({ templates, loading, myEmployee, headshot, supabase, partners, onRefresh, isAdmin }: {
+  templates: MktTemplate[]; loading: boolean; myEmployee: Employee | undefined
+  headshot: string; supabase: any; partners: Partner[]; onRefresh: () => void; isAdmin: boolean
 }) {
   const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all')
   const [search, setSearch] = useState('')
@@ -417,7 +707,7 @@ function LibraryView({ templates, loading, myEmployee, headshot, supabase, onRef
   }
 
   async function del(id: string) {
-    if (!confirm('Delete this template from the library?')) return
+    if (!confirm('Delete this template?')) return
     await supabase.from('marketing_templates').delete().eq('id', id)
     onRefresh()
   }
@@ -426,98 +716,69 @@ function LibraryView({ templates, loading, myEmployee, headshot, supabase, onRef
 
   return (
     <>
-      {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: 6 }}>
           {categories.map(cat => {
             const active = cat === activeCategory
-            const label = cat === 'all' ? '🗂 All' : CATEGORY_LABELS[cat]
-            const count = counts[cat] ?? 0
             return (
               <button key={cat} onClick={() => setActiveCategory(cat)}
                 style={{ padding: '7px 14px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 12, cursor: 'pointer', background: active ? '#0A2540' : '#F3F4F6', color: active ? '#fff' : '#6B7280' }}>
-                {label}{count > 0 ? ` (${count})` : ''}
+                {cat === 'all' ? '🗂 All' : CATEGORY_LABELS[cat]}{(counts[cat] ?? 0) > 0 ? ` (${counts[cat]})` : ''}
               </button>
             )
           })}
         </div>
-        <input
-          value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Search templates…"
-          style={{ marginLeft: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: '7px 14px', fontSize: 13, outline: 'none', minWidth: 200 }}
-        />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search templates…"
+          style={{ marginLeft: 'auto', border: '1px solid #E5E7EB', borderRadius: 8, padding: '7px 14px', fontSize: 13, outline: 'none', minWidth: 200 }} />
       </div>
 
       {visible.length === 0 ? (
         <div style={{ padding: 80, textAlign: 'center' }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#374151', marginBottom: 6 }}>
-            {search ? 'No templates match your search' : 'No templates here yet'}
-          </div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#374151', marginBottom: 6 }}>{search ? 'No templates match' : 'No templates yet'}</div>
           {!search && isAdmin && <div style={{ fontSize: 13, color: '#9CA3AF' }}>Upload templates in the "Upload & Edit" tab.</div>}
-          {!search && !isAdmin && <div style={{ fontSize: 13, color: '#9CA3AF' }}>Templates will appear once your admin uploads them.</div>}
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
           {visible.map(t => {
             const thumb = t.pages?.[0]?.bg_url ?? ''
             const hovered = hoverId === t.id
-            const pageCount = t.pages?.length ?? 1
             return (
               <div key={t.id}
                 style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', overflow: 'hidden', boxShadow: hovered ? '0 8px 32px rgba(0,0,0,.14)' : '0 2px 8px rgba(0,0,0,.06)', transition: 'box-shadow .2s, transform .2s', transform: hovered ? 'translateY(-3px)' : 'none', cursor: 'pointer' }}
-                onMouseEnter={() => setHoverId(t.id)}
-                onMouseLeave={() => setHoverId(null)}
+                onMouseEnter={() => setHoverId(t.id)} onMouseLeave={() => setHoverId(null)}
                 onClick={() => setOpen(t)}
               >
-                {/* Thumbnail with hover overlay */}
                 <div style={{ position: 'relative', background: '#F3F4F6', aspectRatio: '4/3', overflow: 'hidden' }}>
                   {thumb
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={thumb} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .25s', transform: hovered ? 'scale(1.04)' : 'scale(1)' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: 13 }}>No preview</div>
+                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No preview</div>
                   }
-                  {/* Hover overlay */}
-                  <div style={{
-                    position: 'absolute', inset: 0, background: 'rgba(10,37,64,.62)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    opacity: hovered ? 1 : 0, transition: 'opacity .2s',
-                  }}>
-                    <div style={{ background: '#fff', color: '#0A2540', fontWeight: 800, fontSize: 14, borderRadius: 10, padding: '11px 28px', boxShadow: '0 4px 16px rgba(0,0,0,.3)' }}>
-                      Open Template
-                    </div>
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovered ? 1 : 0, transition: 'opacity .2s' }}>
+                    <div style={{ background: '#fff', color: '#0A2540', fontWeight: 800, fontSize: 14, borderRadius: 10, padding: '11px 28px', boxShadow: '0 4px 16px rgba(0,0,0,.3)' }}>Open Template</div>
                   </div>
-                  {/* Badges */}
-                  <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 5 }}>
-                    <span style={{ background: 'rgba(10,37,64,.75)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '3px 8px', backdropFilter: 'blur(4px)' }}>
+                  <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <span style={{ background: 'rgba(10,37,64,.75)', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '3px 8px' }}>
                       {CANVAS_SIZES[t.canvas_size]?.label.split(' (')[0] ?? t.canvas_size}
                     </span>
-                    {pageCount > 1 && (
-                      <span style={{ background: 'rgba(91,203,245,.85)', color: '#0A2540', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '3px 8px' }}>
-                        {pageCount}pp
-                      </span>
-                    )}
+                    {(t.pages?.length ?? 1) > 1 && <span style={{ background: 'rgba(91,203,245,.85)', color: '#0A2540', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '3px 8px' }}>{t.pages.length}pp</span>}
                   </div>
                 </div>
-
                 <div style={{ padding: '12px 14px 14px' }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#0A2540', marginBottom: 10 }}>{t.name}</div>
-
                   {isAdmin && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: 8 }} onClick={e => e.stopPropagation()}>
                       <select value={t.category} onChange={e => moveCategory(t.id, e.target.value as Category)}
-                        style={{ flex: 1, border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 8px', fontSize: 11, color: '#374151', background: '#F9FAFB', cursor: 'pointer' }}>
+                        style={{ flex: 1, border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 8px', fontSize: 11, background: '#F9FAFB', cursor: 'pointer' }}>
                         <option value="flyer">📄 Flyer</option>
                         <option value="social">📱 Social</option>
                         <option value="other">📁 Other</option>
                       </select>
-                      <button onClick={() => del(t.id)}
-                        style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✕</button>
+                      <button onClick={() => del(t.id)} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 7, padding: '5px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>✕</button>
                     </div>
                   )}
-                  {!isAdmin && (
-                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>{new Date(t.created_at).toLocaleDateString()}</div>
-                  )}
+                  {!isAdmin && <div style={{ fontSize: 11, color: '#9CA3AF' }}>{new Date(t.created_at).toLocaleDateString()}</div>}
                 </div>
               </div>
             )
@@ -525,20 +786,12 @@ function LibraryView({ templates, loading, myEmployee, headshot, supabase, onRef
         </div>
       )}
 
-      {open && (
-        <PersonalizationModal
-          template={open}
-          emp={myEmployee}
-          initialHeadshot={headshot}
-          supabase={supabase}
-          onClose={() => setOpen(null)}
-        />
-      )}
+      {open && <PersonalizationModal template={open} emp={myEmployee} initialHeadshot={headshot} supabase={supabase} partners={partners} onClose={() => setOpen(null)} />}
     </>
   )
 }
 
-// ─── Admin: Upload + Multi-Page Editor ───────────────────────────────────────
+// ─── Admin Upload + Editor ────────────────────────────────────────────────────
 
 interface EditorPage { bgFile: File | null; bgUrl: string; fields: TplField[] }
 
@@ -561,7 +814,7 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
 
   function dispDims() {
     const box = boxRef.current
-    const maxW = box ? Math.min(box.clientWidth, 640) : 640
+    const maxW = box ? Math.min(box.clientWidth, 620) : 620
     return { w: maxW, h: Math.round(maxW * (size.h / size.w)) }
   }
 
@@ -572,25 +825,20 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
   function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
     const { w, h } = dispDims()
     const rect = e.currentTarget.getBoundingClientRect()
-    const rx = (e.clientX - rect.left) / w
-    const ry = (e.clientY - rect.top) / h
+    const rx = (e.clientX - rect.left) / w, ry = (e.clientY - rect.top) / h
     for (const f of page.fields) {
       if (Math.abs(e.clientX - rect.left - f.x * w) < 50 && Math.abs(e.clientY - rect.top - f.y * h) < 22) {
-        setSelectedId(f.id === selectedId ? null : f.id)
-        setPendingPos(null)
-        return
+        setSelectedId(f.id === selectedId ? null : f.id); setPendingPos(null); return
       }
     }
-    setSelectedId(null)
-    setPendingPos({ x: rx, y: ry })
+    setSelectedId(null); setPendingPos({ x: rx, y: ry })
   }
 
-  function addField(type: string) {
-    if (!pendingPos || !type) { setPendingPos(null); return }
-    const f: TplField = { id: uid(), type: type as FieldType, x: pendingPos.x, y: pendingPos.y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true }
+  function addField(type: FieldType) {
+    if (!pendingPos) return
+    const f: TplField = { id: uid(), type, x: pendingPos.x, y: pendingPos.y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true }
     updatePage(pageIdx, { fields: [...page.fields, f] })
-    setPendingPos(null)
-    setSelectedId(f.id)
+    setPendingPos(null); setSelectedId(f.id)
   }
 
   function updateField(id: string, patch: Partial<TplField>) {
@@ -609,33 +857,24 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
       const savedPages: TplPage[] = []
       for (const p of pages) {
         let bgUrl = p.bgUrl
-        if (p.bgFile) {
-          const ext = p.bgFile.name.split('.').pop() ?? 'jpg'
-          const path = `templates/${uid()}.${ext}`
-          const { error } = await supabase.storage.from('marketing-assets').upload(path, p.bgFile, { contentType: p.bgFile.type })
-          if (error) throw error
-          const { data } = supabase.storage.from('marketing-assets').getPublicUrl(path)
-          bgUrl = data.publicUrl
-        }
+        if (p.bgFile) { bgUrl = await uploadFile(supabase, p.bgFile, 'templates') }
         savedPages.push({ bg_url: bgUrl, fields: p.fields })
       }
       const { error } = await supabase.from('marketing_templates').insert({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages })
       if (error) throw error
-      setMsg('✓ Template saved to library!')
-      setTimeout(onDone, 700)
-    } catch (e: any) {
-      setMsg(`Error: ${e.message}`)
-    }
+      setMsg('✓ Published to library!'); setTimeout(onDone, 700)
+    } catch (e: any) { setMsg(`Error: ${e.message}`) }
     setSaving(false)
   }
 
   const { w: dw, h: dh } = dispDims()
   const selected = page.fields.find(f => f.id === selectedId)
+  const meta = selected ? FIELD_META[selected.type] : null
 
   return (
     <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-      {/* Settings + pages column */}
-      <div style={{ width: 192, flexShrink: 0 }}>
+      {/* Left sidebar */}
+      <div style={{ width: 188, flexShrink: 0 }}>
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14, marginBottom: 12 }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>Canvas Size</label>
           <select value={canvasSize} onChange={e => setCanvasSize(e.target.value)}
@@ -645,13 +884,9 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
           <label style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>Category</label>
           <select value={category} onChange={e => setCategory(e.target.value as Category)}
             style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 7, padding: '6px 8px', fontSize: 12, background: '#fff' }}>
-            <option value="flyer">📄 Flyer</option>
-            <option value="social">📱 Social Media</option>
-            <option value="other">📁 Other</option>
+            <option value="flyer">📄 Flyer</option><option value="social">📱 Social</option><option value="other">📁 Other</option>
           </select>
         </div>
-
-        {/* Pages */}
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pages</div>
           {pages.map((p, i) => (
@@ -659,14 +894,10 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 4, background: i === pageIdx ? '#0A2540' : '#fff', border: `1px solid ${i === pageIdx ? '#0A2540' : '#E5E7EB'}` }}>
               {p.bgUrl
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={p.bgUrl} alt="" style={{ width: 26, height: 26, objectFit: 'cover', borderRadius: 4, flexShrink: 0 }} />
-                : <div style={{ width: 26, height: 26, borderRadius: 4, background: i === pageIdx ? 'rgba(255,255,255,.2)' : '#F3F4F6', flexShrink: 0 }} />
-              }
+                ? <img src={p.bgUrl} alt="" style={{ width: 24, height: 24, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
+                : <div style={{ width: 24, height: 24, borderRadius: 3, background: i === pageIdx ? 'rgba(255,255,255,.2)' : '#F3F4F6', flexShrink: 0 }} />}
               <span style={{ fontSize: 12, fontWeight: 600, color: i === pageIdx ? '#fff' : '#374151', flex: 1 }}>Page {i + 1}</span>
-              {pages.length > 1 && (
-                <button onClick={e => { e.stopPropagation(); if (pages.length === 1) return; const next = pages.filter((_, j) => j !== i); setPages(next); setPageIdx(Math.min(pageIdx, next.length - 1)) }}
-                  style={{ background: 'none', border: 'none', color: i === pageIdx ? 'rgba(255,255,255,.5)' : '#9CA3AF', cursor: 'pointer', fontSize: 13, padding: 0 }}>✕</button>
-              )}
+              {pages.length > 1 && <button onClick={e => { e.stopPropagation(); const next = pages.filter((_, j) => j !== i); setPages(next); setPageIdx(Math.min(pageIdx, next.length - 1)) }} style={{ background: 'none', border: 'none', color: i === pageIdx ? 'rgba(255,255,255,.5)' : '#9CA3AF', cursor: 'pointer', fontSize: 13, padding: 0 }}>✕</button>}
             </div>
           ))}
           <button onClick={() => { setPages(ps => [...ps, { bgFile: null, bgUrl: '', fields: [] }]); setPageIdx(pages.length) }}
@@ -683,32 +914,33 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
         ) : (
           <>
             <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 8 }}>
-              <button onClick={() => updatePage(pageIdx, { bgFile: null, bgUrl: '' })}
-                style={{ fontSize: 12, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕ Replace background</button>
-              <span style={{ fontSize: 12, color: '#9CA3AF' }}>Click image to place fields · click a chip to select it</span>
+              <button onClick={() => updatePage(pageIdx, { bgFile: null, bgUrl: '' })} style={{ fontSize: 12, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕ Replace background</button>
+              <span style={{ fontSize: 12, color: '#9CA3AF' }}>Click to place fields · click a chip to select</span>
             </div>
-            <div
-              style={{ position: 'relative', width: dw, height: dh, cursor: 'crosshair', userSelect: 'none', borderRadius: 10, overflow: 'hidden', border: '2px solid #E5E7EB', background: '#F3F4F6' }}
-              onClick={handleCanvasClick}
-            >
+            <div style={{ position: 'relative', width: dw, height: dh, cursor: 'crosshair', userSelect: 'none', borderRadius: 10, overflow: 'hidden', border: '2px solid #E5E7EB', background: '#F3F4F6' }} onClick={handleCanvasClick}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={page.bgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', pointerEvents: 'none' }} />
               {page.fields.map(f => (
-                <div key={f.id} style={{ position: 'absolute', left: f.x * dw, top: f.y * dh, transform: 'translate(-50%,-50%)', pointerEvents: 'none', background: FIELD_META[f.type].color, color: '#fff', fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 99, border: f.id === selectedId ? '2px solid #fff' : '2px solid transparent', boxShadow: '0 2px 8px rgba(0,0,0,.4)', whiteSpace: 'nowrap' }}>
+                <div key={f.id} style={{ position: 'absolute', left: f.x * dw, top: f.y * dh, transform: 'translate(-50%,-50%)', pointerEvents: 'none', background: FIELD_META[f.type].color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, border: f.id === selectedId ? '2px solid #fff' : '2px solid transparent', boxShadow: '0 2px 8px rgba(0,0,0,.4)', whiteSpace: 'nowrap' }}>
                   {FIELD_META[f.type].label}
                 </div>
               ))}
               {pendingPos && (
-                <div style={{ position: 'absolute', left: Math.min(pendingPos.x * dw, dw - 210), top: Math.max(pendingPos.y * dh - 168, 4), background: '#0A2540', borderRadius: 12, padding: 12, boxShadow: '0 6px 24px rgba(0,0,0,.55)', zIndex: 10, width: 200 }} onClick={e => e.stopPropagation()}>
-                  <div style={{ fontSize: 11, color: '#9FB0C4', fontWeight: 600, marginBottom: 8 }}>Choose field type</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-                    {FIELD_TYPES.map(t => (
-                      <button key={t} onClick={() => addField(t)} style={{ background: FIELD_META[t].color, color: '#fff', border: 'none', borderRadius: 99, padding: '4px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
-                        {FIELD_META[t].label}
-                      </button>
-                    ))}
-                  </div>
-                  <button onClick={() => setPendingPos(null)} style={{ width: '100%', background: 'rgba(255,255,255,.1)', color: '#9FB0C4', border: 'none', borderRadius: 8, padding: '6px 0', fontSize: 11, cursor: 'pointer' }}>Cancel</button>
+                <div style={{ position: 'absolute', left: Math.min(pendingPos.x * dw, dw - 230), top: Math.max(pendingPos.y * dh - 210, 4), background: '#0A2540', borderRadius: 12, padding: 14, boxShadow: '0 6px 24px rgba(0,0,0,.55)', zIndex: 10, width: 220 }} onClick={e => e.stopPropagation()}>
+                  <div style={{ fontSize: 10, color: '#9FB0C4', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.08em' }}>Choose field type</div>
+                  {Object.entries(FIELD_GROUPS).map(([group, types]) => (
+                    <div key={group} style={{ marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', fontWeight: 700, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>{group}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {types.map(t => (
+                          <button key={t} onClick={() => addField(t)} style={{ background: FIELD_META[t].color, color: '#fff', border: 'none', borderRadius: 99, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                            {FIELD_META[t].label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <button onClick={() => setPendingPos(null)} style={{ width: '100%', background: 'rgba(255,255,255,.1)', color: '#9FB0C4', border: 'none', borderRadius: 8, padding: '6px 0', fontSize: 11, cursor: 'pointer', marginTop: 4 }}>Cancel</button>
                 </div>
               )}
             </div>
@@ -716,36 +948,38 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
         )}
       </div>
 
-      {/* Controls panel */}
-      <div style={{ width: 232, flexShrink: 0 }}>
+      {/* Right controls */}
+      <div style={{ width: 228, flexShrink: 0 }}>
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 14, padding: 18 }}>
           <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>Template Name</label>
-          <input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="e.g. Purchase Flyer 2026"
+          <input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="e.g. Open House Flyer"
             style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', outline: 'none', marginBottom: 18 }} />
 
-          {selected && (
+          {selected && meta && (
             <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 14, marginBottom: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
-                <div style={{ width: 9, height: 9, borderRadius: 3, background: FIELD_META[selected.type].color }} />
-                {FIELD_META[selected.type].label}
+                <div style={{ width: 9, height: 9, borderRadius: 3, background: meta.color }} />{meta.label}
               </div>
-              <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>Size — <strong>{Math.round(selected.fontSize * 100)}%</strong></label>
+              <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                {meta.isCircle || meta.isRect ? 'Size' : 'Font size'} — <strong>{Math.round(selected.fontSize * 100)}%</strong>
+              </label>
               <input type="range" min={1} max={15} step={0.5} value={Math.round(selected.fontSize * 100)}
                 onChange={e => updateField(selected.id, { fontSize: Number(e.target.value) / 100 })}
                 style={{ width: '100%', marginBottom: 12 }} />
-              <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 5 }}>Color</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
-                <input type="color" value={selected.fontColor} onChange={e => updateField(selected.id, { fontColor: e.target.value })}
-                  style={{ width: 36, height: 30, border: '1px solid #D1D5DB', cursor: 'pointer', borderRadius: 5, padding: 2 }} />
-                <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#374151' }}>{selected.fontColor}</span>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#374151', marginBottom: 14, cursor: 'pointer' }}>
-                <input type="checkbox" checked={selected.bold} onChange={e => updateField(selected.id, { bold: e.target.checked })} /> Bold
-              </label>
-              <button onClick={() => removeField(selected.id)}
-                style={{ width: '100%', background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-                Remove Field
-              </button>
+              {!meta.isCircle && !meta.isRect && (
+                <>
+                  <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 5 }}>Color</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+                    <input type="color" value={selected.fontColor} onChange={e => updateField(selected.id, { fontColor: e.target.value })}
+                      style={{ width: 34, height: 28, border: '1px solid #D1D5DB', cursor: 'pointer', borderRadius: 5, padding: 2 }} />
+                    <span style={{ fontSize: 11, fontFamily: 'monospace' }}>{selected.fontColor}</span>
+                  </div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 14, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={selected.bold} onChange={e => updateField(selected.id, { bold: e.target.checked })} />Bold
+                  </label>
+                </>
+              )}
+              <button onClick={() => removeField(selected.id)} style={{ width: '100%', background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Remove Field</button>
             </div>
           )}
 
@@ -763,7 +997,6 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
           )}
 
           {msg && <div style={{ fontSize: 12, color: msg.startsWith('Error') ? '#EF4444' : '#10B981', marginBottom: 10 }}>{msg}</div>}
-
           <button onClick={handleSave} disabled={saving || !tplName.trim()}
             style={{ width: '100%', background: (saving || !tplName.trim()) ? '#D1D5DB' : '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13, cursor: (saving || !tplName.trim()) ? 'default' : 'pointer' }}>
             {saving ? 'Saving…' : 'Publish to Library'}
@@ -776,12 +1009,15 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+type Tab = 'library' | 'partners' | 'admin'
+
 export default function Marketing() {
   const { profile, employees, supabase } = useApp()
   const isColin = profile?.email?.toLowerCase() === 'colin.jenson@neohomeloans.com'
   const isAdmin = profile?.role === 'admin' || isColin
-  const [tab, setTab] = useState<'library' | 'admin'>('library')
+  const [tab, setTab] = useState<Tab>('library')
   const [templates, setTemplates] = useState<MktTemplate[]>([])
+  const [partners, setPartners] = useState<Partner[]>([])
   const [loading, setLoading] = useState(true)
   const [headshot, setHeadshot] = useState('')
 
@@ -789,14 +1025,28 @@ export default function Marketing() {
 
   useEffect(() => { if (myEmployee?.headshot_url) setHeadshot(myEmployee.headshot_url) }, [myEmployee?.headshot_url])
 
-  const load = useCallback(async () => {
+  const loadTemplates = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.from('marketing_templates').select('*').order('created_at', { ascending: false })
     setTemplates(data ?? [])
     setLoading(false)
   }, [supabase])
 
-  useEffect(() => { load() }, [load])
+  const loadPartners = useCallback(async () => {
+    const { data } = await supabase.from('marketing_partners').select('*').order('name')
+    setPartners(data ?? [])
+  }, [supabase])
+
+  useEffect(() => { loadTemplates(); loadPartners() }, [loadTemplates, loadPartners])
+
+  function tabBtn(t: Tab, label: string): React.ReactElement {
+    const active = tab === t
+    return (
+      <button onClick={() => setTab(t)} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: active ? '#0A2540' : '#F3F4F6', color: active ? '#fff' : '#6B7280' }}>
+        {label}
+      </button>
+    )
+  }
 
   return (
     <div style={{ padding: '32px 40px', maxWidth: 1400, margin: '0 auto' }}>
@@ -806,17 +1056,21 @@ export default function Marketing() {
           <p style={{ color: '#6B7280', fontSize: 14, margin: 0 }}>Click any template to personalize and download</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setTab('library')} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: tab === 'library' ? '#0A2540' : '#F3F4F6', color: tab === 'library' ? '#fff' : '#6B7280' }}>📚 Library</button>
-          {isAdmin && <button onClick={() => setTab('admin')} style={{ padding: '8px 20px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13, cursor: 'pointer', background: tab === 'admin' ? '#0A2540' : '#F3F4F6', color: tab === 'admin' ? '#fff' : '#6B7280' }}>⬆ Upload & Edit</button>}
+          {tabBtn('library', '📚 Library')}
+          {tabBtn('partners', '🤝 Partners')}
+          {isAdmin && tabBtn('admin', '⬆ Upload & Edit')}
         </div>
       </div>
 
       {tab === 'library' && (
         <LibraryView templates={templates} loading={loading} myEmployee={myEmployee} headshot={headshot}
-          supabase={supabase} onRefresh={load} isAdmin={isAdmin} />
+          supabase={supabase} partners={partners} onRefresh={loadTemplates} isAdmin={isAdmin} />
+      )}
+      {tab === 'partners' && (
+        <PartnersTab supabase={supabase} ownerEmail={profile?.email ?? ''} />
       )}
       {tab === 'admin' && isAdmin && (
-        <AdminTab supabase={supabase} onDone={() => { load(); setTab('library') }} />
+        <AdminTab supabase={supabase} onDone={() => { loadTemplates(); setTab('library') }} />
       )}
     </div>
   )
