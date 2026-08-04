@@ -899,26 +899,27 @@ interface EditorPage { bgFile: File | null; bgUrl: string; fields: TplField[] }
 // ─── Canvas-based WYSIWYG editor ─────────────────────────────────────────────
 
 type DragState =
-  | { mode: 'move'; id: string; ox: number; oy: number; sx: number; sy: number }
+  | { mode: 'move'; ids: string[]; sx: number; sy: number; initPos: { id: string; ox: number; oy: number }[] }
   | { mode: 'resize'; id: string; corner: 'tl'|'tr'|'bl'|'br'; cx: number; cy: number; origRW: number; origRH: number }
 
-function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResize, onAddAtPos }: {
-  page: EditorPage; dispW: number; dispH: number; selectedId: string | null
-  onSelect: (id: string | null) => void
+function EditorCanvas({ page, dispW, dispH, selectedIds, onSelect, onMove, onMoveMulti, onResize, onAddAtPos }: {
+  page: EditorPage; dispW: number; dispH: number; selectedIds: string[]
+  onSelect: (ids: string[]) => void
   onMove: (id: string, x: number, y: number) => void
+  onMoveMulti: (moves: { id: string; x: number; y: number }[]) => void
   onResize: (id: string, rectW: number, rectH: number) => void
   onAddAtPos: (x: number, y: number, type: FieldType) => void
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const bgRef = useRef<HTMLCanvasElement | null>(null)
   const fieldsRef = useRef(page.fields)
-  const selectedRef = useRef(selectedId)
+  const selectedIdsRef = useRef(selectedIds)
   const dragRef = useRef<DragState | null>(null)
   const boundsRef = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map())
   const [picker, setPicker] = useState<{ px: number; py: number; rx: number; ry: number } | null>(null)
 
   useEffect(() => { fieldsRef.current = page.fields; draw() }, [page.fields, dispW, dispH])
-  useEffect(() => { selectedRef.current = selectedId; draw() }, [selectedId])
+  useEffect(() => { selectedIdsRef.current = selectedIds; draw() }, [selectedIds])
   useEffect(() => { initBg() }, [page.bgUrl, dispW, dispH])
 
   async function initBg() {
@@ -957,7 +958,8 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
       const px = f.x * dispW, py = f.y * dispH
       const fs = Math.max(8, Math.round(f.fontSize * dispH))
       const meta = FIELD_META[f.type]
-      const isSel = f.id === selectedRef.current
+      const isSel = selectedIdsRef.current.includes(f.id)
+      const isPrimary = selectedIdsRef.current[0] === f.id
 
       if (meta.isCircle) {
         const r = Math.max(28, (f.rectW || f.fontSize * 2.5) * Math.min(dispW, dispH))
@@ -1023,9 +1025,12 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
         ctx.strokeRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2)
         ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.setLineDash([])
         ctx.strokeRect(b.x - pad - 1, b.y - pad - 1, b.w + pad * 2 + 2, b.h + pad * 2 + 2)
-        for (const [hx, hy] of [[b.x - pad, b.y - pad], [b.x + b.w + pad, b.y - pad], [b.x - pad, b.y + b.h + pad], [b.x + b.w + pad, b.y + b.h + pad]]) {
-          ctx.fillStyle = '#fff'; ctx.fillRect(hx - 4, hy - 4, 8, 8)
-          ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.strokeRect(hx - 4, hy - 4, 8, 8)
+        // Only show resize handles on the primary selected field
+        if (isPrimary) {
+          for (const [hx, hy] of [[b.x - pad, b.y - pad], [b.x + b.w + pad, b.y - pad], [b.x - pad, b.y + b.h + pad], [b.x + b.w + pad, b.y + b.h + pad]]) {
+            ctx.fillStyle = '#fff'; ctx.fillRect(hx - 4, hy - 4, 8, 8)
+            ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.strokeRect(hx - 4, hy - 4, 8, 8)
+          }
         }
       }
     }
@@ -1041,8 +1046,8 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
 
   // Returns which resize corner the mouse is near, for the selected rect/circle field
   function cornerHitTest(mx: number, my: number): { id: string; corner: 'tl'|'tr'|'bl'|'br' } | null {
-    if (!selectedRef.current) return null
-    const f = fieldsRef.current.find(f => f.id === selectedRef.current)
+    if (!selectedIdsRef.current[0]) return null
+    const f = fieldsRef.current.find(f => f.id === selectedIdsRef.current[0])
     if (!f) return null
     const meta = FIELD_META[f.type]
     if (!meta.isRect && !meta.isCircle && !meta.isMultiline) return null
@@ -1065,7 +1070,7 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
     const rect = e.currentTarget.getBoundingClientRect()
     const mx = e.clientX - rect.left, my = e.clientY - rect.top
 
-    // Check resize corners first (only for selected rect/circle fields)
+    // Corner resize — only on primary selected field
     const cornerHit = cornerHitTest(mx, my)
     if (cornerHit) {
       const f = fieldsRef.current.find(f => f.id === cornerHit.id)!
@@ -1081,12 +1086,33 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
 
     const hit = hitTest(mx, my)
     if (hit) {
-      const f = fieldsRef.current.find(f => f.id === hit)!
-      onSelect(hit); setPicker(null)
-      dragRef.current = { mode: 'move', id: hit, ox: f.x, oy: f.y, sx: mx, sy: my }
+      setPicker(null)
+      const curIds = selectedIdsRef.current
+      if (e.shiftKey) {
+        // Toggle this field in the selection
+        const next = curIds.includes(hit) ? curIds.filter(id => id !== hit) : [hit, ...curIds]
+        onSelect(next)
+        if (!curIds.includes(hit)) {
+          // Start moving the full new selection
+          const initPos = [...next].map(id => {
+            const ff = fieldsRef.current.find(f => f.id === id)!
+            return { id, ox: ff.x, oy: ff.y }
+          })
+          dragRef.current = { mode: 'move', ids: next, sx: mx, sy: my, initPos }
+        }
+      } else {
+        // Single click — if already in selection, start moving all; else select just this one
+        const ids = curIds.includes(hit) ? curIds : [hit]
+        if (!curIds.includes(hit)) onSelect([hit])
+        const initPos = ids.map(id => {
+          const ff = fieldsRef.current.find(f => f.id === id)!
+          return { id, ox: ff.x, oy: ff.y }
+        })
+        dragRef.current = { mode: 'move', ids, sx: mx, sy: my, initPos }
+      }
       e.preventDefault()
     } else {
-      onSelect(null)
+      if (!e.shiftKey) onSelect([])
       setPicker({ px: Math.min(mx, dispW - 224), py: Math.max(my - 188, 0), rx: mx / dispW, ry: my / dispH })
     }
   }
@@ -1098,18 +1124,19 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
     const d = dragRef.current
 
     if (d.mode === 'move') {
-      const nx = Math.max(0.01, Math.min(0.99, d.ox + (mx - d.sx) / dispW))
-      const ny = Math.max(0.01, Math.min(0.99, d.oy + (my - d.sy) / dispH))
-      fieldsRef.current = fieldsRef.current.map(f => f.id === d.id ? { ...f, x: nx, y: ny } : f)
+      const dx = (mx - d.sx) / dispW, dy = (my - d.sy) / dispH
+      fieldsRef.current = fieldsRef.current.map(f => {
+        const init = d.initPos.find(p => p.id === f.id)
+        if (!init) return f
+        return { ...f, x: Math.max(0.01, Math.min(0.99, init.ox + dx)), y: Math.max(0.01, Math.min(0.99, init.oy + dy)) }
+      })
     } else {
-      // Resize: new half-size is distance from center to mouse
       const newHalfW = Math.max(10, Math.abs(mx - d.cx))
       const newHalfH = Math.max(10, Math.abs(my - d.cy))
       const newRW = Math.min(1, (newHalfW * 2) / dispW)
       const newRH = Math.min(1, (newHalfH * 2) / dispH)
       const f = fieldsRef.current.find(f => f.id === d.id)
       if (f && FIELD_META[f.type].isCircle) {
-        // Keep circle square — use the larger dimension
         const s = Math.max(newRW, newRH)
         fieldsRef.current = fieldsRef.current.map(f => f.id === d.id ? { ...f, rectW: s, rectH: s } : f)
       } else {
@@ -1120,11 +1147,18 @@ function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onResi
   }
 
   function handleMouseUp() {
-    if (dragRef.current) {
-      const f = fieldsRef.current.find(f => f.id === dragRef.current!.id)
-      if (f) {
-        if (dragRef.current.mode === 'move') onMove(f.id, f.x, f.y)
-        else onResize(f.id, f.rectW, f.rectH)
+    const d = dragRef.current
+    if (d) {
+      if (d.mode === 'move') {
+        const moves = d.ids.map(id => {
+          const f = fieldsRef.current.find(f => f.id === id)!
+          return { id, x: f.x, y: f.y }
+        })
+        if (moves.length === 1) onMove(moves[0].id, moves[0].x, moves[0].y)
+        else onMoveMulti(moves)
+      } else {
+        const f = fieldsRef.current.find(f => f.id === d.id)
+        if (f) onResize(f.id, f.rectW, f.rectH)
       }
     }
     dragRef.current = null
@@ -1171,7 +1205,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
       : [{ bgFile: null, bgUrl: '', fields: [] }]
   )
   const [pageIdx, setPageIdx] = useState(0)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [thumbFile, setThumbFile] = useState<File | null>(null)
@@ -1199,7 +1233,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
       panX: 0.5, panY: 0.5,
     }
     updatePage(pageIdx, { fields: [...page.fields, f] })
-    setSelectedId(f.id)
+    setSelectedIds([f.id])
   }
 
   function addPreset(preset: { type: FieldType; x: number; y: number; fontSize?: number; rectW?: number; rectH?: number }[]) {
@@ -1216,7 +1250,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
       }
     })
     updatePage(pageIdx, { fields: [...page.fields, ...newFields] })
-    setSelectedId(newFields[newFields.length - 1].id)
+    setSelectedIds(newFields.map(f => f.id))
   }
 
   function updateField(id: string, patch: Partial<TplField>) {
@@ -1225,11 +1259,16 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
 
   function removeField(id: string) {
     updatePage(pageIdx, { fields: page.fields.filter(f => f.id !== id) })
-    if (selectedId === id) setSelectedId(null)
+    setSelectedIds(ids => ids.filter(i => i !== id))
   }
 
   function moveField(id: string, x: number, y: number) {
     updatePage(pageIdx, { fields: page.fields.map(f => f.id === id ? { ...f, x, y } : f) })
+  }
+
+  function moveMultiField(moves: { id: string; x: number; y: number }[]) {
+    const map = new Map(moves.map(m => [m.id, m]))
+    updatePage(pageIdx, { fields: page.fields.map(f => map.has(f.id) ? { ...f, ...map.get(f.id) } : f) })
   }
 
   function resizeField(id: string, rectW: number, rectH: number) {
@@ -1262,7 +1301,8 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
     setSaving(false)
   }
 
-  const selected = page.fields.find(f => f.id === selectedId)
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
+  const selected = selectedId ? page.fields.find(f => f.id === selectedId) : null
   const meta = selected ? FIELD_META[selected.type] : null
 
   return (
@@ -1308,11 +1348,11 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
               desc: 'Headshot + Name + Title + NMLS + Phone + Email',
               fields: [
                 { type: 'headshot' as FieldType,  x: 0.13, y: 0.87, rectW: 0.10, rectH: 0.10 },
-                { type: 'name'     as FieldType,  x: 0.26, y: 0.80, fontSize: 0.045 },
-                { type: 'title'    as FieldType,  x: 0.26, y: 0.85, fontSize: 0.032 },
-                { type: 'nmls'     as FieldType,  x: 0.26, y: 0.89, fontSize: 0.028 },
-                { type: 'phone'    as FieldType,  x: 0.26, y: 0.93, fontSize: 0.028 },
-                { type: 'email'    as FieldType,  x: 0.26, y: 0.97, fontSize: 0.028 },
+                { type: 'name'     as FieldType,  x: 0.26, y: 0.81, fontSize: 0.02 },
+                { type: 'title'    as FieldType,  x: 0.26, y: 0.85, fontSize: 0.01 },
+                { type: 'nmls'     as FieldType,  x: 0.26, y: 0.88, fontSize: 0.01 },
+                { type: 'phone'    as FieldType,  x: 0.26, y: 0.91, fontSize: 0.01 },
+                { type: 'email'    as FieldType,  x: 0.26, y: 0.94, fontSize: 0.01 },
               ],
             },
             {
@@ -1320,22 +1360,22 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
               desc: 'Headshot + Name + Title + Company + Phone + Email',
               fields: [
                 { type: 'partner_headshot' as FieldType, x: 0.63, y: 0.87, rectW: 0.10, rectH: 0.10 },
-                { type: 'partner_name'    as FieldType,  x: 0.76, y: 0.80, fontSize: 0.045 },
-                { type: 'partner_title'   as FieldType,  x: 0.76, y: 0.85, fontSize: 0.032 },
-                { type: 'partner_company' as FieldType,  x: 0.76, y: 0.89, fontSize: 0.028 },
-                { type: 'partner_phone'   as FieldType,  x: 0.76, y: 0.93, fontSize: 0.028 },
-                { type: 'partner_email'   as FieldType,  x: 0.76, y: 0.97, fontSize: 0.028 },
+                { type: 'partner_name'    as FieldType,  x: 0.76, y: 0.81, fontSize: 0.02 },
+                { type: 'partner_title'   as FieldType,  x: 0.76, y: 0.85, fontSize: 0.01 },
+                { type: 'partner_company' as FieldType,  x: 0.76, y: 0.88, fontSize: 0.01 },
+                { type: 'partner_phone'   as FieldType,  x: 0.76, y: 0.91, fontSize: 0.01 },
+                { type: 'partner_email'   as FieldType,  x: 0.76, y: 0.94, fontSize: 0.01 },
               ],
             },
             {
               label: '📋 My Info (No Photo)',
               desc: 'Name + Title + NMLS + Phone + Email stacked',
               fields: [
-                { type: 'name'  as FieldType,  x: 0.08, y: 0.80, fontSize: 0.045 },
-                { type: 'title' as FieldType,  x: 0.08, y: 0.85, fontSize: 0.032 },
-                { type: 'nmls'  as FieldType,  x: 0.08, y: 0.89, fontSize: 0.028 },
-                { type: 'phone' as FieldType,  x: 0.08, y: 0.93, fontSize: 0.028 },
-                { type: 'email' as FieldType,  x: 0.08, y: 0.97, fontSize: 0.028 },
+                { type: 'name'  as FieldType,  x: 0.08, y: 0.81, fontSize: 0.02 },
+                { type: 'title' as FieldType,  x: 0.08, y: 0.85, fontSize: 0.01 },
+                { type: 'nmls'  as FieldType,  x: 0.08, y: 0.88, fontSize: 0.01 },
+                { type: 'phone' as FieldType,  x: 0.08, y: 0.91, fontSize: 0.01 },
+                { type: 'email' as FieldType,  x: 0.08, y: 0.94, fontSize: 0.01 },
               ],
             },
           ] as { label: string; desc: string; fields: { type: FieldType; x: number; y: number; fontSize?: number; rectW?: number; rectH?: number }[] }[]).map(preset => (
@@ -1349,7 +1389,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pages</div>
           {pages.map((p, i) => (
-            <div key={i} onClick={() => { setPageIdx(i); setSelectedId(null) }}
+            <div key={i} onClick={() => { setPageIdx(i); setSelectedIds([]) }}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 4, background: i === pageIdx ? '#0A2540' : '#fff', border: `1px solid ${i === pageIdx ? '#0A2540' : '#E5E7EB'}` }}>
               {p.bgUrl
                 // eslint-disable-next-line @next/next/no-img-element
@@ -1383,9 +1423,10 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
           page={page}
           dispW={DISP_W}
           dispH={DISP_H}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
           onMove={moveField}
+          onMoveMulti={moveMultiField}
           onResize={resizeField}
           onAddAtPos={addField}
         />
@@ -1507,7 +1548,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                 </>
               )}
               <button onClick={() => removeField(selected.id)} style={{ width: '100%', background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer', marginBottom: 10 }}>Remove Field</button>
-              <button onClick={() => setSelectedId(null)} style={{ width: '100%', background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 8, padding: '7px 0', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>← Back to Add Fields</button>
+              <button onClick={() => setSelectedIds([])} style={{ width: '100%', background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 8, padding: '7px 0', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>← Back to Add Fields</button>
             </div>
           )}
 
@@ -1516,8 +1557,11 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
             <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 12, marginBottom: 14 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 7, textTransform: 'uppercase', letterSpacing: '.08em' }}>Page {pageIdx + 1} Fields</div>
               {page.fields.map(f => (
-                <div key={f.id} onClick={() => setSelectedId(f.id === selectedId ? null : f.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px', borderRadius: 7, cursor: 'pointer', marginBottom: 4, background: f.id === selectedId ? '#EFF6FF' : '#fff', border: `1px solid ${f.id === selectedId ? '#BFDBFE' : '#E5E7EB'}` }}>
+                <div key={f.id} onClick={e => {
+                    if (e.shiftKey) setSelectedIds(ids => ids.includes(f.id) ? ids.filter(i => i !== f.id) : [f.id, ...ids])
+                    else setSelectedIds(ids => ids.includes(f.id) && ids.length === 1 ? [] : [f.id])
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px', borderRadius: 7, cursor: 'pointer', marginBottom: 4, background: selectedIds.includes(f.id) ? '#EFF6FF' : '#fff', border: `1px solid ${selectedIds.includes(f.id) ? '#BFDBFE' : '#E5E7EB'}` }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: FIELD_META[f.type].color, flexShrink: 0 }} />
                   <span style={{ fontSize: 12, color: '#374151', flex: 1 }}>{FIELD_META[f.type].label}</span>
                   <button onClick={e => { e.stopPropagation(); removeField(f.id) }} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
