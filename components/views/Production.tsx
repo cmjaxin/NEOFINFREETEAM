@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useApp } from '@/lib/appContext'
 import * as XLSX from 'xlsx'
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
@@ -248,13 +249,13 @@ function parseFundingsRows(rows: CsvRow[], source: 'sg' | 'd2c' | 'all' = 'all')
   const seen = new Set<string>()
   for (const row of rows) {
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
-    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
+    const lc = maSupport || String(row['Assigned LC'] ?? row['RECORD OWNER'] ?? row['Record owner'] ?? row['Record Owner'] ?? '').trim()
     if (!lc) continue
-    const loanId = String(row['Loan File ID'] ?? row['LoanFileID'] ?? '')
+    const loanId = String(row['Loan File ID'] ?? row['LoanFileID'] ?? row['loanFileId'] ?? '')
     const key = `${lc}::${loanId}`
     if (loanId && seen.has(key)) continue
     if (loanId) seen.add(key)
-    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? ''
+    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? row['Actual funding Date'] ?? row['Actual Funding Date'] ?? ''
     const dt = dateRaw ? parseDate(dateRaw as string) : null
     const mo = dt ? dt.getMonth() : -1
     const vol = Number(row['Loan Amount'] ?? row['Volume'] ?? 0)
@@ -284,13 +285,13 @@ function parseFundingsRows(rows: CsvRow[], source: 'sg' | 'd2c' | 'all' = 'all')
 function parseFundingsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, { label: string; byBranch: BranchFundEntry[] }> {
   const map = new Map<string, { label: string; total: { [branch: string]: { fam: number; vol: number } } }>()
   for (const row of rows) {
-    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? row['Closing Date'] ?? row['Date'] ?? ''
+    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? row['Closing Date'] ?? row['Actual funding Date'] ?? row['Actual Funding Date'] ?? row['Date'] ?? ''
     if (!dateRaw) continue
     const dt = parseDate(dateRaw as string)
     if (!dt) continue
     const vol = parseFloat(String(row['Loan Amount'] ?? row['Volume'] ?? row['Amount'] ?? '0').replace(/[$,]/g, '')) || 0
     const maSupport = String(row['Assigned MA Support'] ?? '').trim()
-    const lc = maSupport || String(row['Assigned LC'] ?? '').trim()
+    const lc = maSupport || String(row['Assigned LC'] ?? row['RECORD OWNER'] ?? row['Record owner'] ?? row['Record Owner'] ?? '').trim()
     if (!lc) continue
     const branch = branchForMA(lc)
     const wk = isoWeekKey(dt)
@@ -869,12 +870,13 @@ function HoverBarChart({ values, labels, color, fmt, secondValues, secondColor, 
 }
 
 // ─── Branch Production Tab ────────────────────────────────────────────────────
-function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload, onClearPrevYear }: {
+function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYearUpload, onClearPrevYear, isColin }: {
   maData: MARecord[]
   prevYearData: MARecord[]
   onFundingsUpload: (file: File) => void
   onPrevYearUpload: (file: File) => void
   onClearPrevYear: () => void
+  isColin: boolean
 }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
   const [selectedYear, setSelectedYear] = useState(2026)
@@ -1246,12 +1248,12 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
         <Card style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
             <CardHead title="Upload Prior Year" subtitle={hasPrevYear ? `✓ 2025 data loaded (${prevYearData.length} advisors)` : 'Same report format from 2025 — used for YTY trend comparison'} />
-            <button
+            {isColin && <button
               onClick={() => { if (confirm('Remove all 2025 data and hide YTY trends?')) onClearPrevYear() }}
               style={{ fontSize: 11, color: hasPrevYear ? C.red : C.muted, background: 'none', border: `1px solid ${hasPrevYear ? C.red : C.border}`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
             >
               Clear 2025 Data
-            </button>
+            </button>}
           </div>
           <UploadZone
             label="Drop 2025 Fundings CSV / XLSX"
@@ -1270,13 +1272,14 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 }
 
 // ─── Applications Tab ─────────────────────────────────────────────────────────
-function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWeekUpload, onClearApps }: {
+function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWeekUpload, onClearApps, isColin }: {
   maData: MARecord[]
   prevYearData: MARecord[]
   weeklyData: WeeklyRow[]
   onAppsUpload: (file: File, source: 'sg'|'d2c') => void
   onWeekUpload: (file: File) => void
   onClearApps: () => void
+  isColin: boolean
 }) {
   const [subView, setSubView] = useState('branch')
   const [period, setPeriod] = useState<PeriodStr>('ytd')
@@ -1392,101 +1395,196 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
   const curWeek = weeklyData[weeklyData.length - 1]
   const prevWeek = weeklyData[weeklyData.length - 2]
 
-  const subViewOpts: ToggleOption[] = [{ id: 'branch', label: 'By Branch & MA' }, { id: 'weekly', label: 'Weekly Tracking' }]
-  const appMetricOpts: ToggleOption[] = [{ id: 'respa', label: 'RESPA Apps' }, { id: 'initial', label: 'Initial Apps' }, { id: 'both', label: 'Both' }]
+  const subViewOpts: ToggleOption[] = [{ id: 'branch', label: 'Leaderboard' }, { id: 'weekly', label: 'Weekly Tracking' }]
   const appSourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
 
   const appsSubject = `RESPA files & Initial Apps ${new Date().toLocaleDateString('en-US')}`
   const appsBody = buildAppsEmailBody(maData, weeklyData)
+
+  // Sort MA records by RESPA (primary) then initial (secondary)
+  const appsSorted = [...maData]
+    .filter(m => sumMonths(respaArr(m), fr, to) + sumMonths(initArr(m), fr, to) > 0 ||
+                 m.ytdRespaApps + m.ytdInitialApps > 0)
+    .sort((a, b) => {
+      const aR = sumMonths(respaArr(a), fr, to), bR = sumMonths(respaArr(b), fr, to)
+      if (bR !== aR) return bR - aR
+      return sumMonths(initArr(b), fr, to) - sumMonths(initArr(a), fr, to)
+    })
+  const maxRespa = Math.max(...appsSorted.map(m => sumMonths(respaArr(m), fr, to)), 1)
+
+  const teamTotalRespa = sumMonths(teamRespa as unknown as number[], fr, to)
+  const teamTotalInitial = sumMonths(teamInitial as unknown as number[], fr, to)
+  const prevTeamRespa = hasPrevYear ? sumMonths(
+    MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + respaArr(m)[i], 0)) as unknown as number[],
+    0, ytyAppsToMonth
+  ) : null
+  const prevTeamInitial = hasPrevYear ? sumMonths(
+    MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + initArr(m)[i], 0)) as unknown as number[],
+    0, ytyAppsToMonth
+  ) : null
+
+  // MoM col label
+  const momColLabel = showMoM ? `MO/MO (${MONTHS[to > 0 ? to - 1 : 0]} → ${MONTHS[to]})` : '—'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <ToggleGroup options={subViewOpts} value={subView} onChange={setSubView} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button
+          {isColin && <button
             onClick={() => { if (confirm('Clear all application data? This cannot be undone.')) onClearApps() }}
             style={{ padding: '8px 14px', background: '#fff', border: '1px solid #E4E8EC', borderRadius: 8, fontSize: 13, color: '#B0504A', fontWeight: 600, cursor: 'pointer' }}
-          >Clear All</button>
+          >Clear All</button>}
           <EmailReportButton subject={appsSubject} body={appsBody} label="Email Report" />
         </div>
       </div>
 
       {subView === 'branch' && (
         <>
+          {/* Controls */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
             <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
             {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} availableYears={[2026]} />}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <ToggleGroup options={appMetricOpts} value={appMetric} onChange={setAppMetric} />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Source:</span>
-                <ToggleGroup options={appSourceOpts} value={appSource} onChange={v => setAppSource(v as 'all'|'sg'|'d2c')} />
-              </div>
+              <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Source:</span>
+              <ToggleGroup options={appSourceOpts} value={appSource} onChange={v => setAppSource(v as 'all'|'sg'|'d2c')} />
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 16 }}>
-            {(appMetric === 'respa' || appMetric === 'both') && (
-              <Card style={{ flex: 1 }}>
-                <CardHead title="Monthly RESPA Apps" />
-                <HoverBarChart values={teamRespa} labels={MONTHS} color="#7c3aed" fmt={String} primaryLabel="RESPA Apps" />
-              </Card>
-            )}
-            {(appMetric === 'initial' || appMetric === 'both') && (
-              <Card style={{ flex: 1 }}>
-                <CardHead title="Monthly Initial Apps" />
-                <HoverBarChart values={teamInitial} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="Initial Apps" />
-              </Card>
+          {/* KPI tiles */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <KpiTile label="RESPA Apps" value={String(teamTotalRespa)} sub={period === 'ytd' ? 'YTD' : MONTHS[to]} />
+            <KpiTile label="Initial Apps" value={String(teamTotalInitial)} sub={period === 'ytd' ? 'YTD' : MONTHS[to]} />
+            {showYTY && prevTeamRespa !== null && (
+              <>
+                <KpiTile label="Prior Year RESPA" value={String(prevTeamRespa)} sub="Same period last year" />
+                <KpiTile
+                  label="YTY RESPA Change"
+                  value={pct(teamTotalRespa, prevTeamRespa) !== null ? `${(pct(teamTotalRespa, prevTeamRespa)! >= 0 ? '+' : '')}${pct(teamTotalRespa, prevTeamRespa)}%` : '—'}
+                  sub="vs same period last year"
+                />
+                {prevTeamInitial !== null && <KpiTile
+                  label="YTY Initial Change"
+                  value={pct(teamTotalInitial, prevTeamInitial) !== null ? `${(pct(teamTotalInitial, prevTeamInitial)! >= 0 ? '+' : '')}${pct(teamTotalInitial, prevTeamInitial)}%` : '—'}
+                  sub="vs same period last year"
+                />}
+              </>
             )}
           </div>
 
-          <Card>
-            <CardHead title="Branch & MA Applications" />
-            {branches.map(branch => {
-              const brRespa = branch.members.reduce((s, m) => s + sumMonths(respaArr(m), fr, to), 0)
-              const brInitial = branch.members.reduce((s, m) => s + sumMonths(initArr(m), fr, to), 0)
-              const isOpen = expanded.has(branch.name)
+          {/* Monthly charts */}
+          <div style={{ display: 'flex', gap: 16 }}>
+            <Card style={{ flex: 1 }}>
+              <CardHead title="Monthly RESPA Apps" />
+              <HoverBarChart values={teamRespa} labels={MONTHS} color="#7c3aed" fmt={String} primaryLabel="RESPA Apps" />
+            </Card>
+            <Card style={{ flex: 1 }}>
+              <CardHead title="Monthly Initial Apps" />
+              <HoverBarChart values={teamInitial} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="Initial Apps" />
+            </Card>
+          </div>
+
+          {/* Leaderboard */}
+          <Card style={{ padding: 0, overflow: 'hidden' }}>
+            {/* Column headers */}
+            <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>RESPA APPS</div>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>INITIAL APPS</div>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>{momColLabel}</div>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>SOURCE SPLIT</div>
+            </div>
+
+            {appsSorted.map((ma, i) => {
+              const rank = i + 1
+              const isTop3 = rank <= 3
+              const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank)
+              const maRespa = sumMonths(respaArr(ma), fr, to)
+              const maInit = sumMonths(initArr(ma), fr, to)
+              const barPct = maRespa / maxRespa
+              const rowBg = rank === 1 ? 'rgba(124,58,237,0.03)' : C.white
+              const mR = momRespa(ma), mI = momInitial(ma)
+              const yR = ytyRespa(ma), yI = ytyInitial(ma)
+              // SG/D2C split for current period
+              const maSgRespa = sumMonths(ma.monthlyRespaAppsSG, fr, to)
+              const maD2cRespa = sumMonths(ma.monthlyRespaAppsD2C, fr, to)
+              const maSgInit = sumMonths(ma.monthlyInitialAppsSG, fr, to)
+              const maD2cInit = sumMonths(ma.monthlyInitialAppsD2C, fr, to)
+
               return (
-                <div key={branch.name} style={{ marginBottom: 12 }}>
-                  <div onClick={() => toggleBranch(branch.name)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer', borderBottom: `1px solid ${C.borderSoft}` }}>
-                    <div style={{ width: 4, height: 32, borderRadius: 2, background: branch.color, flexShrink: 0 }} />
-                    <div style={{ fontWeight: 700, color: C.navy, flex: 1 }}>{branch.name}</div>
-                    <div style={{ fontSize: 13, color: C.dim }}>RESPA: {brRespa} · Initial: {brInitial}</div>
-                    <div style={{ fontSize: 14, color: C.muted }}>{isOpen ? '▲' : '▼'}</div>
-                  </div>
-                  {isOpen && (
-                    <div style={{ paddingTop: 8, paddingLeft: 16 }}>
-                      {branch.members.map(ma => {
-                        const maRespa = sumMonths(respaArr(ma), fr, to)
-                        const maInit = sumMonths(initArr(ma), fr, to)
-                        const mR = momRespa(ma), mI = momInitial(ma)
-                        const yR = ytyRespa(ma), yI = ytyInitial(ma)
-                        return (
-                          <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '6px 0', borderBottom: `1px solid ${C.bg}` }}>
-                            <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
-                            {(appMetric === 'respa' || appMetric === 'both') && (
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>RESPA: {maRespa}</span>
-                                <AppTrendChip pct={mR ?? yR} label={showYTY ? 'YTY' : undefined} />
-                              </div>
-                            )}
-                            {(appMetric === 'initial' || appMetric === 'both') && (
-                              <div style={{ display: 'flex', alignItems: 'center' }}>
-                                <span style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>Initial: {maInit}</span>
-                                <AppTrendChip pct={mI ?? yI} label={showYTY ? 'YTY' : undefined} />
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
+                <div key={ma.name} style={{ background: rowBg, borderBottom: `1px solid ${C.bg}` }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '13px 20px', alignItems: 'center' }}>
+
+                    {/* Rank */}
+                    <div style={{ fontSize: isTop3 ? 20 : 13, fontWeight: 800, color: C.muted, textAlign: 'center' }}>{rankLabel}</div>
+
+                    {/* Name + bar */}
+                    <div style={{ paddingRight: 20 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 6 }}>{ma.name}</div>
+                      <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ width: `${barPct * 100}%`, height: '100%', background: isTop3 ? '#7c3aed' : '#a78bfa', borderRadius: 2, transition: 'width 0.4s' }} />
+                      </div>
                     </div>
-                  )}
+
+                    {/* RESPA */}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed' }}>{maRespa}</div>
+                      {showYTY && yR !== null && <div style={{ marginTop: 3 }}><AppTrendChip pct={yR} label="YTY" /></div>}
+                    </div>
+
+                    {/* Initial */}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>{maInit}</div>
+                      {showYTY && yI !== null && <div style={{ marginTop: 3 }}><AppTrendChip pct={yI} label="YTY" /></div>}
+                    </div>
+
+                    {/* MoM */}
+                    <div style={{ textAlign: 'right' }}>
+                      {showMoM ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 11, color: C.muted }}>RESPA</span>
+                            <AppTrendChip pct={mR} />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 11, color: C.muted }}>Initial</span>
+                            <AppTrendChip pct={mI} />
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 11, color: C.muted }}>—</span>
+                      )}
+                    </div>
+
+                    {/* SG / D2C split */}
+                    <div style={{ textAlign: 'right' }}>
+                      {(maSgRespa + maD2cRespa + maSgInit + maD2cInit) > 0 ? (
+                        <div style={{ fontSize: 11, lineHeight: 1.7 }}>
+                          {(maSgRespa + maSgInit) > 0 && (
+                            <div><span style={{ color: '#16a34a', fontWeight: 700 }}>SG</span> <span style={{ color: C.dim }}>{maSgRespa}R · {maSgInit}I</span></div>
+                          )}
+                          {(maD2cRespa + maD2cInit) > 0 && (
+                            <div><span style={{ color: '#7c3aed', fontWeight: 700 }}>D2C</span> <span style={{ color: C.dim }}>{maD2cRespa}R · {maD2cInit}I</span></div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 11, color: C.muted }}>—</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )
             })}
+
+            {appsSorted.length === 0 && (
+              <div style={{ padding: 32, textAlign: 'center', color: C.muted, fontSize: 13 }}>
+                No application data yet. Upload SG and D2C reports below.
+              </div>
+            )}
           </Card>
 
+          {/* Upload section */}
           <div style={{ display: 'flex', gap: 16 }}>
             <Card style={{ flex: 1, borderTop: '3px solid #16a34a' }}>
               <CardHead title="Upload Self-Gen Applications" subtitle="One report for all SG apps — RESPA and Initial pulled by date field" />
@@ -1690,6 +1788,9 @@ function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
 
 // ─── Root Production component ────────────────────────────────────────────────
 export default function Production() {
+  const { profile } = useApp()
+  const isColin = profile?.email?.toLowerCase() === 'colin.jenson@neohomeloans.com'
+
   const [maData, setMaData] = useState<MARecord[]>([])
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>([])
   const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
@@ -1964,7 +2065,7 @@ export default function Production() {
           <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division</div>
         </div>
-        <button
+        {isColin && <button
           onClick={async () => {
             if (!confirm('Reset all production data? This will clear everything and restore seed data.')) return
             setMaData(SEED_MA)
@@ -1975,7 +2076,7 @@ export default function Production() {
           style={{ fontSize: 12, color: C.muted, background: 'none', border: `1px solid ${C.border}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}
         >
           Reset Data
-        </button>
+        </button>}
       </div>
 
       <div style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
@@ -1992,8 +2093,8 @@ export default function Production() {
         ))}
       </div>
 
-      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} />}
-      {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} />}
+      {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} isColin={isColin} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} isColin={isColin} />}
     </div>
   )
 }
