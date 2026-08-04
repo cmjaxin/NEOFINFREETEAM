@@ -805,7 +805,7 @@ function StatusBadge({ status }: { status: BadgeStatus }) {
   )
 }
 
-function KpiTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function KpiTile({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
   return (
     <Card style={{ flex: 1, minWidth: 140 }}>
       <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>{label}</div>
@@ -1270,8 +1270,9 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 }
 
 // ─── Applications Tab ─────────────────────────────────────────────────────────
-function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onClearApps }: {
+function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWeekUpload, onClearApps }: {
   maData: MARecord[]
+  prevYearData: MARecord[]
   weeklyData: WeeklyRow[]
   onAppsUpload: (file: File, source: 'sg'|'d2c') => void
   onWeekUpload: (file: File) => void
@@ -1298,12 +1299,91 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
   const branches = groupMAByBranch(maData)
+  const hasPrevYear = prevYearData.length > 0
 
   function respaArr(m: MARecord) { return appSource === 'sg' ? m.monthlyRespaAppsSG : appSource === 'd2c' ? m.monthlyRespaAppsD2C : m.monthlyRespaApps }
   function initArr(m: MARecord) { return appSource === 'sg' ? m.monthlyInitialAppsSG : appSource === 'd2c' ? m.monthlyInitialAppsD2C : m.monthlyInitialApps }
 
   const teamRespa = MONTHS.map((_, i) => maData.reduce((s, m) => s + respaArr(m)[i], 0))
   const teamInitial = MONTHS.map((_, i) => maData.reduce((s, m) => s + initArr(m)[i], 0))
+
+  // Last month with any apps data
+  const lastAppsMonth = (() => {
+    for (let i = 11; i >= 0; i--) if (teamRespa[i] + teamInitial[i] > 0) return i
+    return 0
+  })()
+  const currentCalMonth = new Date().getMonth()
+  const ytyAppsToMonth = (lastAppsMonth === currentCalMonth && lastAppsMonth > 0) ? lastAppsMonth - 1 : lastAppsMonth
+
+  // MoM: only for single-month views
+  const showMoM = period !== 'ytd' && period !== 'range'
+  const showYTY = hasPrevYear && period === 'ytd'
+
+  function pct(cur: number, prev: number): number | null {
+    if (prev === 0) return cur > 0 ? 100 : null
+    return Math.round(((cur - prev) / prev) * 100)
+  }
+
+  function momRespa(ma: MARecord): number | null {
+    if (!showMoM) return null
+    const cur = respaArr(ma)[to]
+    if (to === 0) {
+      const py = prevYearData.find(p => nameSimilar(p.name, ma.name))
+      return py ? pct(cur, respaArr(py)[11]) : (cur > 0 ? 100 : null)
+    }
+    return pct(cur, respaArr(ma)[to - 1])
+  }
+  function momInitial(ma: MARecord): number | null {
+    if (!showMoM) return null
+    const cur = initArr(ma)[to]
+    if (to === 0) {
+      const py = prevYearData.find(p => nameSimilar(p.name, ma.name))
+      return py ? pct(cur, initArr(py)[11]) : (cur > 0 ? 100 : null)
+    }
+    return pct(cur, initArr(ma)[to - 1])
+  }
+  function ytyRespa(ma: MARecord): number | null {
+    if (!showYTY) return null
+    const cur = sumMonths(respaArr(ma), 0, ytyAppsToMonth)
+    const py = prevYearData.find(p => nameSimilar(p.name, ma.name))
+    return py ? pct(cur, sumMonths(respaArr(py), 0, ytyAppsToMonth)) : null
+  }
+  function ytyInitial(ma: MARecord): number | null {
+    if (!showYTY) return null
+    const cur = sumMonths(initArr(ma), 0, ytyAppsToMonth)
+    const py = prevYearData.find(p => nameSimilar(p.name, ma.name))
+    return py ? pct(cur, sumMonths(initArr(py), 0, ytyAppsToMonth)) : null
+  }
+
+  function AppTrendChip({ pct: p, label }: { pct: number | null; label?: string }) {
+    if (p === null) return null
+    const up = p >= 0
+    return (
+      <span style={{
+        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+        background: up ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+        color: up ? C.green : C.red, whiteSpace: 'nowrap', marginLeft: 4,
+      }}>
+        {up ? '▲' : '▼'}{Math.abs(p)}%{label ? ` ${label}` : ''}
+      </span>
+    )
+  }
+
+  function WowChip({ cur, prev }: { cur: number; prev: number }) {
+    if (prev === 0 && cur === 0) return null
+    const p = pct(cur, prev)
+    if (p === null) return null
+    const up = p >= 0
+    return (
+      <span style={{
+        fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 10,
+        background: up ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
+        color: up ? C.green : C.red, whiteSpace: 'nowrap', marginLeft: 4,
+      }}>
+        {up ? '▲' : '▼'}{Math.abs(p)}%
+      </span>
+    )
+  }
 
   function toggleBranch(name: string) {
     setExpanded(prev => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n })
@@ -1380,14 +1460,22 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
                       {branch.members.map(ma => {
                         const maRespa = sumMonths(respaArr(ma), fr, to)
                         const maInit = sumMonths(initArr(ma), fr, to)
+                        const mR = momRespa(ma), mI = momInitial(ma)
+                        const yR = ytyRespa(ma), yI = ytyInitial(ma)
                         return (
                           <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '6px 0', borderBottom: `1px solid ${C.bg}` }}>
                             <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
                             {(appMetric === 'respa' || appMetric === 'both') && (
-                              <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>RESPA: {maRespa}</div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>RESPA: {maRespa}</span>
+                                <AppTrendChip pct={mR ?? yR} label={showYTY ? 'YTY' : undefined} />
+                              </div>
                             )}
                             {(appMetric === 'initial' || appMetric === 'both') && (
-                              <div style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>Initial: {maInit}</div>
+                              <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <span style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>Initial: {maInit}</span>
+                                <AppTrendChip pct={mI ?? yI} label={showYTY ? 'YTY' : undefined} />
+                              </div>
                             )}
                           </div>
                         )
@@ -1483,8 +1571,22 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
 
             {/* KPI row */}
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <KpiTile label="RESPA Apps" value={String(totalRespa)} sub={prevWeek ? `${totalRespa - prevTotalRespa >= 0 ? '+' : ''}${totalRespa - prevTotalRespa} WoW` : selWeek.weekLabel} />
-              <KpiTile label="Initial Apps" value={String(totalInit)} sub={prevWeek ? `${totalInit - prevTotalInit >= 0 ? '+' : ''}${totalInit - prevTotalInit} WoW` : selWeek.weekLabel} />
+              <KpiTile label="RESPA Apps" value={String(totalRespa)} sub={
+                prevWeek ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>{totalRespa - prevTotalRespa >= 0 ? '+' : ''}{totalRespa - prevTotalRespa} WoW</span>
+                    <WowChip cur={totalRespa} prev={prevTotalRespa} />
+                  </span>
+                ) : selWeek.weekLabel
+              } />
+              <KpiTile label="Initial Apps" value={String(totalInit)} sub={
+                prevWeek ? (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>{totalInit - prevTotalInit >= 0 ? '+' : ''}{totalInit - prevTotalInit} WoW</span>
+                    <WowChip cur={totalInit} prev={prevTotalInit} />
+                  </span>
+                ) : selWeek.weekLabel
+              } />
               {weeklySource !== 'd2c' && selWeek.volume > 0 && <KpiTile label="Volume" value={fmtVol(selWeek.volume)} sub={selWeek.weekLabel} />}
             </div>
 
@@ -1538,8 +1640,18 @@ function ApplicationsTab({ maData, weeklyData, onAppsUpload, onWeekUpload, onCle
                               </>
                             ) : (
                               <>
-                                {ma.respa > 0 && <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{ma.respa} RESPA{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.respa-(prev.respa??0)>=0?'+':''}{ma.respa-(prev.respa??0)})</span>}</div>}
-                                {ma.initial > 0 && <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 8 }}>{ma.initial} Initial{prev && <span style={{ fontWeight: 400, color: C.muted }}> ({ma.initial-(prev.initial??0)>=0?'+':''}{ma.initial-(prev.initial??0)})</span>}</div>}
+                                {ma.respa > 0 && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{ma.respa} RESPA</span>
+                                    {prev && <WowChip cur={ma.respa} prev={prev.respa ?? 0} />}
+                                  </div>
+                                )}
+                                {ma.initial > 0 && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
+                                    <span style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>{ma.initial} Initial</span>
+                                    {prev && <WowChip cur={ma.initial} prev={prev.initial ?? 0} />}
+                                  </div>
+                                )}
                               </>
                             )}
                           </div>
@@ -1724,8 +1836,23 @@ export default function Production() {
     function applyApps(list: MARecord[], parsed: Map<string, AppEntry>): MARecord[] {
       const next = [...list]
       parsed.forEach((appData, maKey) => {
-        const idx = next.findIndex(m => normName(m.name) === maKey || nameSimilar(m.name, maKey))
-        if (idx < 0) return
+        let idx = next.findIndex(m => normName(m.name) === maKey || nameSimilar(m.name, maKey))
+        if (idx < 0) {
+          // Create a stub entry so app data isn't lost even without a fundings upload
+          const displayName = maKey.replace(/\b\w/g, c => c.toUpperCase())
+          next.push({
+            name: displayName, ytdFamilies: 0, ytdVolume: 0, ytdRespaApps: 0, ytdInitialApps: 0,
+            ytdFamiliesSG: 0, ytdVolumeSG: 0, ytdFamiliesD2C: 0, ytdVolumeD2C: 0,
+            ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0,
+            monthlyFamilies: Array(12).fill(0) as number[], monthlyVolume: Array(12).fill(0) as number[],
+            monthlyFamiliesSG: Array(12).fill(0) as number[], monthlyVolumeSG: Array(12).fill(0) as number[],
+            monthlyFamiliesD2C: Array(12).fill(0) as number[], monthlyVolumeD2C: Array(12).fill(0) as number[],
+            monthlyRespaApps: Array(12).fill(0) as number[], monthlyInitialApps: Array(12).fill(0) as number[],
+            monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[],
+            monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[],
+          })
+          idx = next.length - 1
+        }
         const isSG = source === 'sg'
         const sgRespa = isSG ? appData.respaBySource.sg : next[idx].monthlyRespaAppsSG
         const d2cRespa = isSG ? next[idx].monthlyRespaAppsD2C : appData.respaBySource.d2c
@@ -1866,7 +1993,7 @@ export default function Production() {
       </div>
 
       {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} />}
-      {activeTab === 'apps' && <ApplicationsTab maData={maData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} />}
+      {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} />}
     </div>
   )
 }
