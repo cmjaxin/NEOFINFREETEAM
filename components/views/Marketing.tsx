@@ -89,6 +89,7 @@ interface MktTemplate {
   category: Category
   canvas_size: string
   pages: TplPage[]
+  thumbnail_url: string | null
   created_at: string
 }
 
@@ -789,7 +790,7 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 20 }}>
           {visible.map(t => {
-            const thumb = t.pages?.[0]?.bg_url ?? ''
+            const thumb = t.thumbnail_url ?? t.pages?.[0]?.bg_url ?? ''
             const hovered = hoverId === t.id
             return (
               <div key={t.id}
@@ -1123,7 +1124,10 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
+  const [thumbFile, setThumbFile] = useState<File | null>(null)
+  const [thumbUrl, setThumbUrl] = useState<string>(editTemplate?.thumbnail_url ?? '')
   const bgInputRef = useRef<HTMLInputElement>(null)
+  const thumbInputRef = useRef<HTMLInputElement>(null)
 
   const size = CANVAS_SIZES[canvasSize]
   const page = pages[pageIdx]
@@ -1174,12 +1178,14 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
         if (p.bgFile) { bgUrl = await uploadFile(supabase, p.bgFile, 'templates') }
         savedPages.push({ bg_url: bgUrl, fields: p.fields })
       }
+      let savedThumbUrl = thumbUrl || null
+      if (thumbFile) { savedThumbUrl = await uploadFile(supabase, thumbFile, 'thumbnails') }
       if (editTemplate) {
-        const { error } = await supabase.from('marketing_templates').update({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages }).eq('id', editTemplate.id)
+        const { error } = await supabase.from('marketing_templates').update({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages, thumbnail_url: savedThumbUrl }).eq('id', editTemplate.id)
         if (error) throw error
         setMsg('✓ Saved!')
       } else {
-        const { error } = await supabase.from('marketing_templates').insert({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages })
+        const { error } = await supabase.from('marketing_templates').insert({ name: tplName.trim(), category, canvas_size: canvasSize, pages: savedPages, thumbnail_url: savedThumbUrl })
         if (error) throw error
         setMsg('✓ Published to library!')
       }
@@ -1203,9 +1209,27 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
           </select>
           <label style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>Category</label>
           <select value={category} onChange={e => setCategory(e.target.value as Category)}
-            style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 7, padding: '6px 8px', fontSize: 12, background: '#fff' }}>
+            style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 7, padding: '6px 8px', fontSize: 12, background: '#fff', marginBottom: 12 }}>
             <option value="flyer">📄 Flyer</option><option value="social">📱 Social</option><option value="other">📁 Other</option>
           </select>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.08em' }}>Thumbnail</label>
+          <input ref={thumbInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) { setThumbFile(f); setThumbUrl(URL.createObjectURL(f)) } e.target.value = '' }} />
+          {thumbUrl
+            // eslint-disable-next-line @next/next/no-img-element
+            ? <img src={thumbUrl} alt="thumbnail" style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 7, border: '1px solid #E5E7EB', marginBottom: 6, display: 'block' }} />
+            : <div style={{ width: '100%', aspectRatio: '4/3', background: '#F3F4F6', borderRadius: 7, border: '1px dashed #D1D5DB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#9CA3AF', marginBottom: 6 }}>Uses page 1 bg</div>
+          }
+          <div style={{ display: 'flex', gap: 5 }}>
+            <button onClick={() => thumbInputRef.current?.click()}
+              style={{ flex: 1, background: '#0A2540', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 0', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+              {thumbUrl ? '↺ Replace' : '⬆ Upload'}
+            </button>
+            {thumbUrl && (
+              <button onClick={() => { setThumbFile(null); setThumbUrl('') }}
+                style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 7, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>✕</button>
+            )}
+          </div>
         </div>
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pages</div>
