@@ -114,8 +114,12 @@ const SEED_WEEKLY: WeeklyRow[] = [
 // ─── Utility functions ────────────────────────────────────────────────────────
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
+const NICK_MAP: Record<string,string> = { mike:'michael', matt:'matthew', ben:'benjamin', greg:'gregory', kate:'katrinka', kat:'katrinka', tony:'anthony', ed:'edgardo', josh:'joshua' }
+
 function normName(s: string): string {
-  return s.toLowerCase().replace(/[^a-z ]/g, '').trim()
+  const parts = s.toLowerCase().replace(/[^a-z ]/g, '').trim().split(' ').filter(Boolean)
+  if (parts.length > 0) parts[0] = NICK_MAP[parts[0]] ?? parts[0]
+  return parts.join(' ')
 }
 
 function nameSimilar(a: string, b: string): boolean {
@@ -125,10 +129,6 @@ function nameSimilar(a: string, b: string): boolean {
   const bParts = nb.split(' ').filter(Boolean)
   if (aParts.length >= 2 && bParts.length >= 2) {
     if (aParts[0] === bParts[0] && aParts[aParts.length-1] === bParts[bParts.length-1]) return true
-    const nickmap: Record<string,string> = { mike:'michael', matt:'matthew', ben:'benjamin', greg:'gregory', kate:'katrinka', kat:'katrinka', tony:'anthony', ed:'edgardo' }
-    const an0 = nickmap[aParts[0]] ?? aParts[0]
-    const bn0 = nickmap[bParts[0]] ?? bParts[0]
-    if (an0 === bn0 && aParts[aParts.length-1] === bParts[bParts.length-1]) return true
   }
   if (na.includes(nb) || nb.includes(na)) return true
   return false
