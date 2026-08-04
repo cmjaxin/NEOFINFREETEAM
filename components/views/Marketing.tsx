@@ -795,6 +795,181 @@ function LibraryView({ templates, loading, myEmployee, headshot, supabase, partn
 
 interface EditorPage { bgFile: File | null; bgUrl: string; fields: TplField[] }
 
+// ─── Canvas-based WYSIWYG editor ─────────────────────────────────────────────
+
+function EditorCanvas({ page, dispW, dispH, selectedId, onSelect, onMove, onAddAtPos }: {
+  page: EditorPage; dispW: number; dispH: number; selectedId: string | null
+  onSelect: (id: string | null) => void
+  onMove: (id: string, x: number, y: number) => void
+  onAddAtPos: (x: number, y: number, type: FieldType) => void
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const bgRef = useRef<HTMLCanvasElement | null>(null)
+  const fieldsRef = useRef(page.fields)
+  const selectedRef = useRef(selectedId)
+  const dragRef = useRef<{ id: string; ox: number; oy: number; sx: number; sy: number } | null>(null)
+  const boundsRef = useRef<Map<string, { x: number; y: number; w: number; h: number }>>(new Map())
+  const [picker, setPicker] = useState<{ px: number; py: number; rx: number; ry: number } | null>(null)
+
+  useEffect(() => { fieldsRef.current = page.fields; draw() }, [page.fields, dispW, dispH])
+  useEffect(() => { selectedRef.current = selectedId; draw() }, [selectedId])
+  useEffect(() => { initBg() }, [page.bgUrl, dispW, dispH])
+
+  async function initBg() {
+    const c = document.createElement('canvas')
+    c.width = dispW; c.height = dispH
+    const ctx = c.getContext('2d')!
+    if (page.bgUrl) {
+      try { const img = await loadImage(page.bgUrl); ctx.drawImage(img, 0, 0, dispW, dispH) } catch {}
+    } else {
+      ctx.fillStyle = '#e5e7eb'; ctx.fillRect(0, 0, dispW, dispH)
+    }
+    bgRef.current = c
+    draw()
+  }
+
+  function draw() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    if (canvas.width !== dispW) canvas.width = dispW
+    if (canvas.height !== dispH) canvas.height = dispH
+    const ctx = canvas.getContext('2d')!
+    boundsRef.current.clear()
+
+    if (bgRef.current) ctx.drawImage(bgRef.current, 0, 0)
+    else { ctx.fillStyle = '#e5e7eb'; ctx.fillRect(0, 0, dispW, dispH) }
+
+    if (!page.bgUrl && fieldsRef.current.length === 0) {
+      ctx.fillStyle = '#9CA3AF'; ctx.font = '13px Inter,Arial'
+      ctx.textAlign = 'center'
+      ctx.fillText('Upload a background, then click to place fields', dispW / 2, dispH / 2 - 10)
+      ctx.fillText('Or use the "Add Field" buttons on the right →', dispW / 2, dispH / 2 + 14)
+      ctx.textAlign = 'left'
+    }
+
+    for (const f of fieldsRef.current) {
+      const px = f.x * dispW, py = f.y * dispH
+      const fs = Math.max(8, Math.round(f.fontSize * dispH))
+      const meta = FIELD_META[f.type]
+      const isSel = f.id === selectedRef.current
+
+      if (meta.isCircle) {
+        const r = Math.max(28, fs * 2.5)
+        ctx.save(); ctx.globalAlpha = 0.28; ctx.fillStyle = meta.color
+        ctx.beginPath(); ctx.arc(px, py, r / 2, 0, Math.PI * 2); ctx.fill(); ctx.restore()
+        ctx.strokeStyle = meta.color; ctx.lineWidth = 2.5; ctx.setLineDash([])
+        ctx.beginPath(); ctx.arc(px, py, r / 2, 0, Math.PI * 2); ctx.stroke()
+        ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.max(9, Math.round(r * 0.18))}px Inter,Arial`
+        ctx.textAlign = 'center'; ctx.fillText(meta.label, px, py + 4); ctx.textAlign = 'left'
+        boundsRef.current.set(f.id, { x: px - r / 2, y: py - r / 2, w: r, h: r })
+      } else if (meta.isRect) {
+        const rw = Math.max(90, fs * (dispW / dispH) * 5)
+        const rh = Math.max(32, fs * 2)
+        ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = meta.color
+        ctx.fillRect(px - rw / 2, py - rh / 2, rw, rh); ctx.restore()
+        ctx.strokeStyle = meta.color; ctx.lineWidth = 2; ctx.setLineDash([6, 3])
+        ctx.strokeRect(px - rw / 2, py - rh / 2, rw, rh); ctx.setLineDash([])
+        ctx.fillStyle = meta.color; ctx.font = `bold ${Math.max(9, Math.round(rh * 0.35))}px Inter,Arial`
+        ctx.textAlign = 'center'; ctx.fillText(meta.label, px, py + 5); ctx.textAlign = 'left'
+        boundsRef.current.set(f.id, { x: px - rw / 2, y: py - rh / 2, w: rw, h: rh })
+      } else {
+        // Text: WYSIWYG — shows placeholder at actual configured size & color
+        ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter,Arial`
+        const text = meta.placeholder || meta.label
+        const tw = ctx.measureText(text).width
+        ctx.save(); ctx.globalAlpha = 0.52; ctx.fillStyle = '#000'
+        ctx.fillRect(px - 2, py - fs, tw + 4, fs + 5); ctx.restore()
+        ctx.fillStyle = f.fontColor; ctx.fillText(text, px, py)
+        boundsRef.current.set(f.id, { x: px - 2, y: py - fs - 2, w: tw + 4, h: fs + 8 })
+      }
+
+      if (isSel) {
+        const b = boundsRef.current.get(f.id)!
+        const pad = 5
+        ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.setLineDash([6, 3])
+        ctx.strokeRect(b.x - pad, b.y - pad, b.w + pad * 2, b.h + pad * 2)
+        ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.setLineDash([])
+        ctx.strokeRect(b.x - pad - 1, b.y - pad - 1, b.w + pad * 2 + 2, b.h + pad * 2 + 2)
+        for (const [hx, hy] of [[b.x - pad, b.y - pad], [b.x + b.w + pad, b.y - pad], [b.x - pad, b.y + b.h + pad], [b.x + b.w + pad, b.y + b.h + pad]]) {
+          ctx.fillStyle = '#fff'; ctx.fillRect(hx - 4, hy - 4, 8, 8)
+          ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.strokeRect(hx - 4, hy - 4, 8, 8)
+        }
+      }
+    }
+  }
+
+  function hitTest(mx: number, my: number): string | null {
+    for (const f of [...fieldsRef.current].reverse()) {
+      const b = boundsRef.current.get(f.id)
+      if (b && mx >= b.x - 8 && mx <= b.x + b.w + 8 && my >= b.y - 8 && my <= b.y + b.h + 8) return f.id
+    }
+    return null
+  }
+
+  function handleMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top
+    const hit = hitTest(mx, my)
+    if (hit) {
+      const f = fieldsRef.current.find(f => f.id === hit)!
+      onSelect(hit); setPicker(null)
+      dragRef.current = { id: hit, ox: f.x, oy: f.y, sx: mx, sy: my }
+      e.preventDefault()
+    } else {
+      onSelect(null)
+      setPicker({ px: Math.min(mx, dispW - 224), py: Math.max(my - 188, 0), rx: mx / dispW, ry: my / dispH })
+    }
+  }
+
+  function handleMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!dragRef.current) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top
+    const nx = Math.max(0.01, Math.min(0.99, dragRef.current.ox + (mx - dragRef.current.sx) / dispW))
+    const ny = Math.max(0.01, Math.min(0.99, dragRef.current.oy + (my - dragRef.current.sy) / dispH))
+    fieldsRef.current = fieldsRef.current.map(f => f.id === dragRef.current!.id ? { ...f, x: nx, y: ny } : f)
+    draw()
+  }
+
+  function handleMouseUp() {
+    if (dragRef.current) {
+      const f = fieldsRef.current.find(f => f.id === dragRef.current!.id)
+      if (f) onMove(f.id, f.x, f.y)
+    }
+    dragRef.current = null
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%' }}>
+      <canvas ref={canvasRef} width={dispW} height={dispH}
+        style={{ display: 'block', borderRadius: 10, border: '2px solid #E5E7EB', cursor: 'crosshair', width: dispW, height: dispH, maxWidth: '100%', userSelect: 'none' }}
+        onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
+      />
+      {picker && (
+        <div style={{ position: 'absolute', left: picker.px, top: picker.py, background: '#0A2540', borderRadius: 12, padding: 14, boxShadow: '0 6px 24px rgba(0,0,0,.55)', zIndex: 10, width: 218 }}
+          onClick={e => e.stopPropagation()}>
+          <div style={{ fontSize: 10, color: '#9FB0C4', fontWeight: 700, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.08em' }}>Add field here</div>
+          {Object.entries(FIELD_GROUPS).map(([group, types]) => (
+            <div key={group} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,.4)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.07em' }}>{group}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                {types.map(t => (
+                  <button key={t} onClick={() => { onAddAtPos(picker.rx, picker.ry, t); setPicker(null) }}
+                    style={{ background: FIELD_META[t].color, color: '#fff', border: 'none', borderRadius: 99, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                    {FIELD_META[t].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button onClick={() => setPicker(null)} style={{ width: '100%', background: 'rgba(255,255,255,.1)', color: '#9FB0C4', border: 'none', borderRadius: 8, padding: '5px 0', fontSize: 10, cursor: 'pointer', marginTop: 6 }}>Cancel</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
   const [canvasSize, setCanvasSize] = useState('flyer_letter')
   const [category, setCategory] = useState<Category>('flyer')
@@ -802,43 +977,25 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
   const [pages, setPages] = useState<EditorPage[]>([{ bgFile: null, bgUrl: '', fields: [] }])
   const [pageIdx, setPageIdx] = useState(0)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [pendingPos, setPendingPos] = useState<{ x: number; y: number } | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const boxRef = useRef<HTMLDivElement>(null)
+  const bgInputRef = useRef<HTMLInputElement>(null)
 
   const size = CANVAS_SIZES[canvasSize]
   const page = pages[pageIdx]
+  const DISP_W = 580
+  const DISP_H = Math.round(DISP_W * (size.h / size.w))
 
   useEffect(() => { setCategory(CANVAS_SIZES[canvasSize]?.category ?? 'other') }, [canvasSize])
-
-  function dispDims() {
-    const box = boxRef.current
-    const maxW = box ? Math.min(box.clientWidth, 620) : 620
-    return { w: maxW, h: Math.round(maxW * (size.h / size.w)) }
-  }
 
   function updatePage(idx: number, patch: Partial<EditorPage>) {
     setPages(ps => ps.map((p, i) => i === idx ? { ...p, ...patch } : p))
   }
 
-  function handleCanvasClick(e: React.MouseEvent<HTMLDivElement>) {
-    const { w, h } = dispDims()
-    const rect = e.currentTarget.getBoundingClientRect()
-    const rx = (e.clientX - rect.left) / w, ry = (e.clientY - rect.top) / h
-    for (const f of page.fields) {
-      if (Math.abs(e.clientX - rect.left - f.x * w) < 50 && Math.abs(e.clientY - rect.top - f.y * h) < 22) {
-        setSelectedId(f.id === selectedId ? null : f.id); setPendingPos(null); return
-      }
-    }
-    setSelectedId(null); setPendingPos({ x: rx, y: ry })
-  }
-
-  function addField(type: FieldType) {
-    if (!pendingPos) return
-    const f: TplField = { id: uid(), type, x: pendingPos.x, y: pendingPos.y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true }
+  function addField(x: number, y: number, type: FieldType) {
+    const f: TplField = { id: uid(), type, x, y, fontSize: 0.04, fontColor: '#FFFFFF', bold: true }
     updatePage(pageIdx, { fields: [...page.fields, f] })
-    setPendingPos(null); setSelectedId(f.id)
+    setSelectedId(f.id)
   }
 
   function updateField(id: string, patch: Partial<TplField>) {
@@ -848,6 +1005,10 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
   function removeField(id: string) {
     updatePage(pageIdx, { fields: page.fields.filter(f => f.id !== id) })
     if (selectedId === id) setSelectedId(null)
+  }
+
+  function moveField(id: string, x: number, y: number) {
+    updatePage(pageIdx, { fields: page.fields.map(f => f.id === id ? { ...f, x, y } : f) })
   }
 
   async function handleSave() {
@@ -867,7 +1028,6 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
     setSaving(false)
   }
 
-  const { w: dw, h: dh } = dispDims()
   const selected = page.fields.find(f => f.id === selectedId)
   const meta = selected ? FIELD_META[selected.type] : null
 
@@ -890,7 +1050,7 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 12, padding: 14 }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.08em' }}>Pages</div>
           {pages.map((p, i) => (
-            <div key={i} onClick={() => { setPageIdx(i); setSelectedId(null); setPendingPos(null) }}
+            <div key={i} onClick={() => { setPageIdx(i); setSelectedId(null) }}
               style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, cursor: 'pointer', marginBottom: 4, background: i === pageIdx ? '#0A2540' : '#fff', border: `1px solid ${i === pageIdx ? '#0A2540' : '#E5E7EB'}` }}>
               {p.bgUrl
                 // eslint-disable-next-line @next/next/no-img-element
@@ -908,44 +1068,27 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
       </div>
 
       {/* Canvas */}
-      <div style={{ flex: 1, minWidth: 0 }} ref={boxRef}>
-        {!page.bgUrl ? (
-          <DropZone onFile={f => updatePage(pageIdx, { bgFile: f, bgUrl: URL.createObjectURL(f) })} label={`Upload background for Page ${pageIdx + 1}`} />
-        ) : (
-          <>
-            <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 8 }}>
-              <button onClick={() => updatePage(pageIdx, { bgFile: null, bgUrl: '' })} style={{ fontSize: 12, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕ Replace background</button>
-              <span style={{ fontSize: 12, color: '#9CA3AF' }}>Click to place fields · click a chip to select</span>
-            </div>
-            <div style={{ position: 'relative', width: dw, height: dh, cursor: 'crosshair', userSelect: 'none', borderRadius: 10, overflow: 'hidden', border: '2px solid #E5E7EB', background: '#F3F4F6' }} onClick={handleCanvasClick}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={page.bgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'fill', display: 'block', pointerEvents: 'none' }} />
-              {page.fields.map(f => (
-                <div key={f.id} style={{ position: 'absolute', left: f.x * dw, top: f.y * dh, transform: 'translate(-50%,-50%)', pointerEvents: 'none', background: FIELD_META[f.type].color, color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, border: f.id === selectedId ? '2px solid #fff' : '2px solid transparent', boxShadow: '0 2px 8px rgba(0,0,0,.4)', whiteSpace: 'nowrap' }}>
-                  {FIELD_META[f.type].label}
-                </div>
-              ))}
-              {pendingPos && (
-                <div style={{ position: 'absolute', left: Math.min(pendingPos.x * dw, dw - 230), top: Math.max(pendingPos.y * dh - 210, 4), background: '#0A2540', borderRadius: 12, padding: 14, boxShadow: '0 6px 24px rgba(0,0,0,.55)', zIndex: 10, width: 220 }} onClick={e => e.stopPropagation()}>
-                  <div style={{ fontSize: 10, color: '#9FB0C4', fontWeight: 600, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.08em' }}>Choose field type</div>
-                  {Object.entries(FIELD_GROUPS).map(([group, types]) => (
-                    <div key={group} style={{ marginBottom: 10 }}>
-                      <div style={{ fontSize: 10, color: 'rgba(255,255,255,.4)', fontWeight: 700, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.06em' }}>{group}</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                        {types.map(t => (
-                          <button key={t} onClick={() => addField(t)} style={{ background: FIELD_META[t].color, color: '#fff', border: 'none', borderRadius: 99, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
-                            {FIELD_META[t].label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <button onClick={() => setPendingPos(null)} style={{ width: '100%', background: 'rgba(255,255,255,.1)', color: '#9FB0C4', border: 'none', borderRadius: 8, padding: '6px 0', fontSize: 11, cursor: 'pointer', marginTop: 4 }}>Cancel</button>
-                </div>
-              )}
-            </div>
-          </>
-        )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <input ref={bgInputRef} type="file" accept="image/*" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) { updatePage(pageIdx, { bgFile: f, bgUrl: URL.createObjectURL(f) }) } e.target.value = '' }} />
+          <button onClick={() => bgInputRef.current?.click()}
+            style={{ background: '#0A2540', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            {page.bgUrl ? '🖼 Replace Background' : '⬆ Upload Background'}
+          </button>
+          <span style={{ fontSize: 11, color: '#9CA3AF' }}>
+            {page.bgUrl ? 'Click canvas to place a field · drag to reposition' : 'Upload a background image to begin'}
+          </span>
+        </div>
+        <EditorCanvas
+          page={page}
+          dispW={DISP_W}
+          dispH={DISP_H}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          onMove={moveField}
+          onAddAtPos={addField}
+        />
       </div>
 
       {/* Right controls */}
@@ -953,8 +1096,30 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
         <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 14, padding: 18 }}>
           <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>Template Name</label>
           <input value={tplName} onChange={e => setTplName(e.target.value)} placeholder="e.g. Open House Flyer"
-            style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', outline: 'none', marginBottom: 18 }} />
+            style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', outline: 'none', marginBottom: 14 }} />
 
+          {/* Add Field panel */}
+          {!selected && (
+            <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 14, marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Add Field</div>
+              <div style={{ fontSize: 10, color: '#9CA3AF', marginBottom: 10 }}>Adds at center — drag to reposition</div>
+              {Object.entries(FIELD_GROUPS).map(([group, types]) => (
+                <div key={group} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#6B7280', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '.07em' }}>{group}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {types.map(t => (
+                      <button key={t} onClick={() => addField(0.5, 0.5, t)}
+                        style={{ background: FIELD_META[t].color, color: '#fff', border: 'none', borderRadius: 99, padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                        {FIELD_META[t].label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Selected field controls */}
           {selected && meta && (
             <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 14, marginBottom: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -979,18 +1144,21 @@ function AdminTab({ supabase, onDone }: { supabase: any; onDone: () => void }) {
                   </label>
                 </>
               )}
-              <button onClick={() => removeField(selected.id)} style={{ width: '100%', background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Remove Field</button>
+              <button onClick={() => removeField(selected.id)} style={{ width: '100%', background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer', marginBottom: 10 }}>Remove Field</button>
+              <button onClick={() => setSelectedId(null)} style={{ width: '100%', background: '#F3F4F6', color: '#374151', border: 'none', borderRadius: 8, padding: '7px 0', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>← Back to Add Fields</button>
             </div>
           )}
 
-          {page.fields.length > 0 && !selected && (
-            <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 14, marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.08em' }}>Page {pageIdx + 1} Fields</div>
+          {/* Fields list */}
+          {page.fields.length > 0 && (
+            <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 12, marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', marginBottom: 7, textTransform: 'uppercase', letterSpacing: '.08em' }}>Page {pageIdx + 1} Fields</div>
               {page.fields.map(f => (
-                <div key={f.id} onClick={() => setSelectedId(f.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px', borderRadius: 7, cursor: 'pointer', marginBottom: 4, background: '#fff', border: '1px solid #E5E7EB' }}>
+                <div key={f.id} onClick={() => setSelectedId(f.id === selectedId ? null : f.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 9px', borderRadius: 7, cursor: 'pointer', marginBottom: 4, background: f.id === selectedId ? '#EFF6FF' : '#fff', border: `1px solid ${f.id === selectedId ? '#BFDBFE' : '#E5E7EB'}` }}>
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: FIELD_META[f.type].color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: '#374151' }}>{FIELD_META[f.type].label}</span>
+                  <span style={{ fontSize: 12, color: '#374151', flex: 1 }}>{FIELD_META[f.type].label}</span>
+                  <button onClick={e => { e.stopPropagation(); removeField(f.id) }} style={{ background: 'none', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: 13, padding: 0, lineHeight: 1 }}>✕</button>
                 </div>
               ))}
             </div>
