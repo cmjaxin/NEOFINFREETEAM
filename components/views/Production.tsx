@@ -342,8 +342,8 @@ function makeAppEntry(): AppEntry {
 
 // Returns two maps: cur = 2026, prev = 2025
 // Rules:
-//   "Application created at"  → Initial app (date when app was created)
-//   "Loan file created at"    → RESPA app   (date the loan file was opened)
+//   "Loan file created at"    → Initial app
+//   "Application created at"  → RESPA app
 //   Owner = Assigned LC, unless LC is in LC_EXCEPTIONS_SET → use Assigned MA Support
 function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): { cur: Map<string, AppEntry>; prev: Map<string, AppEntry> } {
   const cur = new Map<string, AppEntry>()
@@ -358,8 +358,8 @@ function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): { cur: Map<string, 
     if (!owner) continue
     const maKey = normName(owner)
 
-    // "Application created at" → Initial app
-    const initDateRaw = String(row['Application created at'] ?? '').trim()
+    // "Loan file created at" → Initial app
+    const initDateRaw = String(row['Loan file created at'] ?? '').trim()
     if (initDateRaw) {
       const dt = parseDate(initDateRaw)
       if (dt) {
@@ -370,8 +370,8 @@ function parseAppsRows(rows: CsvRow[], source?: 'sg'|'d2c'): { cur: Map<string, 
       }
     }
 
-    // "Loan file created at" → RESPA app
-    const respaDateRaw = String(row['Loan file created at'] ?? '').trim()
+    // "Application created at" → RESPA app
+    const respaDateRaw = String(row['Application created at'] ?? '').trim()
     if (respaDateRaw) {
       const dt = parseDate(respaDateRaw)
       if (dt) {
@@ -391,8 +391,8 @@ function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, MaWeek
     const owner = resolveAppOwner(row)
     if (!owner) continue
 
-    // Initial app
-    const initDateRaw = String(row['Application created at'] ?? '').trim()
+    // "Loan file created at" → Initial app
+    const initDateRaw = String(row['Loan file created at'] ?? '').trim()
     if (initDateRaw) {
       const dt = parseDate(initDateRaw)
       if (dt && dt.getFullYear() >= 2026) {
@@ -404,8 +404,8 @@ function parseAppsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, MaWeek
       }
     }
 
-    // RESPA app
-    const respaDateRaw = String(row['Loan file created at'] ?? '').trim()
+    // "Application created at" → RESPA app
+    const respaDateRaw = String(row['Application created at'] ?? '').trim()
     if (respaDateRaw) {
       const dt = parseDate(respaDateRaw)
       if (dt && dt.getFullYear() >= 2026) {
@@ -1402,9 +1402,12 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
   const appsBody = buildAppsEmailBody(maData, weeklyData)
 
   // Sort MA records by RESPA (primary) then initial (secondary)
+  const APPS_HIDDEN_NAMES = ['jonathan salgado','marco flores','ryan todey','julie jolivet','gregory allen','rory byrne','rory bryne','joshua mettle']
+  const isAppsHidden = (m: MARecord) => APPS_HIDDEN_NAMES.some(h => normName(m.name) === h || normName(m.name).includes(h) || h.includes(normName(m.name)))
+
   const appsSorted = [...maData]
-    .filter(m => sumMonths(respaArr(m), fr, to) + sumMonths(initArr(m), fr, to) > 0 ||
-                 m.ytdRespaApps + m.ytdInitialApps > 0)
+    .filter(m => !isAppsHidden(m) && (sumMonths(respaArr(m), fr, to) + sumMonths(initArr(m), fr, to) > 0 ||
+                 m.ytdRespaApps + m.ytdInitialApps > 0))
     .sort((a, b) => {
       const aR = sumMonths(respaArr(a), fr, to), bR = sumMonths(respaArr(b), fr, to)
       if (bR !== aR) return bR - aR
@@ -1688,78 +1691,85 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
               {weeklySource !== 'd2c' && selWeek.volume > 0 && <KpiTile label="Volume" value={fmtVol(selWeek.volume)} sub={selWeek.weekLabel} />}
             </div>
 
-            {/* Branch + MA breakdown */}
-            {activeList.length > 0 ? (
-              <Card style={{ borderTop: `3px solid ${sourceColor}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>
-                    {weeklySource === 'sg' ? 'Self-Gen' : weeklySource === 'd2c' ? 'D2C' : 'All Sources'}
+            {/* Leaderboard */}
+            {activeList.length > 0 ? (() => {
+              const wkFiltered = activeList.filter(e => !APPS_HIDDEN_NAMES.some(h => normName(e.name) === h || normName(e.name).includes(h) || h.includes(normName(e.name))))
+              const maxWkRespa = Math.max(...wkFiltered.map(e => e.respa), 1)
+              return (
+                <Card style={{ padding: 0, overflow: 'hidden' }}>
+                  {/* Headers */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>RESPA APPS</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>INITIAL APPS</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>WoW RESPA</div>
+                    <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>SOURCE SPLIT</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
-                    <span style={{ color: '#7c3aed', fontWeight: 700 }}>{totalRespa} RESPA</span>
-                    <span style={{ color: C.accent, fontWeight: 700 }}>{totalInit} Initial</span>
-                  </div>
-                </div>
-                {BRANCH_CONFIG.map(bc => {
-                  const members = activeList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
-                  const prevMembers = prevActiveList.filter(e => bc.members.some(m => nameSimilar(m, e.name)))
-                  if (!members.length) return null
-                  const brRespa = members.reduce((s,e)=>s+e.respa,0)
-                  const brInit = members.reduce((s,e)=>s+e.initial,0)
-                  const prevBrRespa = prevMembers.reduce((s,e)=>s+e.respa,0)
-                  const prevBrInit = prevMembers.reduce((s,e)=>s+e.initial,0)
-                  return (
-                    <div key={bc.name} style={{ marginBottom: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.borderSoft}` }}>
-                        <div style={{ width: 4, height: 28, borderRadius: 2, background: bc.color, flexShrink: 0 }} />
-                        <div style={{ flex: 1, fontWeight: 700, fontSize: 14, color: C.navy }}>{bc.name}</div>
-                        <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>
-                          {brRespa} RESPA{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brRespa-prevBrRespa>=0?'+':''}{brRespa-prevBrRespa})</span>}
-                        </div>
-                        <div style={{ fontSize: 13, color: C.accent, fontWeight: 600, marginLeft: 12 }}>
-                          {brInit} Initial{prevWeek && <span style={{ fontWeight: 400, color: C.muted }}> ({brInit-prevBrInit>=0?'+':''}{brInit-prevBrInit})</span>}
+                  {wkFiltered.map((ma, i) => {
+                    const rank = i + 1
+                    const isTop3 = rank <= 3
+                    const rankLabel = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : String(rank)
+                    const prev = prevActiveList.find(p => nameSimilar(p.name, ma.name))
+                    const sgEntry = weeklySource === 'all' ? sgList.find(e => nameSimilar(e.name, ma.name)) : null
+                    const d2cEntry = weeklySource === 'all' ? d2cList.find(e => nameSimilar(e.name, ma.name)) : null
+                    const barPct = ma.respa / maxWkRespa
+                    const rowBg = rank === 1 ? 'rgba(124,58,237,0.03)' : C.white
+                    return (
+                      <div key={ma.name} style={{ background: rowBg, borderBottom: `1px solid ${C.bg}` }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '13px 20px', alignItems: 'center' }}>
+                          {/* Rank */}
+                          <div style={{ fontSize: isTop3 ? 20 : 13, fontWeight: 800, color: C.muted, textAlign: 'center' }}>{rankLabel}</div>
+                          {/* Name + bar */}
+                          <div style={{ paddingRight: 20 }}>
+                            <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 6 }}>{ma.name}</div>
+                            <div style={{ height: 4, background: C.bg, borderRadius: 2, overflow: 'hidden' }}>
+                              <div style={{ width: `${barPct * 100}%`, height: '100%', background: isTop3 ? '#7c3aed' : '#a78bfa', borderRadius: 2, transition: 'width 0.4s' }} />
+                            </div>
+                          </div>
+                          {/* RESPA */}
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: '#7c3aed' }}>{ma.respa}</div>
+                          </div>
+                          {/* Initial */}
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: 15, fontWeight: 700, color: C.accent }}>{ma.initial}</div>
+                          </div>
+                          {/* WoW */}
+                          <div style={{ textAlign: 'right' }}>
+                            {prevWeek ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontSize: 11, color: C.muted }}>RESPA</span>
+                                  <WowChip cur={ma.respa} prev={prev?.respa ?? 0} />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <span style={{ fontSize: 11, color: C.muted }}>Initial</span>
+                                  <WowChip cur={ma.initial} prev={prev?.initial ?? 0} />
+                                </div>
+                              </div>
+                            ) : <span style={{ fontSize: 11, color: C.muted }}>—</span>}
+                          </div>
+                          {/* SG / D2C split */}
+                          <div style={{ textAlign: 'right' }}>
+                            {weeklySource === 'all' && (sgEntry || d2cEntry) ? (
+                              <div style={{ fontSize: 11, lineHeight: 1.7 }}>
+                                {((sgEntry?.respa ?? 0) + (sgEntry?.initial ?? 0)) > 0 && (
+                                  <div><span style={{ color: '#16a34a', fontWeight: 700 }}>SG</span> <span style={{ color: C.dim }}>{sgEntry!.respa}R · {sgEntry!.initial}I</span></div>
+                                )}
+                                {((d2cEntry?.respa ?? 0) + (d2cEntry?.initial ?? 0)) > 0 && (
+                                  <div><span style={{ color: '#7c3aed', fontWeight: 700 }}>D2C</span> <span style={{ color: C.dim }}>{d2cEntry!.respa}R · {d2cEntry!.initial}I</span></div>
+                                )}
+                              </div>
+                            ) : <span style={{ fontSize: 11, color: C.muted }}>—</span>}
+                          </div>
                         </div>
                       </div>
-                      {members.map(ma => {
-                        const prev = prevMembers.find(p => nameSimilar(p.name, ma.name))
-                        // For "All" view, also show SG/D2C split per MA
-                        const sgEntry = weeklySource === 'all' ? sgList.find(e => nameSimilar(e.name, ma.name)) : null
-                        const d2cEntry = weeklySource === 'all' ? d2cList.find(e => nameSimilar(e.name, ma.name)) : null
-                        return (
-                          <div key={ma.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '5px 0 5px 20px', borderBottom: `1px solid ${C.bg}` }}>
-                            <div style={{ flex: 1, fontSize: 13, color: C.text }}>{ma.name}</div>
-                            {weeklySource === 'all' ? (
-                              <>
-                                {(sgEntry?.respa ?? 0) > 0 && <div style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>{sgEntry!.respa}R SG</div>}
-                                {(sgEntry?.initial ?? 0) > 0 && <div style={{ fontSize: 12, color: '#16a34a' }}>{sgEntry!.initial}I SG</div>}
-                                {(d2cEntry?.respa ?? 0) > 0 && <div style={{ fontSize: 12, color: '#7c3aed', fontWeight: 600 }}>{d2cEntry!.respa}R D2C</div>}
-                                {(d2cEntry?.initial ?? 0) > 0 && <div style={{ fontSize: 12, color: '#7c3aed' }}>{d2cEntry!.initial}I D2C</div>}
-                                <div style={{ fontSize: 13, color: C.navy, fontWeight: 700, marginLeft: 4 }}>{ma.respa + ma.initial} total</div>
-                              </>
-                            ) : (
-                              <>
-                                {ma.respa > 0 && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                    <span style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>{ma.respa} RESPA</span>
-                                    {prev && <WowChip cur={ma.respa} prev={prev.respa ?? 0} />}
-                                  </div>
-                                )}
-                                {ma.initial > 0 && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 8 }}>
-                                    <span style={{ fontSize: 13, color: C.accent, fontWeight: 600 }}>{ma.initial} Initial</span>
-                                    {prev && <WowChip cur={ma.initial} prev={prev.initial ?? 0} />}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )
-                })}
-              </Card>
-            ) : (
+                    )
+                  })}
+                </Card>
+              )
+            })() : (
               <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>No data for this week / source. Upload SG and D2C reports to populate.</div></Card>
             )}
           </>
