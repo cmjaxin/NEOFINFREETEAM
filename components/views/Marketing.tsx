@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<Category, string> = {
 type FieldType =
   | 'name' | 'title' | 'nmls' | 'email' | 'phone' | 'headshot'
   | 'partner_name' | 'partner_title' | 'partner_company' | 'partner_phone' | 'partner_email' | 'partner_headshot' | 'partner_logo'
-  | 'property_address' | 'property_price' | 'property_description' | 'property_image' | 'open_house_date' | 'open_house_time'
+  | 'property_address' | 'property_price' | 'property_description' | 'property_image' | 'property_image_2' | 'property_image_3' | 'open_house_date' | 'open_house_time'
 
 interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
 
@@ -46,7 +46,9 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   property_address:     { label: 'Address',           color: '#6366F1', placeholder: '123 Main St, Salt Lake City' },
   property_price:       { label: 'List Price',        color: '#16A34A', placeholder: '$450,000' },
   property_description: { label: 'Description',       color: '#9333EA', placeholder: '4 bed · 2 bath · 2,100 sq ft', isMultiline: true },
-  property_image:       { label: 'Property Photo',    color: '#EA580C', placeholder: '', isRect: true },
+  property_image:       { label: 'Photo 1',           color: '#EA580C', placeholder: '', isRect: true },
+  property_image_2:     { label: 'Photo 2',           color: '#C2410C', placeholder: '', isRect: true },
+  property_image_3:     { label: 'Photo 3',           color: '#9A3412', placeholder: '', isRect: true },
   open_house_date:      { label: 'Open House Date',   color: '#0369A1', placeholder: 'Saturday, January 18' },
   open_house_time:      { label: 'Open House Time',   color: '#0284C7', placeholder: '1:00 PM – 4:00 PM' },
 }
@@ -54,7 +56,7 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
 const FIELD_GROUPS: Record<string, FieldType[]> = {
   'Advisor':  ['name', 'title', 'nmls', 'email', 'phone', 'headshot'],
   'Partner':  ['partner_name', 'partner_title', 'partner_company', 'partner_phone', 'partner_email', 'partner_headshot', 'partner_logo'],
-  'Property': ['property_address', 'property_price', 'property_description', 'property_image', 'open_house_date', 'open_house_time'],
+  'Property': ['property_address', 'property_price', 'property_description', 'property_image', 'property_image_2', 'property_image_3', 'open_house_date', 'open_house_time'],
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -194,7 +196,7 @@ function initValues(emp: Employee | undefined, headshot: string): FieldValues {
     partner_name: '', partner_title: '', partner_company: '',
     partner_phone: '', partner_email: '', partner_headshot: '', partner_logo: '',
     property_address: '', property_price: '', property_description: '',
-    property_image: '', open_house_date: '', open_house_time: '',
+    property_image: '', property_image_2: '', property_image_3: '', open_house_date: '', open_house_time: '',
   }
 }
 
@@ -455,7 +457,7 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, partne
   template.pages.forEach(p => p.fields.forEach(f => usedFields.has(f.type) || usedFields.add(f.type)))
 
   const hasPartnerFields = ['partner_name','partner_title','partner_company','partner_phone','partner_email','partner_headshot','partner_logo'].some(t => usedFields.has(t as FieldType))
-  const hasPropertyFields = ['property_address','property_price','property_description','property_image','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
+  const hasPropertyFields = ['property_address','property_price','property_description','property_image','property_image_2','property_image_3','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -516,8 +518,8 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, partne
     setHeadshotUploading(false)
   }
 
-  function handlePropertyImageFile(file: File) {
-    setValues(v => ({ ...v, property_image: URL.createObjectURL(file) }))
+  function handlePropertyImageFile(file: File, slot: 'property_image' | 'property_image_2' | 'property_image_3' = 'property_image') {
+    setValues(v => ({ ...v, [slot]: URL.createObjectURL(file) }))
   }
 
   function handlePartnerSelect(id: string) {
@@ -658,7 +660,9 @@ function PersonalizationModal({ template, emp, initialHeadshot, supabase, partne
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('Property Info')}
                 {(['property_address','property_price','property_description','open_house_date','open_house_time'] as FieldType[]).map(ft => fieldInput(ft))}
-                {imageUploadRow('property_image', values.property_image, handlePropertyImageFile, false, false)}
+                {usedFields.has('property_image') && imageUploadRow('property_image', values.property_image, (f) => handlePropertyImageFile(f, 'property_image'), false, false)}
+                {usedFields.has('property_image_2') && imageUploadRow('property_image_2', values.property_image_2, (f) => handlePropertyImageFile(f, 'property_image_2'), false, false)}
+                {usedFields.has('property_image_3') && imageUploadRow('property_image_3', values.property_image_3, (f) => handlePropertyImageFile(f, 'property_image_3'), false, false)}
               </>
             )}
           </div>
