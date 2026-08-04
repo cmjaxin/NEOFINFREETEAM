@@ -62,7 +62,8 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
   const [state, setState] = useState<AppState>({
     profile, employees: [], children: {}, coaching: {}, wins: {}, completions: {},
     welcomeTemplate: DEFAULT_WELCOME, pendingProfiles: [],
-    view: 'dashboard', selectedId: null, profileTab: 'profile', profileFrom: 'dashboard',
+    view: (() => { try { return (localStorage.getItem('hq_view') as View) ?? 'dashboard' } catch { return 'dashboard' } })(),
+    selectedId: null, profileTab: 'profile', profileFrom: 'dashboard',
     showAdd: false, showSettings: false, search: '', dirSearch: '', roleFilter: 'all',
   })
 
@@ -142,7 +143,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
   const ctx: AppContextValue = {
     ...state,
     supabase,
-    setView: (v) => setState(s => ({ ...s, view: v })),
+    setView: (v) => { try { localStorage.setItem('hq_view', v) } catch {} setState(s => ({ ...s, view: v })) },
     setSelectedId: (id) => setState(s => ({ ...s, selectedId: id })),
     setProfileTab: (t) => setState(s => ({ ...s, profileTab: t })),
     setProfileFrom: (v) => setState(s => ({ ...s, profileFrom: v })),

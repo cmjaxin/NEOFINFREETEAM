@@ -833,11 +833,11 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   onClearPrevYear: () => void
 }) {
   const [period, setPeriod] = useState<PeriodStr>('ytd')
+  const [selectedYear, setSelectedYear] = useState(2026)
   const [rangeFrom, setRangeFrom] = useState(0)
   const [rangeFromYear, setRangeFromYear] = useState(2026)
   const [rangeTo, setRangeTo] = useState(6)
   const [rangeToYear, setRangeToYear] = useState(2026)
-  const [source, setSource] = useState<'all'|'sg'|'d2c'>('all')
   const [showOthers, setShowOthers] = useState(false)
   const [fundLoading, setFundLoading] = useState(false)
   const [fundMsg, setFundMsg] = useState('')
@@ -846,10 +846,16 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const [emailMonth, setEmailMonth] = useState(5)
   const FULL_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
+  const hasPrevYear = prevYearData.length > 0
+  // activeData: the year being viewed; hasPrevYearForSelected: whether we have
+  // prior-year comparison data for the selected year (only 2026 has 2025 data)
+  const activeData = selectedYear === 2026 ? maData : prevYearData
+  const hasPrevYearForSelected = selectedYear === 2026 && hasPrevYear
+
   // Detect the last month that has any real volume — makes YTD dynamic
   const lastDataMonth = (() => {
     for (let m = 11; m >= 0; m--) {
-      if (maData.some(ma => (ma.monthlyVolume[m] ?? 0) > 0)) return m
+      if (activeData.some(ma => (ma.monthlyVolume[m] ?? 0) > 0)) return m
     }
     return 0
   })()
@@ -860,10 +866,8 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     ? [0, lastDataMonth]
     : periodRange(period, rangeFrom, rangeTo)
 
-  function famArr(m: MARecord) { return source === 'sg' ? m.monthlyFamiliesSG : source === 'd2c' ? m.monthlyFamiliesD2C : m.monthlyFamilies }
-  function volArr(m: MARecord) { return source === 'sg' ? m.monthlyVolumeSG : source === 'd2c' ? m.monthlyVolumeD2C : m.monthlyVolume }
-
-  const hasPrevYear = prevYearData.length > 0
+  function famArr(m: MARecord) { return m.monthlyFamilies }
+  function volArr(m: MARecord) { return m.monthlyVolume }
 
   // Map a calendar year to the right MARecord list
   function dataForYear(year: number): MARecord[] {
@@ -892,8 +896,8 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return period === 'range' ? sumCrossYear(m, rangeFrom, rangeFromYear, rangeTo, rangeToYear, 'vol') : sumMonths(volArr(m), fr, to)
   }
 
-  const totalFamilies = maData.reduce((s, m) => s + maFam(m), 0)
-  const totalVolume = maData.reduce((s, m) => s + maVol(m), 0)
+  const totalFamilies = activeData.reduce((s, m) => s + maFam(m), 0)
+  const totalVolume = activeData.reduce((s, m) => s + maVol(m), 0)
 
   const FEATURED_NAMES = [
     'katrinka', 'justin', 'jason', 'skyler', 'drake', 'ross', 'aaron',
@@ -906,7 +910,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return FEATURED_NAMES.some(f => n.includes(f) || f.includes(n.split(' ')[0]))
   }
 
-  const sorted = [...maData].sort((a, b) => maVol(b) - maVol(a))
+  const sorted = [...activeData].sort((a, b) => maVol(b) - maVol(a))
   const featuredSorted = sorted.filter(m => isFeatured(m.name))
   const othersSorted = sorted.filter(m => !isFeatured(m.name))
   const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
@@ -916,7 +920,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   // a zero-data month. For ytd/single-month, `to` is already capped correctly.
   const momEndMonthRaw = period === 'range' ? rangeTo : to
   const momEndMonth = Math.min(momEndMonthRaw, lastDataMonth)
-  const momEndYear = period === 'range' ? rangeToYear : 2026
+  const momEndYear = period === 'range' ? rangeToYear : selectedYear
 
   // Previous month: cross year boundary if Jan
   const momPrevMonth = momEndMonth > 0 ? momEndMonth - 1 : 11
@@ -925,6 +929,9 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const momMonthLabel = `${MONTHS[momPrevMonth]} → ${MONTHS[momEndMonth]}`
 
   function momCalc(ma: MARecord, type: 'vol'|'fam'): number | null {
+    // We have data for 2025 (prevYearData) and 2026 (maData) only.
+    // For Jan of the selected year, momPrevYear goes back one more year — null if we lack that data.
+    if (momPrevYear < 2025 || (momPrevYear === 2025 && !hasPrevYear)) return null
     const curSrc = dataForYear(momEndYear).find(p => nameSimilar(p.name, ma.name)) ?? ma
     const prevSrc = dataForYear(momPrevYear).find(p => nameSimilar(p.name, ma.name)) ?? ma
     const curArr = type === 'fam' ? famArr(curSrc) : volArr(curSrc)
@@ -962,17 +969,15 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       return `${curFrom}–${curTo} vs ${pyFrom}–${pyTo}`
     }
     if (period === 'ytd') {
-      return `Jan–${MONTHS[lastDataMonth]} 2026 vs Jan–${MONTHS[lastDataMonth]} 2025`
+      return `Jan–${MONTHS[lastDataMonth]} ${selectedYear} vs Jan–${MONTHS[lastDataMonth]} ${selectedYear - 1}`
     }
-    return `${MONTHS[fr]} 2026 vs ${MONTHS[fr]} 2025`
+    return `${MONTHS[fr]} ${selectedYear} vs ${MONTHS[fr]} ${selectedYear - 1}`
   })()
 
-  const sourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }]
-
-  const teamFamilies = MONTHS.map((_, i) => maData.reduce((s, m) => s + famArr(m)[i], 0))
-  const teamVolume = MONTHS.map((_, i) => maData.reduce((s, m) => s + volArr(m)[i], 0))
-  const prevTeamFamilies = hasPrevYear ? MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + famArr(m)[i], 0)) : undefined
-  const prevTeamVolume = hasPrevYear ? MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + volArr(m)[i], 0)) : undefined
+  const teamFamilies = MONTHS.map((_, i) => activeData.reduce((s, m) => s + famArr(m)[i], 0))
+  const teamVolume = MONTHS.map((_, i) => activeData.reduce((s, m) => s + volArr(m)[i], 0))
+  const prevTeamFamilies = hasPrevYearForSelected ? MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + famArr(m)[i], 0)) : undefined
+  const prevTeamVolume = hasPrevYearForSelected ? MONTHS.map((_, i) => prevYearData.reduce((s, m) => s + volArr(m)[i], 0)) : undefined
 
   const prodSubject = `${FULL_MONTHS[emailMonth]} Production Numbers`
   const prodBody = buildProductionEmailBody(maData, emailMonth)
@@ -997,9 +1002,15 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       {/* Controls */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
-        {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} availableYears={hasPrevYear ? [2025, 2026] : [2026]} />}
+        {hasPrevYear && (
+          <ToggleGroup
+            options={[{ id: '2026', label: '2026' }, { id: '2025', label: '2025' }]}
+            value={String(selectedYear)}
+            onChange={v => setSelectedYear(Number(v))}
+          />
+        )}
+        {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} availableYears={selectedYear === 2025 ? [2025] : hasPrevYear ? [2025, 2026] : [2026]} />}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <ToggleGroup options={sourceOpts} value={source} onChange={v => setSource(v as 'all'|'sg'|'d2c')} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, border: `1px solid ${C.border}`, borderRadius: 9, overflow: 'hidden', background: C.white }}>
             <select value={emailMonth} onChange={e => setEmailMonth(Number(e.target.value))} style={{ padding: '8px 10px', border: 'none', fontSize: 13, color: C.navy, fontWeight: 600, background: 'transparent', cursor: 'pointer', outline: 'none' }}>
               {FULL_MONTHS.slice(0, 7).map((m, i) => <option key={i} value={i}>{m}</option>)}
@@ -1013,7 +1024,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <KpiTile label="Families Helped" value={String(totalFamilies)} sub={periodLabel(period, rangeFrom, rangeTo, rangeFromYear, rangeToYear)} />
         <KpiTile label="Total Volume" value={fmtVol(totalVolume)} sub={periodLabel(period, rangeFrom, rangeTo, rangeFromYear, rangeToYear)} />
-        {hasPrevYear && (() => {
+        {hasPrevYearForSelected && (() => {
           const pyFam = prevYearData.reduce((s, m) => s + maFam(m), 0)
           const pyVol = prevYearData.reduce((s, m) => s + maVol(m), 0)
           const famPct = ytyPct(totalFamilies, pyFam)
@@ -1031,11 +1042,11 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       {/* Team charts: volume + families, with prior year overlay if uploaded */}
       <div style={{ display: 'flex', gap: 16 }}>
         <Card style={{ flex: 1 }}>
-          <CardHead title="Monthly Volume" subtitle={hasPrevYear ? 'Current year vs prior year' : 'All team members'} />
+          <CardHead title="Monthly Volume" subtitle={hasPrevYearForSelected ? 'Current year vs prior year' : 'All team members'} />
           <HoverBarChart values={teamVolume} labels={MONTHS} color="#7c3aed" fmt={fmtVol} primaryLabel="This Year" secondValues={prevTeamVolume} secondColor="#a78bfa" secondLabel="Last Year" />
         </Card>
         <Card style={{ flex: 1 }}>
-          <CardHead title="Monthly Families" subtitle={hasPrevYear ? 'Current year vs prior year' : 'All team members'} />
+          <CardHead title="Monthly Families" subtitle={hasPrevYearForSelected ? 'Current year vs prior year' : 'All team members'} />
           <HoverBarChart values={teamFamilies} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="This Year" secondValues={prevTeamFamilies} secondColor="#93c5fd" secondLabel="Last Year" />
         </Card>
       </div>
@@ -1048,11 +1059,11 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>ADVISOR</div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>VOLUME</div>
-            {hasPrevYear && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
+            {hasPrevYearForSelected && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
           </div>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>FAMILIES</div>
-            {hasPrevYear && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
+            {hasPrevYearForSelected && <div style={{ fontSize: 9, color: C.dim, fontWeight: 400, marginTop: 1 }}>{ytyLabel}</div>}
           </div>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textAlign: 'right' }}>MO/MO ({momMonthLabel})</div>
           <div style={{ textAlign: 'right' }}>
@@ -1098,13 +1109,13 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
                 {/* Volume */}
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{fmtVol(vol)}</div>
-                  {hasPrevYear && <div style={{ marginTop: 3 }}><TrendChip pct={ytyV} label="YTY" /></div>}
+                  {hasPrevYearForSelected && <div style={{ marginTop: 3 }}><TrendChip pct={ytyV} label="YTY" /></div>}
                 </div>
 
                 {/* Families */}
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>{fam}</div>
-                  {hasPrevYear && <div style={{ marginTop: 3 }}><TrendChip pct={ytyF} label="YTY" /></div>}
+                  {hasPrevYearForSelected && <div style={{ marginTop: 3 }}><TrendChip pct={ytyF} label="YTY" /></div>}
                 </div>
 
                 {/* MoM */}
