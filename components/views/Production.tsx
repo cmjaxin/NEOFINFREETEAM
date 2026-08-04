@@ -964,7 +964,10 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
     return FEATURED_NAMES.some(f => n.includes(f) || f.includes(n.split(' ')[0]))
   }
 
-  const sorted = [...activeData].sort((a, b) => maVol(b) - maVol(a))
+  const PROD_HIDDEN_NAMES = ['gregory allen', 'greg allen']
+  const isProdHidden = (name: string) => PROD_HIDDEN_NAMES.includes(normName(name))
+
+  const sorted = [...activeData].filter(m => !isProdHidden(m.name)).sort((a, b) => maVol(b) - maVol(a))
   const featuredSorted = sorted.filter(m => isFeatured(m.name))
   const othersSorted = sorted.filter(m => !isFeatured(m.name))
   const maxVolume = Math.max(...sorted.map(m => maVol(m)), 1)
