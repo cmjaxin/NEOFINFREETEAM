@@ -1275,6 +1275,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
   const [rangeFromYear, setRangeFromYear] = useState(2026)
   const [rangeTo, setRangeTo] = useState(6)
   const [rangeToYear, setRangeToYear] = useState(2026)
+  const [appYear, setAppYear] = useState<2026|2025>(2026)
   const [appMetric, setAppMetric] = useState('both')
   const [appSource, setAppSource] = useState<'all'|'sg'|'d2c'>('all')
   const [weekLoading, setWeekLoading] = useState(false)
@@ -1289,14 +1290,15 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
   const [d2cMsg, setD2cMsg] = useState('')
 
   const [fr, to] = periodRange(period, rangeFrom, rangeTo)
-  const branches = groupMAByBranch(maData)
   const hasPrevYear = prevYearData.length > 0
+  const activeAppData = (appYear === 2025 && hasPrevYear) ? prevYearData : maData
+  const branches = groupMAByBranch(activeAppData)
 
   function respaArr(m: MARecord) { return appSource === 'sg' ? m.monthlyRespaAppsSG : appSource === 'd2c' ? m.monthlyRespaAppsD2C : m.monthlyRespaApps }
   function initArr(m: MARecord) { return appSource === 'sg' ? m.monthlyInitialAppsSG : appSource === 'd2c' ? m.monthlyInitialAppsD2C : m.monthlyInitialApps }
 
-  const teamRespa = MONTHS.map((_, i) => maData.reduce((s, m) => s + respaArr(m)[i], 0))
-  const teamInitial = MONTHS.map((_, i) => maData.reduce((s, m) => s + initArr(m)[i], 0))
+  const teamRespa = MONTHS.map((_, i) => activeAppData.reduce((s, m) => s + respaArr(m)[i], 0))
+  const teamInitial = MONTHS.map((_, i) => activeAppData.reduce((s, m) => s + initArr(m)[i], 0))
 
   // Last month with any apps data
   const lastAppsMonth = (() => {
@@ -1385,6 +1387,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
 
   const subViewOpts: ToggleOption[] = [{ id: 'branch', label: 'Leaderboard' }, { id: 'weekly', label: 'Weekly Tracking' }]
   const appSourceOpts: ToggleOption[] = [{ id: 'all', label: 'All' }, { id: 'sg', label: 'Self-Gen' }, { id: 'd2c', label: 'D2C' }]
+  const appYearOpts: ToggleOption[] = [{ id: '2026', label: '2026' }, ...(hasPrevYear ? [{ id: '2025', label: '2025' }] : [])]
 
   const appsSubject = `RESPA files & Initial Apps ${new Date().toLocaleDateString('en-US')}`
   const appsBody = buildAppsEmailBody(maData, weeklyData)
@@ -1393,7 +1396,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
   const APPS_HIDDEN_NAMES = ['jonathan salgado','marco flores','ryan todey','julie jolivet','gregory allen','rory byrne','rory bryne','joshua mettle']
   const isAppsHidden = (m: MARecord) => APPS_HIDDEN_NAMES.some(h => normName(m.name) === h || normName(m.name).includes(h) || h.includes(normName(m.name)))
 
-  const appsSorted = [...maData]
+  const appsSorted = [...activeAppData]
     .filter(m => !isAppsHidden(m) && (sumMonths(respaArr(m), fr, to) + sumMonths(initArr(m), fr, to) > 0 ||
                  m.ytdRespaApps + m.ytdInitialApps > 0))
     .sort((a, b) => {
@@ -1438,6 +1441,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
             {period === 'range' && <RangeSelector from={rangeFrom} fromYear={rangeFromYear} to={rangeTo} toYear={rangeToYear} onChange={(f,fy,t,ty) => { setRangeFrom(f); setRangeFromYear(fy); setRangeTo(t); setRangeToYear(ty) }} availableYears={[2026]} />}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Source:</span>
+              {hasPrevYear && <ToggleGroup options={appYearOpts} value={String(appYear)} onChange={v => setAppYear(Number(v) as 2026|2025)} />}
               <ToggleGroup options={appSourceOpts} value={appSource} onChange={v => setAppSource(v as 'all'|'sg'|'d2c')} />
             </div>
           </div>
