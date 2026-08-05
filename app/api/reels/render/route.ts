@@ -66,25 +66,21 @@ export async function POST(request: NextRequest) {
     const transcriptElement = {
       type: 'transcript',
       track: 2,
-      // Link to all video clips so captions span the full footage
       clip_ids: clips.map((_: any, i: number) => `clip-${i}`),
-      // Style
       text_transform: 'uppercase',
       font_family: 'Inter',
       font_weight: '700',
       font_size: '8 vmin',
-      color: '#ffffff',
+      fill_color: '#ffffff',
       background_color: 'rgba(0,0,0,0.6)',
       background_x_padding: '30%',
       background_y_padding: '20%',
       background_border_radius: '20%',
-      // Position — lower third
       x: '50%',
       y: '82%',
       width: '85%',
       x_alignment: '50%',
       y_alignment: '50%',
-      // 2 words at a time
       word_count: 2,
     }
 
@@ -119,7 +115,7 @@ export async function POST(request: NextRequest) {
         font_family: 'Inter',
         font_weight: '800',
         font_size: '9 vmin',
-        color: '#ffffff',
+        fill_color: '#ffffff',
         x: '50%',
         y: '42%',
         width: '85%',
@@ -134,7 +130,7 @@ export async function POST(request: NextRequest) {
         font_family: 'Inter',
         font_weight: '600',
         font_size: '5.5 vmin',
-        color: '#7eb8f7',
+        fill_color: '#7eb8f7',
         x: '50%',
         y: '51%',
         width: '85%',
@@ -149,7 +145,7 @@ export async function POST(request: NextRequest) {
         font_family: 'Inter',
         font_weight: '400',
         font_size: '4 vmin',
-        color: '#a0b4c8',
+        fill_color: '#a0b4c8',
         line_height: '160%',
         x: '50%',
         y: title ? '63%' : '58%',
@@ -176,7 +172,7 @@ export async function POST(request: NextRequest) {
         font_family: 'Inter',
         font_weight: '400',
         font_size: '2.2 vmin',
-        color: '#4a6070',
+        fill_color: '#4a6070',
         x: '50%',
         y: '93%',
         width: '90%',
@@ -213,7 +209,7 @@ export async function POST(request: NextRequest) {
       ],
     }
 
-    const res = await fetch('https://api.creatomate.com/v1/renders', {
+    const res = await fetch('https://api.creatomate.com/v2/renders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

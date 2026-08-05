@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     const creatomateKey = process.env.CREATOMATE_API_KEY!
-    const res = await fetch(`https://api.creatomate.com/v1/renders/${video.render_job_id}`, {
+    const res = await fetch(`https://api.creatomate.com/v2/renders/${video.render_job_id}`, {
       headers: { 'Authorization': `Bearer ${creatomateKey}` },
     })
     if (!res.ok) throw new Error('Creatomate poll failed: ' + await res.text())
