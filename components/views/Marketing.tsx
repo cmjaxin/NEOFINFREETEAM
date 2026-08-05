@@ -607,8 +607,8 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 12, marginTop: 4 }}>{label}</div>
   )
 
-  const fieldInput = (ft: FieldType) => {
-    if (!usedFields.has(ft)) return null
+  const fieldInput = (ft: FieldType, force = false) => {
+    if (!force && !usedFields.has(ft)) return null
     const meta = FIELD_META[ft]
     if (meta.isCircle || meta.isRect) return null // handled separately
     return (
@@ -802,7 +802,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
             <>
               <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
               {sectionHead('Testimonial')}
-              {(['testimonial_review','testimonial_name'] as FieldType[]).map(ft => fieldInput(ft))}
+              {(['testimonial_review','testimonial_name'] as FieldType[]).map(ft => fieldInput(ft, true))}
             </>
             {usedFields.has('tca_image') && (
               <>
