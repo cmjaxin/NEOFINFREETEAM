@@ -132,22 +132,18 @@ export async function POST(request: NextRequest) {
       cursor += storedDuration - TRIM_START
     }
 
-    // Disclaimer — small text at bottom, last clip only
+    // Disclaimer bar image — pinned to bottom, last clip only
     const disclaimerElement = {
-      type: 'text',
+      type: 'image',
       track: 3,
       time: lastClipStart,
       duration: lastClipDuration,
-      text: DISCLAIMER,
-      font_family: 'Inter',
-      font_weight: '400',
-      font_size: '1.8 vmin',
-      fill_color: 'rgba(255,255,255,0.7)',
+      source: 'https://i.imgur.com/PGyOoFZ.jpeg',
       x: '50%',
-      y: '97%',
-      width: '92%',
+      y: '100%',
+      width: '100%',
       x_alignment: '50%',
-      y_alignment: '50%',
+      y_alignment: '100%',
     }
 
     const renderScript = {
