@@ -3,8 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 
 export const maxDuration = 300
 
-const NEO_LOGO  = 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png'
-const EHL_LOGO  = 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png'
 const DISCLAIMER = 'Equal Housing Lender. Not available in all states. © 2026 NEO Home Loans. All rights reserved.'
 
 function supabase() {
@@ -37,8 +35,6 @@ async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperW
 
 function buildCaptionElements(words: WhisperWord[], timelineOffset: number, chunkSize = 2): any[] {
   const elements: any[] = []
-  // Whisper timestamps are clip-relative; add a small delay to account for
-  // actual file duration being slightly longer than stored duration_seconds
   const CAPTION_DELAY = 0.15
   for (let i = 0; i < words.length; i += chunkSize) {
     const group = words.slice(i, i + chunkSize)
@@ -92,11 +88,6 @@ export async function POST(request: NextRequest) {
       .eq('id', videoId).single()
     if (vErr || !video) return NextResponse.json({ error: 'Video not found' }, { status: 404 })
 
-    const { data: profile } = await sb
-      .from('profiles')
-      .select('full_name, email, title, nmls, phone')
-      .eq('id', video.user_id).single()
-
     const clips: any[] = (video.splice_video_clips ?? []).sort((a: any, b: any) => {
       const sa = a.splice_scenes?.scene_order ?? 0
       const sb2 = b.splice_scenes?.scene_order ?? 0
@@ -104,37 +95,31 @@ export async function POST(request: NextRequest) {
     })
     if (clips.length === 0) return NextResponse.json({ error: 'No clips found' }, { status: 400 })
 
-    const p = profile as any
-    const name  = p?.full_name ?? ''
-    const title = p?.title ?? ''
-    const nmls  = p?.nmls ? `NMLS# ${p.nmls}` : ''
-    const phone = p?.phone ?? ''
-    const email = p?.email ?? ''
-
-    // Build video elements + transcribe each clip for captions
+    const TRIM_START = 0.2
     let cursor = 0
+    let lastClipStart = 0
+    let lastClipDuration = 5
     const videoElements: any[] = []
     const captionElements: any[] = []
 
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
-      const trimStart = 0.2
-      // Use stored duration as caption offset estimate only — don't pass to Creatomate
-      // so it uses the actual file duration (prevents early cuts from inaccurate stored values)
       const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
+
+      if (i === clips.length - 1) {
+        lastClipStart = cursor
+        lastClipDuration = storedDuration - TRIM_START
+      }
 
       videoElements.push({
         type: 'video',
         track: 1,
-        // No explicit time or duration — Creatomate auto-sequences clips on the
-        // same track using actual file duration, eliminating early-cut issues
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
-        trim_start: trimStart,
+        trim_start: TRIM_START,
       })
 
-      // Transcribe for captions — use stored duration as timeline offset estimate
       if (openAiKey && clip.clip_url) {
         try {
           const words = await transcribeClip(clip.clip_url, openAiKey)
@@ -144,95 +129,26 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      cursor += storedDuration - trimStart
+      cursor += storedDuration - TRIM_START
     }
 
-    // End card — navy bg via fill_color on the composition
-    const endCardElements: any[] = [
-      // NEO logo — top
-      {
-        type: 'image',
-        track: 1,
-        source: NEO_LOGO,
-        width: '62%',
-        x: '50%',
-        y: '13%',
-        x_alignment: '50%',
-        y_alignment: '50%',
-      },
-      // Name
-      {
-        type: 'text',
-        track: 2,
-        text: name,
-        font_family: 'Inter',
-        font_weight: '800',
-        font_size: '9 vmin',
-        fill_color: '#ffffff',
-        x: '50%',
-        y: '42%',
-        width: '85%',
-        x_alignment: '50%',
-        y_alignment: '50%',
-      },
-      // Title
-      ...(title ? [{
-        type: 'text',
-        track: 3,
-        text: title,
-        font_family: 'Inter',
-        font_weight: '600',
-        font_size: '5.5 vmin',
-        fill_color: '#7eb8f7',
-        x: '50%',
-        y: '51%',
-        width: '85%',
-        x_alignment: '50%',
-        y_alignment: '50%',
-      }] : []),
-      // NMLS + phone + email stacked
-      ...(nmls || phone || email ? [{
-        type: 'text',
-        track: 4,
-        text: [nmls, phone, email].filter(Boolean).join('\n'),
-        font_family: 'Inter',
-        font_weight: '400',
-        font_size: '4 vmin',
-        fill_color: '#a0b4c8',
-        line_height: '160%',
-        x: '50%',
-        y: title ? '63%' : '57%',
-        width: '85%',
-        x_alignment: '50%',
-        y_alignment: '50%',
-      }] : []),
-      // EHL logo
-      {
-        type: 'image',
-        track: 5,
-        source: EHL_LOGO,
-        width: '28%',
-        x: '50%',
-        y: '82%',
-        x_alignment: '50%',
-        y_alignment: '50%',
-      },
-      // Disclaimer
-      {
-        type: 'text',
-        track: 6,
-        text: DISCLAIMER,
-        font_family: 'Inter',
-        font_weight: '400',
-        font_size: '2.2 vmin',
-        fill_color: '#4a6070',
-        x: '50%',
-        y: '93%',
-        width: '90%',
-        x_alignment: '50%',
-        y_alignment: '50%',
-      },
-    ]
+    // Disclaimer — small text at bottom, last clip only
+    const disclaimerElement = {
+      type: 'text',
+      track: 3,
+      time: lastClipStart,
+      duration: lastClipDuration,
+      text: DISCLAIMER,
+      font_family: 'Inter',
+      font_weight: '400',
+      font_size: '1.8 vmin',
+      fill_color: 'rgba(255,255,255,0.7)',
+      x: '50%',
+      y: '97%',
+      width: '92%',
+      x_alignment: '50%',
+      y_alignment: '50%',
+    }
 
     const renderScript = {
       output_format: 'mp4',
@@ -246,6 +162,7 @@ export async function POST(request: NextRequest) {
           elements: [
             ...videoElements,
             ...captionElements,
+            disclaimerElement,
           ],
         },
       ],
