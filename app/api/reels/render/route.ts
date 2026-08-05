@@ -116,21 +116,22 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const trimStart = 0.2
-      const rawDuration = Math.max(0.5, clip.duration_seconds ?? 5)
-      const duration = rawDuration - trimStart
+      // Use stored duration as caption offset estimate only — don't pass to Creatomate
+      // so it uses the actual file duration (prevents early cuts from inaccurate stored values)
+      const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
 
       videoElements.push({
         type: 'video',
         track: 1,
-        time: cursor,
-        duration,
+        // No explicit time or duration — Creatomate auto-sequences clips on the
+        // same track using actual file duration, eliminating early-cut issues
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
         trim_start: trimStart,
       })
 
-      // Transcribe for captions
+      // Transcribe for captions — use stored duration as timeline offset estimate
       if (openAiKey && clip.clip_url) {
         try {
           const words = await transcribeClip(clip.clip_url, openAiKey)
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      cursor += duration
+      cursor += storedDuration - trimStart
     }
 
     // End card — navy bg via fill_color on the composition
