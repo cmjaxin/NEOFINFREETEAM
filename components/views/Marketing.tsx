@@ -393,10 +393,10 @@ function PartnersTab({ supabase, ownerEmail }: { supabase: any; ownerEmail: stri
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('marketing_partners').select('*').order('name')
+    const { data } = await supabase.from('marketing_partners').select('*').eq('owner_email', ownerEmail).order('name')
     setPartners(data ?? [])
     setLoading(false)
-  }, [supabase])
+  }, [supabase, ownerEmail])
 
   useEffect(() => { load() }, [load])
 
@@ -1612,9 +1612,11 @@ export default function Marketing() {
   }, [supabase])
 
   const loadPartners = useCallback(async () => {
-    const { data } = await supabase.from('marketing_partners').select('*').order('name')
+    const email = profile?.email ?? ''
+    if (!email) return
+    const { data } = await supabase.from('marketing_partners').select('*').eq('owner_email', email).order('name')
     setPartners(data ?? [])
-  }, [supabase])
+  }, [supabase, profile?.email])
 
   useEffect(() => { loadTemplates(); loadPartners() }, [loadTemplates, loadPartners])
 
