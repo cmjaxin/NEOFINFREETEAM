@@ -814,6 +814,7 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
   const visible = templates
     .filter(t => activeCategory === 'all' || t.category === activeCategory)
     .filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (a.category === 'pre_approval' ? 0 : 1) - (b.category === 'pre_approval' ? 0 : 1))
 
   async function moveCategory(id: string, cat: Category) {
     await supabase.from('marketing_templates').update({ category: cat }).eq('id', id)
