@@ -410,6 +410,7 @@ function ScriptsView({ scripts, members, onRefresh, onRecord }: { scripts: Splic
 
   async function del(id: string) {
     if (!confirm('Delete this script? This cannot be undone.')) return
+    setShowForm(false)
     const res = await fetch('/api/reels/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'script', id }) })
     if (!res.ok) { alert('Delete failed — please try again'); return }
     onRefresh()
@@ -1019,7 +1020,15 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
   }
 
   function discardClip() {
+    // Revoke pending clip URL
     if (pendingClip) { URL.revokeObjectURL(pendingClip.url); setPendingClip(null) }
+    // Also clear any previously kept clips for this scene so retake starts fresh
+    setAllClips(prev => {
+      const n = [...prev]
+      ;(n[sceneIdx] ?? []).forEach(c => URL.revokeObjectURL(c.url))
+      n[sceneIdx] = []
+      return n
+    })
     resetTeleprompter()
     if (streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current
