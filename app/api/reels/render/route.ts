@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await sb
       .from('profiles')
-      .select('full_name, email')
+      .select('full_name, email, title, nmls, phone')
       .eq('id', video.user_id)
       .single()
 
@@ -152,47 +152,51 @@ export async function POST(request: NextRequest) {
 
     // End card (5 s)
     const endCardStart = totalDuration
-    const endCardDuration = 5
-    const displayName = (profile as any)?.full_name ?? ''
-    const displayEmail = (profile as any)?.email ?? ''
+    const endCardDuration = 6
+    const p = profile as any
+    const displayName  = p?.full_name ?? ''
+    const displayTitle = p?.title ?? ''
+    const displayNmls  = p?.nmls  ? `NMLS# ${p.nmls}` : ''
+    const displayPhone = p?.phone ?? ''
+    const displayEmail = p?.email ?? ''
 
-    const endCardBg = {
-      asset: {
-        type: 'html',
-        html: '<div style="width:1080px;height:1920px;background:#000a15"></div>',
-        width: 1080,
-        height: 1920,
-      },
+    // NEO logo hosted on the deployed app
+    const appBase = process.env.NEXT_PUBLIC_APP_URL
+      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://finfree-team-hq.vercel.app')
+    const neoLogoUrl = `${appBase}/neo-logo.png`
+
+    const DISCLAIMER = '© 2026 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+
+    // Single HTML end card — full layout in one asset
+    const endCardHtml = `
+<div style="width:1080px;height:1920px;background:#060e1f;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:120px 80px 80px;box-sizing:border-box">
+  <!-- Logo -->
+  <div style="display:flex;align-items:center;justify-content:center">
+    <img src="${neoLogoUrl}" style="width:320px;height:auto;filter:brightness(0) invert(1)" />
+  </div>
+
+  <!-- Advisor info -->
+  <div style="text-align:center">
+    <p style="font-family:Montserrat,Arial,sans-serif;font-size:62px;font-weight:900;color:#ffffff;margin:0 0 16px">${displayName}</p>
+    ${displayTitle ? `<p style="font-family:Montserrat,Arial,sans-serif;font-size:34px;font-weight:600;color:#7eb8f7;margin:0 0 28px">${displayTitle}</p>` : ''}
+    <div style="display:flex;flex-direction:column;gap:14px;align-items:center">
+      ${displayNmls  ? `<p style="font-family:Montserrat,Arial,sans-serif;font-size:28px;color:#ccddee;margin:0">${displayNmls}</p>`  : ''}
+      ${displayPhone ? `<p style="font-family:Montserrat,Arial,sans-serif;font-size:28px;color:#ccddee;margin:0">${displayPhone}</p>` : ''}
+      ${displayEmail ? `<p style="font-family:Montserrat,Arial,sans-serif;font-size:28px;color:#ccddee;margin:0">${displayEmail}</p>` : ''}
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div style="border-top:1px solid rgba(255,255,255,0.15);padding-top:32px;width:100%">
+    <p style="font-family:Montserrat,Arial,sans-serif;font-size:18px;color:rgba(255,255,255,0.45);line-height:1.55;text-align:center;margin:0">${DISCLAIMER}</p>
+  </div>
+</div>`
+
+    const endCard = {
+      asset: { type: 'html', html: endCardHtml, width: 1080, height: 1920 },
       start: endCardStart,
       length: endCardDuration,
       position: 'center',
-    }
-
-    const endCardName = {
-      asset: {
-        type: 'html',
-        html: `<div style="text-align:center;width:900px"><p style="font-family:Montserrat,Arial,sans-serif;font-size:56px;font-weight:900;color:#ffffff;margin:0">${displayName}</p></div>`,
-        width: 900,
-        height: 120,
-      },
-      start: endCardStart,
-      length: endCardDuration,
-      position: 'center',
-      offset: { x: 0, y: 0.08 },
-      transition: { in: 'fade' },
-    }
-
-    const endCardEmail = {
-      asset: {
-        type: 'html',
-        html: `<div style="text-align:center;width:900px"><p style="font-family:Montserrat,Arial,sans-serif;font-size:32px;color:#aaaaaa;margin:0">${displayEmail}</p></div>`,
-        width: 900,
-        height: 80,
-      },
-      start: endCardStart,
-      length: endCardDuration,
-      position: 'center',
-      offset: { x: 0, y: -0.04 },
       transition: { in: 'fade' },
     }
 
@@ -201,8 +205,7 @@ export async function POST(request: NextRequest) {
     if (allCaptionChunks.length > 0) {
       tracks.push({ clips: allCaptionChunks.map(captionClip) })
     }
-    tracks.push({ clips: [endCardName, endCardEmail] })
-    tracks.push({ clips: [endCardBg] })
+    tracks.push({ clips: [endCard] })
     tracks.push({ clips: videoClips })
 
     const timeline = {
