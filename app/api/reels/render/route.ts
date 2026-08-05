@@ -16,14 +16,12 @@ interface CaptionChunk { text: string; start: number; end: number }
 async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperWord[]> {
   const videoRes = await fetch(clipUrl)
   if (!videoRes.ok) throw new Error(`Failed to fetch clip: ${clipUrl}`)
-  const videoBuffer = await videoRes.arrayBuffer()
-
+  const buf = await videoRes.arrayBuffer()
   const form = new FormData()
-  form.append('file', new Blob([videoBuffer], { type: 'video/webm' }), 'clip.webm')
+  form.append('file', new Blob([buf], { type: 'video/webm' }), 'clip.webm')
   form.append('model', 'whisper-1')
   form.append('response_format', 'verbose_json')
   form.append('timestamp_granularities[]', 'word')
-
   const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -34,77 +32,92 @@ async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperW
   return (data.words ?? []) as WhisperWord[]
 }
 
-// Group into 3-word chunks — easier to read on vertical video
 function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkSize = 3): CaptionChunk[] {
   const chunks: CaptionChunk[] = []
   for (let i = 0; i < words.length; i += chunkSize) {
     const group = words.slice(i, i + chunkSize)
     if (!group.length) continue
     const nextStart = words[i + chunkSize]?.start
-    const chunkEnd = nextStart != null
+    const end = nextStart != null
       ? timelineOffset + nextStart - 0.05
       : timelineOffset + group[group.length - 1].end + 0.25
     chunks.push({
       text: group.map(w => w.word).join(' ').trim(),
       start: timelineOffset + group[0].start,
-      end: Math.max(timelineOffset + group[0].start + 0.4, chunkEnd),
+      end: Math.max(timelineOffset + group[0].start + 0.4, end),
     })
   }
   return chunks
 }
 
-// Bold white caption with dark background pill — TikTok style
 function captionClip(chunk: CaptionChunk) {
-  const duration = Math.max(0.4, chunk.end - chunk.start)
-  const text = chunk.text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+  const text = chunk.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   return {
     asset: {
       type: 'html',
-      html: `<div style="display:inline-block;background:rgba(0,0,0,0.75);border-radius:20px;padding:20px 40px;max-width:940px;text-align:center"><span style="font-family:Arial,Helvetica,sans-serif;font-size:72px;font-weight:900;color:#ffffff;line-height:1.2">${text}</span></div>`,
-      width: 1000,
-      height: 300,
+      html: `<div style="background:rgba(0,0,0,0.72);border-radius:14px;padding:16px 28px;display:inline-block"><span style="font-family:Arial,Helvetica,sans-serif;font-size:54px;font-weight:900;color:#fff;line-height:1.2">${text}</span></div>`,
+      width: 680,
+      height: 220,
     },
     start: chunk.start,
-    length: duration,
+    length: Math.max(0.4, chunk.end - chunk.start),
     position: 'bottom',
-    offset: { x: 0, y: 0.14 },
+    offset: { x: 0, y: 0.15 },
   }
 }
 
+// End card — separate Shotstack clips so images load via native asset renderer
 const NEO_LOGO = 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png'
-const EHL_LOGO = 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png'
-const DISCLAIMER = '&copy; 2026 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+const EHL_LOGO  = 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png'
+const DISCLAIMER = '© 2026 Better Home & Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
 
-function buildEndCard(name: string, title: string, nmls: string, phone: string, email: string, start: number, duration: number) {
-  const infoRows = [nmls, phone, email].filter(Boolean)
-    .map(v => `<p style="font-family:Arial,Helvetica,sans-serif;font-size:30px;color:#b8cfe8;margin:0;padding:6px 0">${v}</p>`)
+function endCardClips(
+  name: string, title: string, nmls: string, phone: string, email: string,
+  start: number, dur: number,
+) {
+  const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const infoLines = [nmls, phone, email].filter(Boolean)
+    .map(v => `<p style="font-family:Arial,Helvetica,sans-serif;font-size:26px;color:#b8cfe8;margin:0;padding:5px 0">${e(v)}</p>`)
     .join('')
 
-  const html = `<div style="width:1080px;height:1920px;background:#060e1f;box-sizing:border-box;padding:110px 80px 70px;display:flex;flex-direction:column;align-items:center;justify-content:space-between">
-  <img src="${NEO_LOGO}" width="320" style="display:block" />
-  <div style="text-align:center">
-    <p style="font-family:Arial,Helvetica,sans-serif;font-size:64px;font-weight:900;color:#ffffff;margin:0 0 14px">${name}</p>
-    ${title ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:34px;font-weight:600;color:#7eb8f7;margin:0 0 24px">${title}</p>` : ''}
-    ${infoRows}
-  </div>
-  <div style="width:100%">
-    <div style="border-top:1px solid rgba(255,255,255,0.18);padding-top:28px;margin-bottom:22px">
-      <p style="font-family:Arial,Helvetica,sans-serif;font-size:17px;color:rgba(255,255,255,0.42);line-height:1.6;text-align:center;margin:0">${DISCLAIMER}</p>
-    </div>
-    <div style="text-align:center"><img src="${EHL_LOGO}" width="64" style="opacity:0.55;display:inline-block" /></div>
-  </div>
-</div>`
+  const nameHtml = `<div style="text-align:center;width:660px">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:54px;font-weight:900;color:#ffffff;margin:0 0 10px">${e(name)}</p>
+    ${title ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:700;color:#7eb8f7;margin:0 0 18px">${e(title)}</p>` : ''}
+    ${infoLines}
+  </div>`
 
-  return {
-    asset: { type: 'html', html, width: 1080, height: 1920 },
-    start,
-    length: duration,
-    position: 'center',
-    transition: { in: 'fade' },
-  }
+  const disclaimerHtml = `<div style="text-align:center;width:660px;border-top:1px solid rgba(255,255,255,0.2);padding-top:14px">
+    <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:rgba(255,255,255,0.4);line-height:1.55;margin:0">${e(DISCLAIMER)}</p>
+  </div>`
+
+  const fade = { in: 'fade' }
+  return [
+    // Navy background
+    {
+      asset: { type: 'html', html: '<div style="width:720px;height:1280px;background:#060e1f"></div>', width: 720, height: 1280 },
+      start, length: dur, position: 'center', transition: fade,
+    },
+    // NEO logo — native image asset (no HTML img tag, loads reliably)
+    {
+      asset: { type: 'image', src: NEO_LOGO },
+      start, length: dur, position: 'top', offset: { x: 0, y: -0.35 }, scale: 0.42, transition: fade,
+    },
+    // Name / title / contact
+    {
+      asset: { type: 'html', html: nameHtml, width: 660, height: 340 },
+      start, length: dur, position: 'center', offset: { x: 0, y: 0.01 }, transition: fade,
+    },
+    // Disclaimer
+    {
+      asset: { type: 'html', html: disclaimerHtml, width: 660, height: 220 },
+      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.13 }, transition: fade,
+    },
+    // Equal Housing logo — native image asset
+    {
+      asset: { type: 'image', src: EHL_LOGO },
+      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.055 }, scale: 0.055, transition: fade,
+    },
+  ]
 }
 
 export async function POST(request: NextRequest) {
@@ -115,34 +128,27 @@ export async function POST(request: NextRequest) {
     if (!videoId) return NextResponse.json({ error: 'videoId required' }, { status: 400 })
 
     const sb = supabase()
-
     const { data: video, error: vErr } = await sb
       .from('splice_videos')
       .select('*, splice_video_clips(*, splice_scenes(scene_order))')
-      .eq('id', videoId)
-      .single()
+      .eq('id', videoId).single()
     if (vErr || !video) return NextResponse.json({ error: 'Video not found' }, { status: 404 })
 
     const { data: profile } = await sb
       .from('profiles')
       .select('full_name, email, title, nmls, phone')
-      .eq('id', video.user_id)
-      .single()
+      .eq('id', video.user_id).single()
 
     const shotStackApiKey = process.env.SHOTSTACK_API_KEY
-    // Default to production — stage watermarks videos
     const shotStackUrl = process.env.SHOTSTACK_API_URL ?? 'https://api.shotstack.io/v1/render'
     const openAiKey = process.env.OPENAI_API_KEY
+    if (!shotStackApiKey) return NextResponse.json({ error: 'SHOTSTACK_API_KEY not set' }, { status: 500 })
 
-    if (!shotStackApiKey) return NextResponse.json({ error: 'SHOTSTACK_API_KEY not configured' }, { status: 500 })
-
-    // Sort clips: scene_order, then clip_order
     const clips: any[] = (video.splice_video_clips ?? []).sort((a: any, b: any) => {
       const sa = a.splice_scenes?.scene_order ?? 0
       const sb2 = b.splice_scenes?.scene_order ?? 0
       return sa !== sb2 ? sa - sb2 : (a.clip_order ?? 0) - (b.clip_order ?? 0)
     })
-
     if (clips.length === 0) return NextResponse.json({ error: 'No clips found' }, { status: 400 })
 
     let cursor = 0
@@ -150,52 +156,59 @@ export async function POST(request: NextRequest) {
     const allCaptionChunks: CaptionChunk[] = []
 
     for (const clip of clips) {
-      const duration = Math.max(1, clip.duration_seconds ?? 5)
+      const rawDuration = Math.max(1, clip.duration_seconds ?? 5)
+      let words: WhisperWord[] = []
 
-      // NO trim — WebM files from MediaRecorder have no seek index so trim causes black video
-      // fit: cover fills the 9:16 frame; no scale override
+      if (openAiKey && clip.clip_url) {
+        try { words = await transcribeClip(clip.clip_url, openAiKey) }
+        catch (err) { console.warn('Transcription failed, skipping:', err) }
+      }
+
+      // Use speech timestamps for tight cuts — trim silence before first word and after last word
+      // Small padding so first/last syllable isn't clipped
+      const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.15) : 0
+      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.2) : rawDuration
+      const usedLength  = Math.max(0.5, speechEnd - speechStart)
+
       videoClips.push({
-        asset: {
-          type: 'video',
-          src: clip.clip_url,
-          volume: 1,
-        },
+        asset: { type: 'video', src: clip.clip_url, volume: 1, trim: speechStart },
         start: cursor,
-        length: duration,
+        length: usedLength,
         fit: 'cover',
       })
 
-      if (openAiKey && clip.clip_url) {
-        try {
-          const words = await transcribeClip(clip.clip_url, openAiKey)
-          allCaptionChunks.push(...groupWordsToChunks(words, cursor))
-        } catch (err) {
-          console.warn('Transcription failed for clip, skipping:', err)
-        }
+      // Caption chunks: word timestamps are relative to clip start; adjust for trim and timeline position
+      if (words.length > 0) {
+        const adjusted = words
+          .map(w => ({ ...w, start: w.start - speechStart, end: w.end - speechStart }))
+          .filter(w => w.end > 0 && w.start < usedLength)
+        allCaptionChunks.push(...groupWordsToChunks(adjusted, cursor))
       }
 
-      cursor += duration
+      cursor += usedLength
     }
 
     const endCardStart = cursor
-    const endCardDuration = 7
-
+    const endCardDur   = 7
     const p = profile as any
-    const endCard = buildEndCard(
-      p?.full_name ?? '',
-      p?.title ?? '',
-      p?.nmls ? `NMLS# ${p.nmls}` : '',
-      p?.phone ?? '',
-      p?.email ?? '',
-      endCardStart,
-      endCardDuration,
+    const ecClips = endCardClips(
+      p?.full_name ?? '', p?.title ?? '',
+      p?.nmls ? `NMLS# ${p.nmls}` : '', p?.phone ?? '', p?.email ?? '',
+      endCardStart, endCardDur,
     )
 
-    // Track order: top = first in array
+    // Tracks: top layer first
+    // End card has 5 clips across multiple layers — put them all in one track (Shotstack handles z-order by track index)
     const tracks: any[] = []
     if (allCaptionChunks.length > 0) tracks.push({ clips: allCaptionChunks.map(captionClip) })
-    tracks.push({ clips: [endCard] })
-    tracks.push({ clips: videoClips })
+
+    // End card layers (each in its own track so z-order is correct: logo over bg, text over bg)
+    const [ecBg, ecLogo, ecName, ecDisclaimer, ecEHL] = ecClips
+    tracks.push({ clips: [ecLogo] })
+    tracks.push({ clips: [ecName] })
+    tracks.push({ clips: [ecDisclaimer] })
+    tracks.push({ clips: [ecEHL] })
+    tracks.push({ clips: [ecBg, ...videoClips] })
 
     const timeline = { background: '#000000', tracks }
 
@@ -212,7 +225,6 @@ export async function POST(request: NextRequest) {
 
     const shotData = await shotRes.json()
     const renderId = shotData.response?.id
-
     await sb.from('splice_videos').update({ status: 'rendering', render_job_id: renderId }).eq('id', videoId)
 
     return NextResponse.json({ renderId, videoId, clipCount: clips.length, totalDuration: cursor, captionChunks: allCaptionChunks.length })
