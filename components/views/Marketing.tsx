@@ -31,6 +31,7 @@ type FieldType =
   | 'property_image' | 'property_image_2' | 'property_image_3' | 'property_image_4'
   | 'open_house_date' | 'open_house_time'
   | 'pa_regarding' | 'pa_date' | 'pa_loan_type' | 'pa_purchase_price' | 'pa_down_payment' | 'pa_loan_amount' | 'pa_occupancy' | 'pa_address'
+  | 'testimonial_review' | 'testimonial_name'
 
 interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
 
@@ -70,6 +71,8 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   pa_down_payment:      { label: 'Down Payment',      color: '#0891B2', placeholder: '$110,000' },
   pa_loan_amount:       { label: 'Loan Amount',       color: '#B45309', placeholder: '$440,000' },
   pa_occupancy:         { label: 'Occupancy Type',    color: '#BE185D', placeholder: 'Primary Residence' },
+  testimonial_review:   { label: 'Review',            color: '#D97706', placeholder: '"Working with this team was an incredible experience. They made the entire process seamless and stress-free from start to finish."', isMultiline: true },
+  testimonial_name:     { label: 'Client Name',       color: '#92400E', placeholder: '— John & Jane Smith, Austin TX' },
 }
 
 const FIELD_GROUPS: Record<string, FieldType[]> = {
@@ -77,6 +80,7 @@ const FIELD_GROUPS: Record<string, FieldType[]> = {
   'Partner':  ['partner_name', 'partner_title', 'partner_company', 'partner_phone', 'partner_email', 'partner_headshot', 'partner_logo'],
   'Property': ['property_address', 'property_price', 'property_beds', 'property_baths', 'property_sqft', 'property_extras', 'property_header', 'property_description', 'property_image', 'property_image_2', 'property_image_3', 'property_image_4', 'open_house_date', 'open_house_time'],
   'Pre-Approval': ['pa_regarding', 'pa_date', 'pa_address', 'pa_loan_type', 'pa_purchase_price', 'pa_down_payment', 'pa_loan_amount', 'pa_occupancy'],
+  'Testimonial': ['testimonial_review', 'testimonial_name'],
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -250,6 +254,7 @@ function initValues(profile: { full_name: string; title: string; email: string; 
     property_header: '', property_description: '',
     property_image: '', property_image_2: '', property_image_3: '', property_image_4: '', open_house_date: '', open_house_time: '',
     pa_regarding: '', pa_date: '', pa_address: '', pa_loan_type: '', pa_purchase_price: '', pa_down_payment: '', pa_loan_amount: '', pa_occupancy: '',
+    testimonial_review: '', testimonial_name: '',
   }
 }
 
@@ -516,6 +521,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const hasPartnerFields = ['partner_name','partner_title','partner_company','partner_phone','partner_email','partner_headshot','partner_logo'].some(t => usedFields.has(t as FieldType))
   const hasPropertyFields = ['property_address','property_price','property_beds','property_baths','property_sqft','property_extras','property_header','property_description','property_image','property_image_2','property_image_3','property_image_4','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
   const hasPreApprovalFields = ['pa_regarding','pa_date','pa_address','pa_loan_type','pa_purchase_price','pa_down_payment','pa_loan_amount','pa_occupancy'].some(t => usedFields.has(t as FieldType))
+  const hasTestimonialFields = ['testimonial_review','testimonial_name'].some(t => usedFields.has(t as FieldType))
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -773,6 +779,13 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('Pre-Approval')}
                 {(['pa_regarding','pa_date','pa_address','pa_loan_type','pa_purchase_price','pa_down_payment','pa_loan_amount','pa_occupancy'] as FieldType[]).map(ft => fieldInput(ft))}
+              </>
+            )}
+            {hasTestimonialFields && (
+              <>
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
+                {sectionHead('Testimonial')}
+                {(['testimonial_review','testimonial_name'] as FieldType[]).map(ft => fieldInput(ft))}
               </>
             )}
           </div>
