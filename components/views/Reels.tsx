@@ -921,8 +921,10 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
 
   async function submitAll() {
     if (!selectedScript || !profile) return
-    setSubmitStatus('Creating video record…')
+    setSubmitStatus('Preparing storage…')
     try {
+      await fetch('/api/reels/ensure-bucket', { method: 'POST' })
+      setSubmitStatus('Creating video record…')
       const { data: video, error: vErr } = await supabase.from('splice_videos').insert({ script_id: selectedScript.id, user_id: profile.id, status: 'uploading' }).select().single()
       if (vErr || !video) throw vErr ?? new Error('Failed to create video')
       let totalClips = 0
@@ -1197,14 +1199,36 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
               {/* Clip review */}
               {sceneSubStep === 'review-clip' && pendingClip ? (
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', marginBottom: 10 }}>
-                    Review clip #{currentClips.length + 1} — {SCENE[currentScene?.kind]?.label}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.05em', color: SCENE[currentScene?.kind]?.color ?? '#fff' }}>{SCENE[currentScene?.kind]?.label?.toUpperCase()} — CLIP {currentClips.length + 1}</span>
+                    <span style={{ fontSize: 11, color: '#666' }}>{pendingClip.duration ? `${pendingClip.duration}s` : ''}</span>
                   </div>
-                  <video src={pendingClip.url} controls style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: 380, display: 'block' }} />
-                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-                    <button onClick={discardClip} style={{ flex: 1, padding: '11px 0', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', background: 'rgba(239,68,68,0.08)', color: '#FCA5A5' }}>Discard</button>
-                    <button onClick={keepClip} style={{ flex: 2, padding: '11px 0', background: '#34D399', color: '#000a15', border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>✓ Keep this clip</button>
+                  <video
+                    src={pendingClip.url}
+                    autoPlay
+                    playsInline
+                    controls
+                    style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: isMobile ? 340 : 400, display: 'block' }}
+                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginTop: 12 }}>
+                    <button
+                      onClick={discardClip}
+                      style={{ padding: '13px 0', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', background: 'transparent', color: '#EF4444' }}
+                    >
+                      Retake
+                    </button>
+                    <button
+                      onClick={keepClip}
+                      style={{ padding: '13px 0', background: '#34D399', color: '#000a15', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 900, cursor: 'pointer' }}
+                    >
+                      Keep Clip
+                    </button>
                   </div>
+                  {currentClips.length > 0 && (
+                    <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12, color: '#666' }}>
+                      {currentClips.length} clip{currentClips.length !== 1 ? 's' : ''} already kept for this scene
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -1311,26 +1335,26 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
                     </div>
                   )}
 
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {sceneSubStep === 'ready' && currentClips.length > 0 && (
-                      <button onClick={advanceScene} style={{ flex: 1, padding: '12px 0', background: 'rgba(52,211,153,0.12)', color: '#34D399', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-                        {sceneIdx < scenes.length - 1 ? `Done — Next Scene →` : '✓ Submit Video'}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* Primary action: record (or stop) */}
+                    {sceneSubStep === 'ready' && (
+                      <button onClick={startCountdown} style={{ width: '100%', padding: '14px 0', background: '#EF4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <span style={{ width: 10, height: 10, background: '#fff', borderRadius: '50%', display: 'inline-block' }} />
+                        {currentClips.length === 0 ? 'Start Recording' : 'Record Another Take'}
                       </button>
                     )}
-                    <div style={{ flex: sceneSubStep === 'ready' && currentClips.length > 0 ? '0 0 auto' : 1, display: 'flex', justifyContent: 'center' }}>
-                      {sceneSubStep === 'ready' && (
-                        <button onClick={startCountdown} style={{ padding: '13px 36px', background: '#EF4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, whiteSpace: 'nowrap' }}>
-                          <span style={{ width: 10, height: 10, background: '#fff', borderRadius: '50%', display: 'inline-block' }} />
-                          {currentClips.length === 0 ? 'Start Recording' : 'Record Another Clip'}
-                        </button>
-                      )}
-                      {(sceneSubStep === 'countdown' || sceneSubStep === 'recording') && (
-                        <button onClick={stopRecording} disabled={sceneSubStep === 'countdown'} style={{ padding: '13px 36px', background: sceneSubStep === 'countdown' ? 'rgba(255,255,255,0.06)' : '#1C3248', color: '#ffffff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: sceneSubStep === 'countdown' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <span style={{ width: 10, height: 10, background: '#EF4444', borderRadius: 2, display: 'inline-block' }} />
-                          {sceneSubStep === 'countdown' ? 'Get ready…' : 'Stop Recording'}
-                        </button>
-                      )}
-                    </div>
+                    {(sceneSubStep === 'countdown' || sceneSubStep === 'recording') && (
+                      <button onClick={stopRecording} disabled={sceneSubStep === 'countdown'} style={{ width: '100%', padding: '14px 0', background: sceneSubStep === 'countdown' ? 'rgba(255,255,255,0.06)' : '#1C3248', color: '#ffffff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 800, cursor: sceneSubStep === 'countdown' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <span style={{ width: 10, height: 10, background: '#EF4444', borderRadius: 2, display: 'inline-block' }} />
+                        {sceneSubStep === 'countdown' ? 'Get ready…' : 'Stop Recording'}
+                      </button>
+                    )}
+                    {/* Secondary: advance only after at least one clip kept */}
+                    {sceneSubStep === 'ready' && currentClips.length > 0 && (
+                      <button onClick={advanceScene} style={{ width: '100%', padding: '13px 0', background: 'linear-gradient(135deg,rgba(45,174,255,0.15),rgba(122,51,245,0.15))', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                        {sceneIdx < scenes.length - 1 ? `Next Scene (${sceneIdx + 2}/${scenes.length}) →` : '✓ Done — Submit Video'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
