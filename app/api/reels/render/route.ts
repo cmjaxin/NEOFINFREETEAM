@@ -3,15 +3,6 @@ import { createClient } from '@supabase/supabase-js'
 
 export const maxDuration = 300
 
-const DISCLAIMER_IMG_URL = 'https://i.imgur.com/PGyOoFZ.jpeg'
-
-async function getDisclaimerBarBase64(): Promise<string> {
-  const res = await fetch(DISCLAIMER_IMG_URL)
-  if (!res.ok) throw new Error('Failed to fetch disclaimer image')
-  const buf = await res.arrayBuffer()
-  const b64 = Buffer.from(buf).toString('base64')
-  return `data:image/jpeg;base64,${b64}`
-}
 
 function supabase() {
   return createClient(
@@ -140,21 +131,9 @@ export async function POST(request: NextRequest) {
       cursor += storedDuration - TRIM_START
     }
 
-    // Disclaimer bar image — pinned to bottom, last clip only
-    // Fetch and base64-encode to avoid Imgur hotlink blocking
-    const disclaimerSrc = await getDisclaimerBarBase64()
-    const disclaimerElement = {
-      type: 'image',
-      track: 3,
-      time: lastClipStart,
-      duration: lastClipDuration,
-      source: disclaimerSrc,
-      x: '50%',
-      y: '100%',
-      width: '100%',
-      x_alignment: '50%',
-      y_alignment: '100%',
-    }
+    // Disclaimer image temporarily removed — needs to be hosted in Supabase storage
+    // TODO: upload disclaimer bar to splice-clips/assets/ and add URL here
+    const disclaimerElement = null
 
     const renderScript = {
       output_format: 'mp4',
@@ -168,7 +147,7 @@ export async function POST(request: NextRequest) {
           elements: [
             ...videoElements,
             ...captionElements,
-            disclaimerElement,
+            ...(disclaimerElement ? [disclaimerElement] : []),
           ],
         },
       ],
