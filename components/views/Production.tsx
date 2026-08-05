@@ -1269,7 +1269,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
   const [leads, setLeads]   = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
-  const visible = maData.filter(m => !CONV_HIDDEN.includes(normName(m.name)))
+  const visible = maData.filter(m => !CONV_HIDDEN.some(h => normName(m.name).includes(h) || h.includes(normName(m.name))))
 
   useEffect(() => {
     if (!visible.length) return
