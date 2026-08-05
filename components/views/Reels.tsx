@@ -779,13 +779,8 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
         )}
 
         {video.status === 'rendering' && (
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ fontSize: 12, color: '#7A33F5', fontWeight: 600, marginBottom: 6 }}>
-              Rendering your video… usually 2–5 min. This page will update automatically.
-            </div>
-            <button onClick={checkStatus} disabled={checking} style={{ width: '100%', padding: '7px 0', background: 'rgba(122,51,245,0.1)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.2)', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: checking ? 0.6 : 1 }}>
-              {checking ? 'Checking…' : 'Check Now'}
-            </button>
+          <div style={{ padding: '8px 12px', background: 'rgba(122,51,245,0.1)', border: '1px solid rgba(122,51,245,0.2)', borderRadius: 7, fontSize: 12, color: '#7A33F5', fontWeight: 600, marginBottom: 6 }}>
+            Rendering… usually 2–5 min. This will update automatically.
           </div>
         )}
 
