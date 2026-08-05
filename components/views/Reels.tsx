@@ -1545,7 +1545,7 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
 
                     {/* Next scene — only after a clip is kept */}
                     {sceneSubStep === 'ready' && currentClips.length > 0 && (
-                      <button onClick={advanceScene} style={{ width: '100%', padding: '14px 0', background: 'rgba(45,174,255,0.2)', backdropFilter: 'blur(8px)', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.4)', borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
+                      <button onClick={() => advanceScene()} style={{ width: '100%', padding: '14px 0', background: 'rgba(45,174,255,0.2)', backdropFilter: 'blur(8px)', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.4)', borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
                         {sceneIdx < scenes.length - 1 ? `Next Scene (${sceneIdx + 2}/${scenes.length}) →` : '✓ Done — Submit Video'}
                       </button>
                     )}
