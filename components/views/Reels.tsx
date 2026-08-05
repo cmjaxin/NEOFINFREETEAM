@@ -822,16 +822,18 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     if (!textRef.current || !promptContainerRef.current) return
     const containerH = promptContainerRef.current.clientHeight
     const textH = textRef.current.scrollHeight
-    const totalScroll = Math.max(0, textH - containerH * 0.4)
-    if (totalScroll <= 0) return
+    // Scroll text from its mid-screen start position all the way up past the container
+    const initialOffset = containerH * 0.45  // text starts at ~45% down (mid-screen)
+    const totalScroll = initialOffset + textH  // scroll all text through the top
     scrollOffsetRef.current = 0
-    textRef.current.style.transform = 'translateY(0px)'
+    textRef.current.style.transform = `translateY(${initialOffset}px)`
     const totalMs = (durationSeconds / scrollSpeed) * 1000
     const startTime = performance.now()
     const tick = (now: number) => {
       const pct = Math.min((now - startTime) / totalMs, 1)
+      const offset = initialOffset - pct * totalScroll
       scrollOffsetRef.current = pct * totalScroll
-      if (textRef.current) textRef.current.style.transform = `translateY(-${scrollOffsetRef.current}px)`
+      if (textRef.current) textRef.current.style.transform = `translateY(${offset}px)`
       if (pct < 1) scrollAnimRef.current = requestAnimationFrame(tick)
     }
     scrollAnimRef.current = requestAnimationFrame(tick)
@@ -840,7 +842,12 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
   function resetTeleprompter() {
     cancelAnimationFrame(scrollAnimRef.current)
     scrollOffsetRef.current = 0
-    if (textRef.current) textRef.current.style.transform = 'translateY(0px)'
+    if (textRef.current && promptContainerRef.current) {
+      const initialOffset = promptContainerRef.current.clientHeight * 0.45
+      textRef.current.style.transform = `translateY(${initialOffset}px)`
+    } else if (textRef.current) {
+      textRef.current.style.transform = 'translateY(0px)'
+    }
   }
 
   function startCountdown() {
@@ -1013,6 +1020,16 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
           {/* SELECT */}
           {step === 'select' && (
             <div>
+              {/* Resume draft if compose has content */}
+              {composeScenes.some(s => s.text.trim()) && (
+                <button onClick={() => setStep('compose')} style={{ width: '100%', background: 'rgba(122,51,245,0.12)', border: '1px solid rgba(122,51,245,0.35)', borderRadius: 12, padding: '14px 20px', textAlign: 'left', cursor: 'pointer', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(122,51,245,0.3)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>✏</div>
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#7A33F5', marginBottom: 2 }}>Continue Draft</div>
+                    <div style={{ fontSize: 12, color: '#999' }}>{composeTitle || 'Untitled script'}</div>
+                  </div>
+                </button>
+              )}
               <button onClick={() => setStep('compose')} style={{ width: '100%', background: 'linear-gradient(135deg,rgba(45,174,255,0.15) 0%,rgba(122,51,245,0.15) 100%)', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 12, padding: '18px 20px', textAlign: 'left', cursor: 'pointer', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#2DAEFF,#7A33F5)', flexShrink: 0 }} />
                 <div>
@@ -1286,31 +1303,35 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
                     </div>
                   </div>
 
-                  {/* ── TELEPROMPTER (bottom 55%) ── */}
+                  {/* ── TELEPROMPTER — full screen overlay, text scrolls mid→up ── */}
                   {currentScene?.text && sceneSubStep !== 'countdown' && (
                     <div
                       ref={promptContainerRef}
                       style={{
-                        position: 'absolute', bottom: 0, left: 0, right: 0,
-                        height: '55%',
-                        background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 20%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.92) 100%)',
+                        position: 'absolute', inset: 0,
                         overflow: 'hidden',
-                        padding: '24px 22px 160px',
                         zIndex: 10,
-                        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                        // Fade text at top and bottom edges — no hard clip
+                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 18%, black 72%, transparent 100%)',
+                        maskImage: 'linear-gradient(to bottom, transparent 0%, black 18%, black 72%, transparent 100%)',
                       }}
                     >
                       <p
                         ref={textRef}
                         style={{
-                          fontSize: 22,
-                          lineHeight: 1.8,
-                          color: '#fff',
-                          fontWeight: 700,
+                          position: 'absolute',
+                          left: 0, right: 0,
+                          padding: '0 28px',
+                          fontSize: 30,
+                          lineHeight: 1.75,
+                          color: 'rgba(255,255,255,0.82)',
+                          fontWeight: 800,
                           margin: 0,
                           whiteSpace: 'pre-wrap',
-                          textShadow: '0 2px 8px rgba(0,0,0,0.9)',
+                          textAlign: 'center',
+                          textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,1)',
                           willChange: 'transform',
+                          // Initial position set by resetTeleprompter / startScrollAnimation
                         }}
                       >
                         {currentScene.text}
