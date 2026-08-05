@@ -1097,6 +1097,14 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       const finishData = await finishRes.json()
       if (!finishRes.ok) throw new Error(finishData.error ?? 'Failed to save clips')
 
+      // Trigger render directly from client — server self-calls don't work on Vercel
+      setSubmitStatus('Starting render…')
+      fetch('/api/reels/render', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId }),
+      }).catch(() => {}) // fire and forget — render route handles its own status updates
+
       setSubmitStatus(''); setStep('done')
     } catch (e: any) { setError('Upload failed: ' + e.message); setStep('scene'); setSceneSubStep('ready') }
   }
