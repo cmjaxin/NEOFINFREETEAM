@@ -209,18 +209,24 @@ export async function POST(request: NextRequest) {
       ],
     }
 
+    const payload = { source: renderScript }
+    console.log('Creatomate payload:', JSON.stringify(payload, null, 2))
+
     const res = await fetch('https://api.creatomate.com/v2/renders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${creatomateKey}`,
       },
-      body: JSON.stringify({ source: renderScript }),
+      body: JSON.stringify(payload),
     })
 
-    if (!res.ok) throw new Error('Creatomate error: ' + await res.text())
+    const responseText = await res.text()
+    console.log('Creatomate response:', res.status, responseText)
 
-    const data = await res.json()
+    if (!res.ok) throw new Error('Creatomate error: ' + responseText)
+
+    const data = JSON.parse(responseText)
     // Creatomate returns an array of render objects
     const render = Array.isArray(data) ? data[0] : data
     const renderId = render?.id
