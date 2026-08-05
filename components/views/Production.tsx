@@ -1261,6 +1261,125 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   )
 }
 
+// ─── Conversion Tab ───────────────────────────────────────────────────────────
+function ConversionTab({ maData }: { maData: MARecord[] }) {
+  const now = new Date()
+  const [monthIdx, setMonthIdx] = useState(now.getMonth())
+  const [year]                  = useState(now.getFullYear())
+  const [leads, setLeads]       = useState<Record<string, number>>({})
+  const [loading, setLoading]   = useState(true)
+
+  useEffect(() => {
+    if (!maData.length) return
+    const month = `${year}-${String(monthIdx + 1).padStart(2, '0')}`
+    const names = maData.map(m => m.name).join(',')
+    setLoading(true)
+    fetch(`/api/conversion?month=${month}&names=${encodeURIComponent(names)}`)
+      .then(r => r.json())
+      .then(d => {
+        const map: Record<string, number> = {}
+        for (const row of d.rows ?? []) map[row.name] = row.leads
+        setLeads(map)
+        setLoading(false)
+      })
+  }, [maData, monthIdx, year])
+
+  function pct(num: number, denom: number) {
+    if (!denom) return '—'
+    return (num / denom * 100).toFixed(1) + '%'
+  }
+
+  const rows = maData.map(ma => ({
+    name:   ma.name,
+    leads:  leads[ma.name] ?? 0,
+    apps:   ma.monthlyRespaApps[monthIdx]   ?? 0,
+    funded: ma.monthlyFamilies[monthIdx]    ?? 0,
+  }))
+
+  const totals = rows.reduce(
+    (acc, r) => ({ leads: acc.leads + r.leads, apps: acc.apps + r.apps, funded: acc.funded + r.funded }),
+    { leads: 0, apps: 0, funded: 0 },
+  )
+
+  const th: React.CSSProperties = { padding: '9px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }
+  const td: React.CSSProperties = { padding: '10px 14px', borderBottom: `1px solid ${C.bg}`, fontSize: 13, color: C.text }
+  const tp: React.CSSProperties = { ...td, color: C.navy, fontWeight: 700 }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Month selector */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={() => setMonthIdx(i => Math.max(0, i - 1))} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 7, padding: '5px 10px', cursor: 'pointer', color: C.text }}>‹</button>
+        <span style={{ fontSize: 14, fontWeight: 700, color: C.navy, minWidth: 100, textAlign: 'center' }}>{MONTHS[monthIdx]} {year}</span>
+        <button onClick={() => setMonthIdx(i => Math.min(11, i + 1))} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 7, padding: '5px 10px', cursor: 'pointer', color: C.text }}>›</button>
+      </div>
+
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
+        {[
+          { label: 'Total Leads',   val: loading ? '—' : totals.leads.toString() },
+          { label: 'Total Apps',    val: totals.apps.toString() },
+          { label: 'Total Funded',  val: totals.funded.toString() },
+          { label: 'Lead → App',    val: loading ? '—' : pct(totals.apps,   totals.leads) },
+          { label: 'Lead → Funded', val: loading ? '—' : pct(totals.funded, totals.leads) },
+          { label: 'App → Funded',  val: pct(totals.funded, totals.apps) },
+        ].map(c => (
+          <div key={c.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.navy }}>{c.val}</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: 'uppercase', letterSpacing: '.05em', marginTop: 3 }}>{c.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: C.white }}>
+              <th style={th}>Name</th>
+              <th style={th}>Leads</th>
+              <th style={th}>Apps</th>
+              <th style={th}>Funded</th>
+              <th style={th}>L→A</th>
+              <th style={th}>L→F</th>
+              <th style={th}>A→F</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(row => (
+              <tr key={row.name}>
+                <td style={{ ...td, fontWeight: 600 }}>{row.name}</td>
+                <td style={td}>{loading ? '…' : row.leads || '—'}</td>
+                <td style={td}>{row.apps || '—'}</td>
+                <td style={td}>{row.funded || '—'}</td>
+                <td style={tp}>{loading ? '—' : pct(row.apps,   row.leads)}</td>
+                <td style={tp}>{loading ? '—' : pct(row.funded, row.leads)}</td>
+                <td style={tp}>{pct(row.funded, row.apps)}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr style={{ background: C.white, borderTop: `2px solid ${C.border}` }}>
+              <td style={{ ...td, fontWeight: 700 }}>Total</td>
+              <td style={{ ...td, fontWeight: 700 }}>{loading ? '…' : totals.leads || '—'}</td>
+              <td style={{ ...td, fontWeight: 700 }}>{totals.apps || '—'}</td>
+              <td style={{ ...td, fontWeight: 700 }}>{totals.funded || '—'}</td>
+              <td style={{ ...tp, fontWeight: 700 }}>{loading ? '—' : pct(totals.apps,   totals.leads)}</td>
+              <td style={{ ...tp, fontWeight: 700 }}>{loading ? '—' : pct(totals.funded, totals.leads)}</td>
+              <td style={{ ...tp, fontWeight: 700 }}>{pct(totals.funded, totals.apps)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
+        Apps and Funded pull from production data. Leads are pushed daily via webhook.
+      </p>
+    </div>
+  )
+}
+
 // ─── Applications Tab ─────────────────────────────────────────────────────────
 function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWeekUpload, onClearApps, isAdmin }: {
   maData: MARecord[]
@@ -1803,7 +1922,7 @@ export default function Production() {
   const [maData, setMaData] = useState<MARecord[]>([])
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>([])
   const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
-  const [activeTab, setActiveTab] = useState<'branch'|'apps'>('branch')
+  const [activeTab, setActiveTab] = useState<'branch'|'apps'|'conversion'>('branch')
   const [dataLoaded, setDataLoaded] = useState(false)
   const maTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const weeklyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -2062,9 +2181,10 @@ export default function Production() {
     })))
   }, [])
 
-  const tabOpts: Array<{ id: 'branch'|'apps'; label: string }> = [
+  const tabOpts: Array<{ id: 'branch'|'apps'|'conversion'; label: string }> = [
     { id: 'branch', label: 'Production' },
     { id: 'apps', label: 'Applications' },
+    { id: 'conversion', label: 'Conversion' },
   ]
 
   return (
@@ -2104,6 +2224,7 @@ export default function Production() {
 
       {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} isAdmin={isAdmin} />}
       {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} isAdmin={isAdmin} />}
+      {activeTab === 'conversion' && <ConversionTab maData={maData} />}
     </div>
   )
 }
