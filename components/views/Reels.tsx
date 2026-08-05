@@ -983,26 +983,27 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
   ]
 
   return (
-    <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="splice-modal" onClick={e => e.stopPropagation()} style={{ background: '#1a2633', border: '1px solid rgba(45,174,255,0.2)', borderRadius: 18, width: '100%', maxWidth: step === 'scene' ? 700 : 660, maxHeight: '95vh', overflow: 'auto', margin: 12, display: 'flex', flexDirection: 'column' }}>
+    <div onClick={step === 'scene' ? undefined : handleClose} style={{ position: 'fixed', inset: 0, background: step === 'scene' ? '#000' : 'rgba(0,0,0,0.95)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="splice-modal" onClick={e => e.stopPropagation()} style={step === 'scene' ? { position: 'fixed', inset: 0, background: '#000', display: 'flex', flexDirection: 'column', zIndex: 501 } : { background: '#1a2633', border: '1px solid rgba(45,174,255,0.2)', borderRadius: 18, width: '100%', maxWidth: 660, maxHeight: '95vh', overflow: 'auto', margin: 12, display: 'flex', flexDirection: 'column' }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <SpliceLogo />
-            <span style={{ color: '#666', fontSize: 14 }}>·</span>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#999' }}>
-              {step === 'select' ? 'Choose a Script'
-                : step === 'compose' ? 'Write Your Script'
-                : step === 'done' ? 'Done!'
-                : step === 'uploading' ? 'Submitting…'
-                : `${SCENE[currentScene?.kind]?.label ?? ''} — Scene ${sceneIdx + 1} / ${scenes.length}`}
-            </span>
+        {/* Header — hidden in full-screen scene mode */}
+        {step !== 'scene' && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <SpliceLogo />
+              <span style={{ color: '#666', fontSize: 14 }}>·</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#999' }}>
+                {step === 'select' ? 'Choose a Script'
+                  : step === 'compose' ? 'Write Your Script'
+                  : step === 'done' ? 'Done!'
+                  : 'Submitting…'}
+              </span>
+            </div>
+            <button onClick={handleClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666', lineHeight: 1 }}>×</button>
           </div>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#666', lineHeight: 1 }}>×</button>
-        </div>
+        )}
 
-        <div style={{ padding: 22, flex: 1, overflow: 'auto' }}>
+        <div style={step === 'scene' ? { flex: 1, position: 'relative', overflow: 'hidden' } : { padding: 22, flex: 1, overflow: 'auto' }}>
           {error && (
             <div style={{ background: '#7F1D1D44', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#FCA5A5', fontSize: 13 }}>
               {error}
@@ -1198,172 +1199,170 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
             </div>
           )}
 
-          {/* SCENE — full-camera with overlaid teleprompter */}
+          {/* SCENE — true full-screen camera, all UI overlaid */}
           {step === 'scene' && (
-            <div>
-              {/* Scene progress dots */}
-              <div style={{ display: 'flex', gap: 5, marginBottom: 14 }}>
-                {scenes.map((s, i) => (
-                  <div key={s.id} style={{ flex: 1, height: 4, borderRadius: 2, background: i < sceneIdx ? '#2DAEFF' : i === sceneIdx ? SCENE[s.kind]?.color : 'rgba(255,255,255,0.08)' }} />
-                ))}
-              </div>
+            <div style={{ position: 'absolute', inset: 0 }}>
 
-              {/* Clip review */}
               {sceneSubStep === 'review-clip' && pendingClip ? (
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.05em', color: SCENE[currentScene?.kind]?.color ?? '#fff' }}>{SCENE[currentScene?.kind]?.label?.toUpperCase()} — CLIP {currentClips.length + 1}</span>
-                    <span style={{ fontSize: 11, color: '#666' }}>{pendingClip.duration ? `${pendingClip.duration}s` : ''}</span>
-                  </div>
+                /* ── CLIP REVIEW ── */
+                <div style={{ position: 'absolute', inset: 0, background: '#000', display: 'flex', flexDirection: 'column' }}>
+                  {/* review video fills available space */}
                   <video
                     src={pendingClip.url}
                     autoPlay
                     playsInline
                     controls
-                    style={{ width: '100%', borderRadius: 12, background: '#000', maxHeight: isMobile ? 340 : 400, display: 'block' }}
+                    style={{ flex: 1, width: '100%', objectFit: 'contain', background: '#000', display: 'block', minHeight: 0 }}
                   />
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10, marginTop: 12 }}>
-                    <button
-                      onClick={discardClip}
-                      style={{ padding: '13px 0', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', background: 'transparent', color: '#EF4444' }}
-                    >
-                      Retake
-                    </button>
-                    <button
-                      onClick={keepClip}
-                      style={{ padding: '13px 0', background: '#34D399', color: '#000a15', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 900, cursor: 'pointer' }}
-                    >
-                      Keep Clip
-                    </button>
-                  </div>
-                  {currentClips.length > 0 && (
-                    <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12, color: '#666' }}>
-                      {currentClips.length} clip{currentClips.length !== 1 ? 's' : ''} already kept for this scene
+                  {/* bottom bar */}
+                  <div style={{ background: 'rgba(0,0,0,0.92)', padding: '12px 16px 28px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.06em', color: SCENE[currentScene?.kind]?.color ?? '#fff' }}>
+                        {SCENE[currentScene?.kind]?.label?.toUpperCase()} — CLIP {currentClips.length + 1}
+                      </span>
+                      <span style={{ fontSize: 12, color: '#666' }}>{pendingClip.duration ? `${pendingClip.duration}s` : ''}</span>
                     </div>
-                  )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+                      <button onClick={discardClip} style={{ padding: '15px 0', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', background: 'transparent', color: '#EF4444' }}>
+                        Retake
+                      </button>
+                      <button onClick={keepClip} style={{ padding: '15px 0', background: '#34D399', color: '#000', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 900, cursor: 'pointer' }}>
+                        Keep Clip
+                      </button>
+                    </div>
+                    {currentClips.length > 0 && (
+                      <div style={{ marginTop: 10, textAlign: 'center', fontSize: 12, color: '#666' }}>
+                        {currentClips.length} clip{currentClips.length !== 1 ? 's' : ''} already kept
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div>
-                  {/* Camera container — full height, teleprompter overlaid */}
-                  <div style={{ position: 'relative', background: '#000', borderRadius: 14, overflow: 'hidden', height: isMobile ? 320 : 420, marginBottom: 12 }}>
-                    <video ref={videoRef} muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }} />
+                /* ── CAMERA + RECORDING UI ── */
+                <div style={{ position: 'absolute', inset: 0 }}>
+                  {/* Full-screen camera */}
+                  <video ref={videoRef} muted playsInline style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', display: 'block' }} />
 
-                    {/* Countdown overlay */}
-                    {sceneSubStep === 'countdown' && (
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', zIndex: 10 }}>
-                        <div style={{ fontSize: 100, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{countdown}</div>
+                  {/* Countdown overlay */}
+                  {sceneSubStep === 'countdown' && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', zIndex: 20 }}>
+                      <div style={{ fontSize: 140, fontWeight: 900, color: '#fff', lineHeight: 1, textShadow: '0 4px 24px rgba(0,0,0,0.8)' }}>{countdown}</div>
+                    </div>
+                  )}
+
+                  {/* ── TOP BAR ── */}
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 15, padding: '48px 18px 0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                    {/* Scene progress + label */}
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                        {scenes.map((s, i) => (
+                          <div key={s.id} style={{ flex: 1, height: 3, borderRadius: 2, background: i < sceneIdx ? '#2DAEFF' : i === sceneIdx ? SCENE[s.kind]?.color : 'rgba(255,255,255,0.2)' }} />
+                        ))}
                       </div>
-                    )}
-
-                    {/* REC indicator */}
-                    {sceneSubStep === 'recording' && (
-                      <div style={{ position: 'absolute', top: 10, right: 10, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.75)', borderRadius: 7, padding: '5px 11px', zIndex: 10 }}>
-                        <div style={{ width: 8, height: 8, background: '#EF4444', borderRadius: '50%', animation: 'blink 1s ease-in-out infinite' }} />
-                        <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(elapsed)}</span>
-                        {currentScene?.duration_seconds && <span style={{ color: '#999', fontSize: 11 }}>/ {fmt(currentScene.duration_seconds)}</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ background: SCENE[currentScene?.kind]?.color, color: '#000', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 5, letterSpacing: '.06em' }}>
+                          {currentScene?.kind?.toUpperCase()}
+                        </span>
+                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600 }}>
+                          {sceneIdx + 1} / {scenes.length}
+                        </span>
+                        {currentClips.length > 0 && (
+                          <span style={{ color: '#34D399', fontSize: 12, fontWeight: 700 }}>
+                            {currentClips.length} kept
+                          </span>
+                        )}
                       </div>
-                    )}
+                    </div>
+                    {/* Close + REC */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {sceneSubStep === 'recording' && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(0,0,0,0.6)', borderRadius: 20, padding: '5px 12px' }}>
+                          <div style={{ width: 8, height: 8, background: '#EF4444', borderRadius: '50%', animation: 'blink 1s ease-in-out infinite' }} />
+                          <span style={{ color: '#fff', fontSize: 13, fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{fmt(elapsed)}</span>
+                          {currentScene?.duration_seconds && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11 }}>/ {fmt(currentScene.duration_seconds)}</span>}
+                        </div>
+                      )}
+                      <button onClick={handleClose} style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>×</button>
+                    </div>
+                  </div>
 
-                    {/* Scene label badge */}
-                    {sceneSubStep === 'ready' && (
-                      <div style={{ position: 'absolute', top: 10, left: 10, background: SCENE[currentScene?.kind]?.color, color: '#000a15', fontSize: 10, fontWeight: 800, padding: '4px 10px', borderRadius: 5, letterSpacing: '.06em', zIndex: 10 }}>
-                        {currentScene?.kind?.toUpperCase()}
-                      </div>
-                    )}
-
-                    {/* Clip count badge */}
-                    {currentClips.length > 0 && sceneSubStep === 'ready' && (
-                      <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.7)', color: '#34D399', fontSize: 11, fontWeight: 700, padding: '4px 9px', borderRadius: 5, zIndex: 10 }}>
-                        {currentClips.length} clip{currentClips.length !== 1 ? 's' : ''} kept
-                      </div>
-                    )}
-
-                    {/* Teleprompter overlay — bottom 60% of the camera, scrolling text */}
-                    {currentScene?.text && (sceneSubStep === 'ready' || sceneSubStep === 'countdown' || sceneSubStep === 'recording') && (
-                      <div
-                        ref={promptContainerRef}
+                  {/* ── TELEPROMPTER (bottom 55%) ── */}
+                  {currentScene?.text && sceneSubStep !== 'countdown' && (
+                    <div
+                      ref={promptContainerRef}
+                      style={{
+                        position: 'absolute', bottom: 0, left: 0, right: 0,
+                        height: '55%',
+                        background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 20%, rgba(0,0,0,0.88) 60%, rgba(0,0,0,0.92) 100%)',
+                        overflow: 'hidden',
+                        padding: '24px 22px 160px',
+                        zIndex: 10,
+                        display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                      }}
+                    >
+                      <p
+                        ref={textRef}
                         style={{
-                          position: 'absolute', bottom: 0, left: 0, right: 0,
-                          height: '62%',
-                          background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.78) 22%, rgba(0,0,0,0.88) 100%)',
-                          overflow: 'hidden',
-                          padding: '18px 22px 14px',
-                          zIndex: 5,
-                          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+                          fontSize: 22,
+                          lineHeight: 1.8,
+                          color: '#fff',
+                          fontWeight: 700,
+                          margin: 0,
+                          whiteSpace: 'pre-wrap',
+                          textShadow: '0 2px 8px rgba(0,0,0,0.9)',
+                          willChange: 'transform',
                         }}
                       >
-                        <p
-                          ref={textRef}
-                          style={{
-                            fontSize: isMobile ? 17 : 21,
-                            lineHeight: 1.75,
-                            color: '#FFFFFF',
-                            fontWeight: 600,
-                            margin: 0,
-                            whiteSpace: 'pre-wrap',
-                            textShadow: '0 1px 4px rgba(0,0,0,0.8)',
-                            willChange: 'transform',
-                          }}
-                        >
-                          {currentScene.text}
-                        </p>
+                        {currentScene.text}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* ── BOTTOM CONTROLS ── */}
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 20, padding: '0 18px 36px' }}>
+                    {/* Speed row */}
+                    {sceneSubStep === 'ready' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, justifyContent: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '.06em' }}>SPEED</span>
+                        {SPEEDS.map(sp => (
+                          <button key={sp.value} onClick={() => setScrollSpeed(sp.value)} style={{
+                            padding: '5px 13px', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                            background: scrollSpeed === sp.value ? '#2DAEFF' : 'rgba(255,255,255,0.15)',
+                            color: scrollSpeed === sp.value ? '#000' : 'rgba(255,255,255,0.8)',
+                            backdropFilter: 'blur(8px)',
+                          }}>
+                            {sp.label}
+                          </button>
+                        ))}
                       </div>
                     )}
 
-                    {/* Fade-out top edge of teleprompter so text disappears cleanly */}
-                    {currentScene?.text && (sceneSubStep === 'ready' || sceneSubStep === 'recording') && (
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '62%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.5) 0%, transparent 15%)', pointerEvents: 'none', zIndex: 6 }} />
+                    {/* Kept clips thumbnails */}
+                    {currentClips.length > 0 && sceneSubStep === 'ready' && (
+                      <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', paddingBottom: 2 }}>
+                        {currentClips.map((clip, ci) => (
+                          <video key={ci} src={clip.url} style={{ height: 52, width: 36, objectFit: 'cover', borderRadius: 6, border: '2px solid rgba(52,211,153,0.5)', flexShrink: 0, background: '#000' }} muted playsInline />
+                        ))}
+                      </div>
                     )}
-                  </div>
 
-                  {/* Speed control + action buttons */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#666', letterSpacing: '.06em', flexShrink: 0 }}>SPEED</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {SPEEDS.map(sp => (
-                        <button key={sp.value} onClick={() => setScrollSpeed(sp.value)} style={{
-                          padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11.5, fontWeight: 700,
-                          background: scrollSpeed === sp.value ? '#2DAEFF' : 'rgba(255,255,255,0.07)',
-                          color: scrollSpeed === sp.value ? '#000a15' : '#999',
-                        }}>
-                          {sp.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Kept clips thumbnails */}
-                  {currentClips.length > 0 && (
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
-                      {currentClips.map((clip, ci) => (
-                        <video key={ci} src={clip.url} style={{ height: 54, width: 80, objectFit: 'cover', borderRadius: 8, border: '1px solid rgba(52,211,153,0.4)', flexShrink: 0, background: '#000' }} muted playsInline />
-                      ))}
-                    </div>
-                  )}
-
-                  {!currentScene?.text && (
-                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 13, color: '#666', fontStyle: 'italic' }}>
-                      No script text for this scene — speak from your knowledge!
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {/* Primary action: record (or stop) */}
+                    {/* Primary: record / stop */}
                     {sceneSubStep === 'ready' && (
-                      <button onClick={startCountdown} style={{ width: '100%', padding: '14px 0', background: '#EF4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                        <span style={{ width: 10, height: 10, background: '#fff', borderRadius: '50%', display: 'inline-block' }} />
+                      <button onClick={startCountdown} style={{ width: '100%', padding: '16px 0', background: '#EF4444', color: '#fff', border: 'none', borderRadius: 14, fontSize: 16, fontWeight: 900, cursor: 'pointer', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, boxShadow: '0 4px 20px rgba(239,68,68,0.4)' }}>
+                        <span style={{ width: 12, height: 12, background: '#fff', borderRadius: '50%', display: 'inline-block' }} />
                         {currentClips.length === 0 ? 'Start Recording' : 'Record Another Take'}
                       </button>
                     )}
                     {(sceneSubStep === 'countdown' || sceneSubStep === 'recording') && (
-                      <button onClick={stopRecording} disabled={sceneSubStep === 'countdown'} style={{ width: '100%', padding: '14px 0', background: sceneSubStep === 'countdown' ? 'rgba(255,255,255,0.06)' : '#1C3248', color: '#ffffff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 800, cursor: sceneSubStep === 'countdown' ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                        <span style={{ width: 10, height: 10, background: '#EF4444', borderRadius: 2, display: 'inline-block' }} />
+                      <button onClick={stopRecording} disabled={sceneSubStep === 'countdown'} style={{ width: '100%', padding: '16px 0', background: sceneSubStep === 'countdown' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 14, fontSize: 16, fontWeight: 900, cursor: sceneSubStep === 'countdown' ? 'default' : 'pointer', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                        <span style={{ width: 12, height: 12, background: '#EF4444', borderRadius: 3, display: 'inline-block' }} />
                         {sceneSubStep === 'countdown' ? 'Get ready…' : 'Stop Recording'}
                       </button>
                     )}
-                    {/* Secondary: advance only after at least one clip kept */}
+
+                    {/* Next scene — only after a clip is kept */}
                     {sceneSubStep === 'ready' && currentClips.length > 0 && (
-                      <button onClick={advanceScene} style={{ width: '100%', padding: '13px 0', background: 'linear-gradient(135deg,rgba(45,174,255,0.15),rgba(122,51,245,0.15))', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+                      <button onClick={advanceScene} style={{ width: '100%', padding: '14px 0', background: 'rgba(45,174,255,0.2)', backdropFilter: 'blur(8px)', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.4)', borderRadius: 14, fontSize: 15, fontWeight: 800, cursor: 'pointer' }}>
                         {sceneIdx < scenes.length - 1 ? `Next Scene (${sceneIdx + 2}/${scenes.length}) →` : '✓ Done — Submit Video'}
                       </button>
                     )}
