@@ -398,7 +398,13 @@ function ScriptsView({ scripts, members, onRefresh, onRecord }: { scripts: Splic
   }
 
   async function toggleStatus(s: SpliceScript) {
-    await supabase.from('splice_scripts').update({ status: s.status === 'draft' ? 'live' : 'draft' }).eq('id', s.id)
+    const newStatus = s.status === 'draft' ? 'live' : 'draft'
+    const res = await fetch('/api/reels/scripts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scriptId: s.id, status: newStatus }),
+    })
+    if (!res.ok) { alert('Failed to update status — please try again'); return }
     onRefresh()
   }
 
