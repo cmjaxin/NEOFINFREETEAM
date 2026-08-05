@@ -13,9 +13,18 @@ interface WinPost {
   body: string
   author_name: string
   created_at: string
-  tagged_ids: string[]
+  tagged_ids:   string[]
   tagged_names: string[]
-  reactions: Record<string, number>
+  reactions:    Record<string, number>
+  image_url:    string | null
+}
+
+interface WinComment {
+  id: string
+  win_id: string
+  body: string
+  author_name: string
+  created_at: string
 }
 
 const C = {
@@ -52,13 +61,14 @@ function autoEmoji(body: string): string {
   if (l.includes('fund') || l.includes('clos')) return '💰'
   if (l.includes('record')) return '🏅'
   if (l.includes('referr')) return '🤝'
-  if (l.includes('million') || l.includes('$1')) return '💎'
+  if (l.includes('million')) return '💎'
   if (l.includes('first') && l.includes('loan')) return '🎯'
   if (l.includes('promot') || l.includes('anniversar')) return '🎂'
   if (l.includes('team') || l.includes('branch')) return '🌟'
   return '🏆'
 }
 
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function Wins() {
   const { employees, profile } = useApp()
   const sb = createClient()
@@ -74,8 +84,8 @@ export default function Wins() {
   const fetchPosts = useCallback(async () => {
     setLoading(true)
     const y = selYear, m = selMonth
-    const from    = `${y}-${String(m + 1).padStart(2, '0')}-01T00:00:00`
-    const nextM   = m === 11 ? `${y + 1}-01-01T00:00:00` : `${y}-${String(m + 2).padStart(2, '0')}-01T00:00:00`
+    const from  = `${y}-${String(m + 1).padStart(2, '0')}-01T00:00:00`
+    const nextM = m === 11 ? `${y + 1}-01-01T00:00:00` : `${y}-${String(m + 2).padStart(2, '0')}-01T00:00:00`
     const { data } = await sb.from('wins').select('*')
       .gte('created_at', from).lt('created_at', nextM)
       .order('created_at', { ascending: false })
@@ -84,6 +94,7 @@ export default function Wins() {
       tagged_ids:   Array.isArray(w.tagged_ids)   ? w.tagged_ids   : [],
       tagged_names: Array.isArray(w.tagged_names) ? w.tagged_names : [],
       reactions:    w.reactions && typeof w.reactions === 'object' ? w.reactions : {},
+      image_url:    w.image_url ?? null,
     })))
     setLoading(false)
   }, [selYear, selMonth]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -106,7 +117,7 @@ export default function Wins() {
   return (
     <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
 
-      {/* ── Hero header ── */}
+      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #0A2540 0%, #0f3460 100%)', padding: '28px 40px 0', flexShrink: 0 }}>
         <div style={{ maxWidth: 720, margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 22 }}>
@@ -117,17 +128,14 @@ export default function Wins() {
               </h1>
               <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13, marginTop: 3, fontWeight: 500 }}>
                 {posts.length > 0
-                  ? `${posts.length} win${posts.length !== 1 ? 's' : ''} in ${MONTH_NAMES[selMonth]} · Keep crushing it`
+                  ? `${posts.length} win${posts.length !== 1 ? 's' : ''} in ${MONTH_NAMES[selMonth]} · Keep crushing it 🔥`
                   : 'Celebrate every milestone, big and small'}
               </div>
             </div>
           </div>
-
-          {/* Month tabs */}
           <div style={{ display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
             {monthOpts.map(opt => {
               const active = opt.year === selYear && opt.month === selMonth
-              const isCurrentYear = opt.year === now.getFullYear()
               return (
                 <button
                   key={`${opt.year}-${opt.month}`}
@@ -141,7 +149,7 @@ export default function Wins() {
                     transition: 'all 0.12s',
                   }}
                 >
-                  {MONTH_NAMES[opt.month].slice(0, 3)}{!isCurrentYear ? ` '${String(opt.year).slice(2)}` : ''}
+                  {MONTH_NAMES[opt.month].slice(0, 3)}{opt.year !== now.getFullYear() ? ` '${String(opt.year).slice(2)}` : ''}
                 </button>
               )
             })}
@@ -149,41 +157,29 @@ export default function Wins() {
         </div>
       </div>
 
-      {/* ── Feed ── */}
+      {/* Feed */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 24px 64px' }}>
-
-          {/* Submit */}
           <SubmitWinCard
             employees={activeEmps}
             authorName={profile?.full_name ?? 'Team'}
             onSubmit={fetchPosts}
           />
 
-          {/* Posts */}
           {loading ? (
-            <div style={{ textAlign: 'center', padding: '56px 0', color: C.muted, fontSize: 14 }}>
-              Loading wins...
-            </div>
+            <div style={{ textAlign: 'center', padding: '56px 0', color: C.muted, fontSize: 14 }}>Loading wins...</div>
           ) : posts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '64px 0' }}>
               <div style={{ fontSize: 56 }}>🎯</div>
               <div style={{ fontWeight: 800, fontSize: 20, color: C.navy, marginTop: 14 }}>
-                No wins logged yet in {MONTH_NAMES[selMonth]}
+                No wins yet in {MONTH_NAMES[selMonth]}
               </div>
-              <div style={{ color: C.muted, marginTop: 6, fontSize: 14 }}>
-                Be the first to shout someone out!
-              </div>
+              <div style={{ color: C.muted, marginTop: 6, fontSize: 14 }}>Be the first to shout someone out!</div>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
               {posts.map(post => (
-                <WinCard
-                  key={post.id}
-                  post={post}
-                  employees={employees}
-                  onReact={handleReact}
-                />
+                <WinCard key={post.id} post={post} employees={employees} onReact={handleReact} authorName={profile?.full_name ?? 'Team'} />
               ))}
             </div>
           )}
@@ -200,17 +196,39 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
   onSubmit: () => void
 }) {
   const sb = createClient()
-  const [body, setBody]           = useState('')
-  const [tagged, setTagged]       = useState<string[]>([])
+  const [body, setBody]             = useState('')
+  const [tagged, setTagged]         = useState<string[]>([])
+  const [imgFile, setImgFile]       = useState<File | null>(null)
+  const [imgPreview, setImgPreview] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [posted, setPosted]       = useState(false)
+  const [posted, setPosted]         = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const taggedEmps = employees.filter(e => tagged.includes(e.id))
   const canSubmit  = body.trim().length > 0 && tagged.length > 0
 
+  function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImgFile(file)
+    const reader = new FileReader()
+    reader.onload = ev => setImgPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
   async function submit() {
     if (!canSubmit || submitting) return
     setSubmitting(true)
+    let image_url: string | null = null
+    if (imgFile) {
+      const ext  = imgFile.name.split('.').pop()
+      const path = `${Date.now()}.${ext}`
+      const { data: up } = await sb.storage.from('win-images').upload(path, imgFile, { upsert: true })
+      if (up) {
+        const { data: pub } = sb.storage.from('win-images').getPublicUrl(up.path)
+        image_url = pub.publicUrl
+      }
+    }
     await sb.from('wins').insert({
       employee_id:  tagged[0],
       body:         body.trim(),
@@ -218,46 +236,46 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
       tagged_ids:   tagged,
       tagged_names: taggedEmps.map(e => e.name),
       reactions:    {},
+      image_url,
     })
-    setBody('')
-    setTagged([])
-    setSubmitting(false)
-    setPosted(true)
+    setBody(''); setTagged([]); setImgFile(null); setImgPreview(null)
+    if (fileRef.current) fileRef.current.value = ''
+    setSubmitting(false); setPosted(true)
     setTimeout(() => setPosted(false), 2500)
     onSubmit()
   }
 
   return (
-    <div style={{
-      background: C.white, borderRadius: 18, border: `1px solid ${C.border}`,
-      overflow: 'hidden', boxShadow: '0 4px 24px rgba(10,37,64,0.08)',
-    }}>
+    <div style={{ background: C.white, borderRadius: 18, border: `1px solid ${C.border}`, boxShadow: '0 4px 24px rgba(10,37,64,0.08)' }}>
+
       {/* Author bar */}
       <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: `1px solid ${C.bg}` }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '50%', background: C.navy,
-          color: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontWeight: 800, fontSize: 12, flexShrink: 0,
-        }}>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', background: C.navy, color: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0 }}>
           {initials(authorName)}
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{authorName}</div>
         <div style={{ marginLeft: 'auto', fontSize: 22 }}>✨</div>
       </div>
 
-      {/* Body */}
+      {/* Textarea */}
       <textarea
         value={body}
         onChange={e => setBody(e.target.value)}
         onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
         placeholder="Share a win, milestone, or shoutout... 🏆"
-        style={{
-          width: '100%', border: 'none', outline: 'none',
-          padding: '14px 18px', fontSize: 15, color: C.text,
-          resize: 'none', minHeight: 88, fontFamily: 'inherit',
-          boxSizing: 'border-box', lineHeight: 1.65,
-        }}
+        style={{ width: '100%', border: 'none', outline: 'none', padding: '14px 18px', fontSize: 15, color: C.text, resize: 'none', minHeight: 88, fontFamily: 'inherit', boxSizing: 'border-box', lineHeight: 1.65 }}
       />
+
+      {/* Image preview */}
+      {imgPreview && (
+        <div style={{ position: 'relative', margin: '0 18px 14px' }}>
+          <img src={imgPreview} alt="preview" style={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 10 }} />
+          <button
+            onClick={() => { setImgFile(null); setImgPreview(null); if (fileRef.current) fileRef.current.value = '' }}
+            style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.55)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >✕</button>
+        </div>
+      )}
 
       {/* Tag */}
       <div style={{ padding: '4px 18px 14px', borderTop: `1px solid ${C.bg}` }}>
@@ -268,30 +286,28 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
       </div>
 
       {/* Footer */}
-      <div style={{
-        padding: '12px 18px', borderTop: `1px solid ${C.bg}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        background: '#FAFBFC',
-      }}>
-        <div style={{ fontSize: 12, color: C.muted }}>
-          {tagged.length > 0
-            ? `${tagged.length} person${tagged.length > 1 ? 's' : ''} tagged`
-            : 'Tag at least one person'}
+      <div style={{ padding: '12px 18px', borderTop: `1px solid ${C.bg}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#FAFBFC', borderRadius: '0 0 18px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => fileRef.current?.click()}
+            title="Add photo"
+            style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 16, color: C.dim, display: 'flex', alignItems: 'center', gap: 5 }}
+          >
+            📷 <span style={{ fontSize: 12, fontWeight: 600 }}>Photo</span>
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={pickImage} style={{ display: 'none' }} />
+          <span style={{ fontSize: 12, color: C.muted }}>
+            {tagged.length > 0 ? `${tagged.length} tagged` : 'Tag someone first'}
+          </span>
         </div>
         <button
           onClick={submit}
           disabled={!canSubmit || submitting}
           style={{
-            background: posted
-              ? '#10B981'
-              : canSubmit
-                ? 'linear-gradient(135deg, #0A2540 0%, #1a3a5c 100%)'
-                : C.border,
+            background: posted ? '#10B981' : canSubmit ? 'linear-gradient(135deg, #0A2540 0%, #1a3a5c 100%)' : C.border,
             color: (canSubmit || posted) ? '#fff' : C.muted,
             border: 'none', borderRadius: 10, padding: '10px 22px',
-            fontSize: 14, fontWeight: 700,
-            cursor: canSubmit ? 'pointer' : 'default',
-            transition: 'all 0.15s',
+            fontSize: 14, fontWeight: 700, cursor: canSubmit ? 'pointer' : 'default', transition: 'all 0.15s',
           }}
         >
           {posted ? '✓ Posted!' : submitting ? 'Posting...' : 'Post Win 🏆'}
@@ -301,86 +317,88 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
   )
 }
 
-// ── Employee multi-select ────────────────────────────────────────────────────
+// ── Employee multi-select (fixed-position dropdown to avoid overflow clipping) ─
 function EmployeeMultiSelect({ employees, selected, onChange }: {
   employees: Employee[]
   selected: string[]
   onChange: (ids: string[]) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]     = useState(false)
   const [search, setSearch] = useState('')
-  const ref = useRef<HTMLDivElement>(null)
+  const [rect, setRect]     = useState<DOMRect | null>(null)
+  const triggerRef = useRef<HTMLDivElement>(null)
+  const dropRef    = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false)
-        setSearch('')
-      }
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
+        dropRef.current   && !dropRef.current.contains(e.target as Node)
+      ) { setOpen(false); setSearch('') }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  function openDropdown() {
+    if (triggerRef.current) setRect(triggerRef.current.getBoundingClientRect())
+    setOpen(o => !o)
+  }
+
   function toggle(id: string) {
     onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
   }
 
-  const filtered = employees.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered   = employees.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
   const selectedEmps = employees.filter(e => selected.includes(e.id))
 
   return (
-    <div ref={ref} style={{ position: 'relative' }}>
+    <>
       <div
-        onClick={() => setOpen(o => !o)}
+        ref={triggerRef}
+        onClick={openDropdown}
         style={{
-          border: `1px solid ${open ? C.accent : C.border}`,
-          borderRadius: 10, padding: '8px 12px', cursor: 'pointer',
-          display: 'flex', flexWrap: 'wrap', gap: 6,
-          minHeight: 40, alignItems: 'center', background: C.white,
+          border: `1.5px solid ${open ? C.accent : C.border}`, borderRadius: 10,
+          padding: '8px 12px', cursor: 'pointer', display: 'flex', flexWrap: 'wrap',
+          gap: 6, minHeight: 42, alignItems: 'center', background: C.white,
           transition: 'border-color 0.12s',
         }}
       >
         {selectedEmps.length === 0
           ? <span style={{ color: C.muted, fontSize: 13 }}>Select teammates...</span>
           : selectedEmps.map(e => (
-            <span
-              key={e.id}
-              style={{
-                background: avatarColor(e.name), color: '#fff',
-                borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: 5,
-              }}
-            >
+            <span key={e.id} style={{ background: avatarColor(e.name), color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
               {e.name}
-              <span
-                onClick={ev => { ev.stopPropagation(); toggle(e.id) }}
-                style={{ cursor: 'pointer', opacity: .75, fontSize: 10, lineHeight: 1 }}
-              >✕</span>
+              <span onClick={ev => { ev.stopPropagation(); toggle(e.id) }} style={{ cursor: 'pointer', opacity: .8, fontSize: 10 }}>✕</span>
             </span>
           ))
         }
-        <span style={{ marginLeft: 'auto', color: C.muted, fontSize: 10, flexShrink: 0 }}>
-          {open ? '▲' : '▼'}
-        </span>
+        <span style={{ marginLeft: 'auto', color: C.muted, fontSize: 10, flexShrink: 0 }}>{open ? '▲' : '▼'}</span>
       </div>
 
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-          background: C.white, border: `1px solid ${C.border}`, borderRadius: 12,
-          boxShadow: '0 8px 28px rgba(10,37,64,0.12)', marginTop: 4,
-          overflow: 'hidden',
-        }}>
+      {open && rect && (
+        <div
+          ref={dropRef}
+          style={{
+            position: 'fixed',
+            top: rect.bottom + 4,
+            left: rect.left,
+            width: rect.width,
+            zIndex: 9999,
+            background: C.white,
+            border: `1px solid ${C.border}`,
+            borderRadius: 12,
+            boxShadow: '0 8px 32px rgba(10,37,64,0.14)',
+            overflow: 'hidden',
+          }}
+        >
           <div style={{ padding: '8px 12px', borderBottom: `1px solid ${C.bg}` }}>
             <input
               autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
               onClick={e => e.stopPropagation()}
-              placeholder="Search..."
+              placeholder="Search teammates..."
               style={{ width: '100%', border: 'none', outline: 'none', fontSize: 13, color: C.text, background: 'transparent', fontFamily: 'inherit' }}
             />
           </div>
@@ -393,24 +411,12 @@ function EmployeeMultiSelect({ employees, selected, onChange }: {
                   <div
                     key={e.id}
                     onClick={() => toggle(e.id)}
-                    style={{
-                      padding: '9px 14px', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', gap: 10,
-                      background: sel ? 'rgba(91,203,245,0.07)' : 'transparent',
-                      transition: 'background 0.1s',
-                    }}
+                    style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, background: sel ? 'rgba(91,203,245,0.07)' : 'transparent', transition: 'background 0.1s' }}
                   >
-                    <div style={{
-                      width: 30, height: 30, borderRadius: '50%',
-                      background: avatarColor(e.name), color: '#fff',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontWeight: 700, fontSize: 11, flexShrink: 0,
-                    }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: avatarColor(e.name), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
                       {initials(e.name)}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: sel ? 700 : 500, color: C.text, flex: 1 }}>
-                      {e.name}
-                    </span>
+                    <span style={{ fontSize: 13, fontWeight: sel ? 700 : 500, color: C.text, flex: 1 }}>{e.name}</span>
                     {sel && <span style={{ color: C.accent, fontWeight: 700, fontSize: 15 }}>✓</span>}
                   </div>
                 )
@@ -419,16 +425,51 @@ function EmployeeMultiSelect({ employees, selected, onChange }: {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
 // ── Win card ─────────────────────────────────────────────────────────────────
-function WinCard({ post, employees, onReact }: {
+function WinCard({ post, employees, onReact, authorName }: {
   post: WinPost
   employees: Employee[]
   onReact: (id: string, emoji: string) => void
+  authorName: string
 }) {
+  const sb = createClient()
+  const [comments, setComments]       = useState<WinComment[]>([])
+  const [showComments, setShowComments] = useState(false)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [loadingCmts, setLoadingCmts] = useState(false)
+  const [posting, setPosting]         = useState(false)
+  const [imgOpen, setImgOpen]         = useState(false)
+
+  async function loadComments() {
+    if (loadingCmts) return
+    setLoadingCmts(true)
+    const { data } = await sb.from('win_comments').select('*').eq('win_id', post.id).order('created_at', { ascending: true })
+    setComments(data ?? [])
+    setLoadingCmts(false)
+  }
+
+  function toggleComments() {
+    if (!showComments) loadComments()
+    setShowComments(v => !v)
+  }
+
+  async function postComment() {
+    if (!commentDraft.trim() || posting) return
+    setPosting(true)
+    const { data } = await sb.from('win_comments').insert({
+      win_id:      post.id,
+      body:        commentDraft.trim(),
+      author_name: authorName,
+    }).select().single()
+    if (data) setComments(prev => [...prev, data as WinComment])
+    setCommentDraft('')
+    setPosting(false)
+  }
+
   const taggedNames = post.tagged_names.length > 0
     ? post.tagged_names
     : [employees.find(e => e.id === post.employee_id)?.name ?? 'Team']
@@ -437,96 +478,137 @@ function WinCard({ post, employees, onReact }: {
   const secondary = taggedNames.length > 1 ? avatarColor(taggedNames[1]) : primary + '66'
 
   const displayNames =
-    taggedNames.length === 1
-      ? taggedNames[0]
-      : taggedNames.length === 2
-        ? `${taggedNames[0]} & ${taggedNames[1]}`
-        : `${taggedNames[0]}, ${taggedNames[1]} +${taggedNames.length - 2} more`
+    taggedNames.length === 1 ? taggedNames[0]
+    : taggedNames.length === 2 ? `${taggedNames[0]} & ${taggedNames[1]}`
+    : `${taggedNames[0]}, ${taggedNames[1]} +${taggedNames.length - 2} more`
 
   const totalReactions = Object.values(post.reactions).reduce((a, b) => a + b, 0)
 
   return (
-    <div style={{
-      background: C.white, borderRadius: 16, border: `1px solid ${C.border}`,
-      overflow: 'hidden', boxShadow: '0 2px 12px rgba(10,37,64,0.06)',
-    }}>
-      {/* Color stripe */}
-      <div style={{ height: 5, background: `linear-gradient(90deg, ${primary}, ${secondary})` }} />
+    <>
+      <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, overflow: 'hidden', boxShadow: '0 2px 12px rgba(10,37,64,0.06)' }}>
 
-      <div style={{ padding: '18px 20px' }}>
-        {/* Tagged people */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-          <div style={{ display: 'flex' }}>
-            {taggedNames.slice(0, 5).map((name, i) => (
-              <div
-                key={name}
-                title={name}
-                style={{
-                  width: 36, height: 36, borderRadius: '50%',
-                  background: avatarColor(name), color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: 12, flexShrink: 0,
-                  border: '2px solid #fff', position: 'relative',
-                  marginLeft: i > 0 ? -10 : 0, zIndex: 5 - i,
-                }}
-              >
-                {initials(name)}
+        {/* Color stripe */}
+        <div style={{ height: 5, background: `linear-gradient(90deg, ${primary}, ${secondary})` }} />
+
+        <div style={{ padding: '18px 20px 14px' }}>
+          {/* Tagged avatars */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+            <div style={{ display: 'flex' }}>
+              {taggedNames.slice(0, 5).map((name, i) => (
+                <div key={name} title={name} style={{ width: 36, height: 36, borderRadius: '50%', background: avatarColor(name), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, border: '2px solid #fff', position: 'relative', marginLeft: i > 0 ? -10 : 0, zIndex: 5 - i }}>
+                  {initials(name)}
+                </div>
+              ))}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {displayNames}
               </div>
-            ))}
+            </div>
+            <span style={{ fontSize: 24, flexShrink: 0 }}>{autoEmoji(post.body)}</span>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {displayNames}
+
+          {/* Body */}
+          <p style={{ margin: '0 0 12px', fontSize: 15, color: C.text, lineHeight: 1.7, fontWeight: 500 }}>{post.body}</p>
+
+          {/* Image */}
+          {post.image_url && (
+            <div style={{ marginBottom: 12, borderRadius: 10, overflow: 'hidden', cursor: 'zoom-in' }} onClick={() => setImgOpen(true)}>
+              <img src={post.image_url} alt="" style={{ width: '100%', maxHeight: 360, objectFit: 'cover', display: 'block' }} />
+            </div>
+          )}
+
+          {/* Meta */}
+          <div style={{ fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>Posted by <span style={{ fontWeight: 600, color: C.dim }}>{post.author_name}</span></span>
+            <span>·</span>
+            <span>{fmtDate(post.created_at)}</span>
+            {totalReactions > 0 && <><span>·</span><span>{totalReactions} reaction{totalReactions !== 1 ? 's' : ''}</span></>}
+          </div>
+        </div>
+
+        {/* Reactions + comment button */}
+        <div style={{ padding: '10px 20px', borderTop: `1px solid ${C.bg}`, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+          {REACTIONS.map(emoji => {
+            const count = post.reactions[emoji] ?? 0
+            return (
+              <button
+                key={emoji}
+                onClick={() => onReact(post.id, emoji)}
+                style={{ background: count > 0 ? `${primary}18` : C.bg, border: `1px solid ${count > 0 ? primary + '55' : 'transparent'}`, borderRadius: 20, padding: '5px 12px', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 5, color: C.text, fontWeight: count > 0 ? 700 : 400, transition: 'all 0.12s' }}
+              >
+                {emoji}{count > 0 && <span style={{ fontSize: 12, color: C.dim }}>{count}</span>}
+              </button>
+            )
+          })}
+          <button
+            onClick={toggleComments}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: showComments ? C.navy : C.muted, fontWeight: showComments ? 700 : 500, padding: '4px 8px', borderRadius: 8, transition: 'color 0.1s' }}
+          >
+            💬 {comments.length > 0 ? comments.length : ''} Comment{comments.length !== 1 ? 's' : ''}
+          </button>
+        </div>
+
+        {/* Comments section */}
+        {showComments && (
+          <div style={{ borderTop: `1px solid ${C.bg}`, background: '#FAFBFC' }}>
+            {loadingCmts
+              ? <div style={{ padding: '12px 20px', fontSize: 13, color: C.muted }}>Loading...</div>
+              : comments.length === 0
+                ? <div style={{ padding: '12px 20px', fontSize: 13, color: C.muted }}>No comments yet. Be the first!</div>
+                : <div style={{ padding: '8px 0' }}>
+                    {comments.map(c => (
+                      <div key={c.id} style={{ padding: '10px 20px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                        <div style={{ width: 30, height: 30, borderRadius: '50%', background: avatarColor(c.author_name), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                          {initials(c.author_name)}
+                        </div>
+                        <div style={{ flex: 1, background: C.white, borderRadius: 10, padding: '8px 12px', border: `1px solid ${C.border}` }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: C.navy, marginBottom: 3 }}>{c.author_name}</div>
+                          <div style={{ fontSize: 13, color: C.text, lineHeight: 1.5 }}>{c.body}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{fmtDate(c.created_at)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+            }
+
+            {/* Comment input */}
+            <div style={{ padding: '10px 20px 14px', display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: avatarColor(authorName), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                {initials(authorName)}
+              </div>
+              <div style={{ flex: 1, display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <textarea
+                  value={commentDraft}
+                  onChange={e => setCommentDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); postComment() } }}
+                  placeholder="Write a comment... (Enter to send)"
+                  rows={1}
+                  style={{ flex: 1, border: `1px solid ${C.border}`, borderRadius: 10, padding: '8px 12px', fontSize: 13, color: C.text, resize: 'none', fontFamily: 'inherit', outline: 'none', lineHeight: 1.5, background: C.white }}
+                />
+                <button
+                  onClick={postComment}
+                  disabled={!commentDraft.trim() || posting}
+                  style={{ background: commentDraft.trim() ? C.navy : C.border, color: commentDraft.trim() ? '#fff' : C.muted, border: 'none', borderRadius: 10, padding: '8px 14px', cursor: commentDraft.trim() ? 'pointer' : 'default', fontSize: 13, fontWeight: 700, flexShrink: 0, transition: 'all 0.12s' }}
+                >
+                  Send
+                </button>
+              </div>
             </div>
           </div>
-          <span style={{ fontSize: 24, flexShrink: 0 }}>{autoEmoji(post.body)}</span>
-        </div>
-
-        {/* Body */}
-        <p style={{ margin: 0, fontSize: 15, color: C.text, lineHeight: 1.7, fontWeight: 500 }}>
-          {post.body}
-        </p>
-
-        {/* Meta */}
-        <div style={{ marginTop: 12, fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span>Posted by <span style={{ fontWeight: 600, color: C.dim }}>{post.author_name}</span></span>
-          <span>·</span>
-          <span>{fmtDate(post.created_at)}</span>
-          {totalReactions > 0 && (
-            <>
-              <span>·</span>
-              <span>{totalReactions} reaction{totalReactions !== 1 ? 's' : ''}</span>
-            </>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* Reactions */}
-      <div style={{
-        padding: '10px 20px 14px', borderTop: `1px solid ${C.bg}`,
-        display: 'flex', gap: 6, flexWrap: 'wrap',
-      }}>
-        {REACTIONS.map(emoji => {
-          const count = post.reactions[emoji] ?? 0
-          return (
-            <button
-              key={emoji}
-              onClick={() => onReact(post.id, emoji)}
-              style={{
-                background: count > 0 ? `${primary}18` : C.bg,
-                border: `1px solid ${count > 0 ? primary + '55' : 'transparent'}`,
-                borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
-                fontSize: 14, display: 'flex', alignItems: 'center', gap: 5,
-                color: C.text, fontWeight: count > 0 ? 700 : 400,
-                transition: 'all 0.12s',
-              }}
-            >
-              {emoji}
-              {count > 0 && <span style={{ fontSize: 12, color: C.dim }}>{count}</span>}
-            </button>
-          )
-        })}
-      </div>
-    </div>
+      {/* Lightbox */}
+      {imgOpen && post.image_url && (
+        <div
+          onClick={() => setImgOpen(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', padding: 24 }}
+        >
+          <img src={post.image_url} alt="" style={{ maxWidth: '100%', maxHeight: '90vh', borderRadius: 12, objectFit: 'contain' }} />
+        </div>
+      )}
+    </>
   )
 }
