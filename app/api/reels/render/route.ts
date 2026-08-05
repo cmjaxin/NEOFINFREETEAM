@@ -55,14 +55,15 @@ function captionClip(chunk: CaptionChunk) {
   return {
     asset: {
       type: 'html',
-      html: `<div style="background:rgba(0,0,0,0.72);border-radius:14px;padding:16px 28px;display:inline-block"><span style="font-family:Arial,Helvetica,sans-serif;font-size:54px;font-weight:900;color:#fff;line-height:1.2">${text}</span></div>`,
-      width: 680,
-      height: 220,
+      // 600px wide container with word-wrap so text never overflows the 720px frame
+      html: `<div style="width:600px;text-align:center;padding:0 10px;box-sizing:border-box"><div style="background:rgba(0,0,0,0.75);border-radius:12px;padding:14px 22px;display:inline-block;max-width:100%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:44px;font-weight:900;color:#fff;line-height:1.25;word-break:break-word;white-space:normal">${text}</span></div></div>`,
+      width: 620,
+      height: 200,
     },
     start: chunk.start,
     length: Math.max(0.4, chunk.end - chunk.start),
     position: 'bottom',
-    offset: { x: 0, y: 0.15 },
+    offset: { x: 0, y: 0.12 },
   }
 }
 
@@ -97,25 +98,25 @@ function endCardClips(
       asset: { type: 'html', html: '<div style="width:720px;height:1280px;background:#060e1f"></div>', width: 720, height: 1280 },
       start, length: dur, position: 'center', transition: fade,
     },
-    // NEO logo — native image asset (no HTML img tag, loads reliably)
+    // NEO logo — small, pinned near top (offset.y positive = push down from top anchor)
     {
       asset: { type: 'image', src: NEO_LOGO },
-      start, length: dur, position: 'top', offset: { x: 0, y: -0.35 }, scale: 0.42, transition: fade,
+      start, length: dur, position: 'top', offset: { x: 0, y: 0.08 }, scale: 0.22, transition: fade,
     },
-    // Name / title / contact
+    // Name / title / contact — center, shifted slightly up so logo has room
     {
       asset: { type: 'html', html: nameHtml, width: 660, height: 340 },
-      start, length: dur, position: 'center', offset: { x: 0, y: 0.01 }, transition: fade,
+      start, length: dur, position: 'center', offset: { x: 0, y: 0.05 }, transition: fade,
     },
     // Disclaimer
     {
       asset: { type: 'html', html: disclaimerHtml, width: 660, height: 220 },
-      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.13 }, transition: fade,
+      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.10 }, transition: fade,
     },
     // Equal Housing logo — native image asset
     {
       asset: { type: 'image', src: EHL_LOGO },
-      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.055 }, scale: 0.055, transition: fade,
+      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.04 }, scale: 0.06, transition: fade,
     },
   ]
 }
@@ -166,8 +167,8 @@ export async function POST(request: NextRequest) {
 
       // Use speech timestamps for tight cuts — trim silence before first word and after last word
       // Small padding so first/last syllable isn't clipped
-      const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.15) : 0
-      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.2) : rawDuration
+      const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.05) : 0
+      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.08) : rawDuration
       const usedLength  = Math.max(0.5, speechEnd - speechStart)
 
       videoClips.push({
