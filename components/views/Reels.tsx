@@ -50,6 +50,7 @@ export default function Reels() {
   const [assignedIds, setAssignedIds] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [showRecord, setShowRecord] = useState(false)
+  const [recordInitialScript, setRecordInitialScript] = useState<SpliceScript | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -188,7 +189,8 @@ export default function Reels() {
         ) : tab === 'home' ? (
           <HomeView
             myVideos={myVideos} assignedScripts={assignedScripts} liveScripts={liveScripts}
-            isAdmin={isAdmin} allVideos={allVideos} onRecord={() => setShowRecord(true)}
+            isAdmin={isAdmin} allVideos={allVideos}
+            onRecord={(s?: SpliceScript) => { setRecordInitialScript(s ?? null); setShowRecord(true) }}
             profile={profile}
           />
         ) : tab === 'scripts' ? (
@@ -220,7 +222,8 @@ export default function Reels() {
       {showRecord && (
         <RecordModal
           scripts={liveScripts} assignedScripts={assignedScripts} profile={profile}
-          onClose={() => { setShowRecord(false); load() }}
+          initialScript={recordInitialScript ?? undefined}
+          onClose={() => { setShowRecord(false); setRecordInitialScript(null); load() }}
         />
       )}
     </div>
@@ -240,10 +243,13 @@ function SpliceLogo() {
 
 function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, onRecord, profile }: {
   myVideos: SpliceVideo[]; assignedScripts: SpliceScript[]; liveScripts: SpliceScript[]
-  isAdmin: boolean; allVideos: SpliceVideo[]; onRecord: () => void; profile: any
+  isAdmin: boolean; allVideos: SpliceVideo[]; onRecord: (s?: SpliceScript) => void; profile: any
 }) {
   const readyCount = allVideos.filter(v => v.status === 'ready').length
   const renderingCount = allVideos.filter(v => v.status === 'rendering').length
+  // Live scripts not assigned to this user (shown as browsable marketing scripts)
+  const assignedIds = new Set(assignedScripts.map(s => s.id))
+  const marketingScripts = liveScripts.filter(s => !assignedIds.has(s.id))
 
   return (
     <div className="splice-main-pad" style={{ padding: '28px 32px', maxWidth: 920, margin: '0 auto' }}>
@@ -254,7 +260,7 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
         <p style={{ fontSize: 14, color: '#999', margin: 0 }}>
           {assignedScripts.length > 0
             ? `You have ${assignedScripts.length} script${assignedScripts.length > 1 ? 's' : ''} waiting for you.`
-            : 'Write your own script or use a published one to record a Splice video.'}
+            : 'Record a video using an assigned script or a marketing script below.'}
         </p>
       </div>
 
@@ -276,13 +282,13 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
 
       {assignedScripts.length > 0 && (
         <div style={{ marginBottom: 32 }}>
-          <SectionLabel>Assigned to You</SectionLabel>
+          <SectionLabel>Your Assigned Scripts</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {assignedScripts.map(s => (
               <div key={s.id} style={{ background: 'rgba(45,174,255,0.06)', border: '1px solid rgba(45,174,255,0.2)', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15, color: '#fff', marginBottom: 6 }}>{s.title}</div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     {(s.scenes ?? []).map(sc => (
                       <span key={sc.id} style={{ background: SCENE[sc.kind]?.color + '22', color: SCENE[sc.kind]?.color, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
                         {SCENE[sc.kind]?.label} · {sc.duration_seconds}s
@@ -290,8 +296,33 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
                     ))}
                   </div>
                 </div>
-                <button onClick={onRecord} style={{ padding: '9px 20px', background: 'linear-gradient(135deg, #2DAEFF, #7A33F5)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  Record Now
+                <button onClick={() => onRecord(s)} style={{ padding: '9px 20px', background: 'linear-gradient(135deg, #2DAEFF, #7A33F5)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Film Now
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {marketingScripts.length > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <SectionLabel>Marketing Scripts</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {marketingScripts.map(s => (
+              <div key={s.id} style={{ background: '#1a2633', border: '1px solid #2d3e4f', borderRadius: 12, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#fff', marginBottom: 6 }}>{s.title}</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {(s.scenes ?? []).map(sc => (
+                      <span key={sc.id} style={{ background: SCENE[sc.kind]?.color + '22', color: SCENE[sc.kind]?.color, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
+                        {SCENE[sc.kind]?.label} · {sc.duration_seconds}s
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={() => onRecord(s)} style={{ padding: '9px 20px', background: 'rgba(45,174,255,0.15)', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  Film Now
                 </button>
               </div>
             ))}
@@ -301,17 +332,25 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
 
       <div>
         <SectionLabel>My Videos ({myVideos.length})</SectionLabel>
+        {myVideos.length > 0 && (
+          <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10, padding: '10px 16px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <p style={{ margin: 0, fontSize: 13, color: '#FCA5A5', lineHeight: 1.5 }}>
+              <strong>Videos are deleted after 24 hours.</strong> Save your finished video to your phone or computer, then send it to Colin before it expires.
+            </p>
+          </div>
+        )}
         {myVideos.length === 0 ? (
           <div style={{ border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 14, padding: '48px 24px', textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6 }}>No videos yet</div>
-            <div style={{ fontSize: 13, color: '#666', marginBottom: 22 }}>Write your own script or choose an assigned one</div>
-            <button onClick={onRecord} style={{ padding: '11px 28px', background: 'linear-gradient(135deg, #2DAEFF, #7A33F5)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
-              Record Your First Video
+            <div style={{ fontSize: 13, color: '#666', marginBottom: 22 }}>Choose a script above to record your first Splice video</div>
+            <button onClick={() => onRecord()} style={{ padding: '11px 28px', background: 'linear-gradient(135deg, #2DAEFF, #7A33F5)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>
+              Record a Video
             </button>
           </div>
         ) : (
           <div className="splice-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
-            {myVideos.map(v => <VideoCard key={v.id} video={v} onRefresh={onRecord} />)}
+            {myVideos.map(v => <VideoCard key={v.id} video={v} onRefresh={() => onRecord()} />)}
           </div>
         )}
       </div>
@@ -726,8 +765,8 @@ const DEFAULT_COMPOSE = [
   { kind: 'cta'  as const, text: '', duration_seconds: 15 },
 ]
 
-function RecordModal({ scripts, assignedScripts, profile, onClose }: {
-  scripts: SpliceScript[]; assignedScripts: SpliceScript[]; profile: any; onClose: () => void
+function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript }: {
+  scripts: SpliceScript[]; assignedScripts: SpliceScript[]; profile: any; onClose: () => void; initialScript?: SpliceScript
 }) {
   const supabase = createClient()
   const [step, setStep] = useState<RecordStep>('select')
@@ -769,6 +808,14 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
   const currentClips = allClips[sceneIdx] ?? []
 
   function clearTimer() { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }
+
+  // Auto-select and start filming if an initialScript was passed in
+  useEffect(() => {
+    if (initialScript) {
+      handleSelectScript(initialScript)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Re-attach camera stream when returning to a scene sub-step that needs live video
   useEffect(() => {
