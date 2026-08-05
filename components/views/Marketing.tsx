@@ -32,6 +32,7 @@ type FieldType =
   | 'open_house_date' | 'open_house_time'
   | 'pa_regarding' | 'pa_date' | 'pa_loan_type' | 'pa_purchase_price' | 'pa_down_payment' | 'pa_loan_amount' | 'pa_occupancy' | 'pa_address'
   | 'testimonial_review' | 'testimonial_name'
+  | 'tca_image'
 
 interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
 
@@ -73,6 +74,7 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   pa_occupancy:         { label: 'Occupancy Type',    color: '#BE185D', placeholder: 'Primary Residence' },
   testimonial_review:   { label: 'Review',            color: '#D97706', placeholder: '"Working with this team was an incredible experience. They made the entire process seamless and stress-free from start to finish."', isMultiline: true },
   testimonial_name:     { label: 'Client Name',       color: '#92400E', placeholder: '— John & Jane Smith, Austin TX' },
+  tca_image:            { label: 'TCA Image',         color: '#0F766E', placeholder: '', isRect: true },
 }
 
 const FIELD_GROUPS: Record<string, FieldType[]> = {
@@ -81,6 +83,7 @@ const FIELD_GROUPS: Record<string, FieldType[]> = {
   'Property': ['property_address', 'property_price', 'property_beds', 'property_baths', 'property_sqft', 'property_extras', 'property_header', 'property_description', 'property_image', 'property_image_2', 'property_image_3', 'property_image_4', 'open_house_date', 'open_house_time'],
   'Pre-Approval': ['pa_regarding', 'pa_date', 'pa_address', 'pa_loan_type', 'pa_purchase_price', 'pa_down_payment', 'pa_loan_amount', 'pa_occupancy'],
   'Testimonial': ['testimonial_review', 'testimonial_name'],
+  'TCA': ['tca_image'],
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -255,6 +258,7 @@ function initValues(profile: { full_name: string; title: string; email: string; 
     property_image: '', property_image_2: '', property_image_3: '', property_image_4: '', open_house_date: '', open_house_time: '',
     pa_regarding: '', pa_date: '', pa_address: '', pa_loan_type: '', pa_purchase_price: '', pa_down_payment: '', pa_loan_amount: '', pa_occupancy: '',
     testimonial_review: '', testimonial_name: '',
+    tca_image: '',
   }
 }
 
@@ -586,6 +590,10 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     setValues(v => ({ ...v, [slot]: URL.createObjectURL(file) }))
   }
 
+  function handleTcaImageFile(file: File) {
+    setValues(v => ({ ...v, tca_image: URL.createObjectURL(file) }))
+  }
+
   function handlePartnerSelect(id: string) {
     setSelectedPartner(id)
     if (!id) return
@@ -786,6 +794,13 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('Testimonial')}
                 {(['testimonial_review','testimonial_name'] as FieldType[]).map(ft => fieldInput(ft))}
+              </>
+            )}
+            {usedFields.has('tca_image') && (
+              <>
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
+                {sectionHead('TCA')}
+                {imageUploadRow('tca_image', values.tca_image, handleTcaImageFile, false, false)}
               </>
             )}
           </div>
