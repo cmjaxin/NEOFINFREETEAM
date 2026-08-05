@@ -694,8 +694,27 @@ function AssignModal({ script, members, onClose }: { script: SpliceScript; membe
 function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }: {
   video: SpliceVideo; isAdmin?: boolean; onRender?: () => void; rendering?: boolean; onDelete?: () => void; onRefresh?: () => void
 }) {
-  const supabase = createClient()
   const [checking, setChecking] = useState(false)
+
+  // Auto-poll every 20s while rendering
+  useEffect(() => {
+    if (video.status !== 'rendering') return
+    const id = setInterval(async () => {
+      try {
+        const res = await fetch('/api/reels/render-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ videoId: video.id }),
+        })
+        const data = await res.json()
+        if (data.status === 'ready' || data.status === 'error') {
+          clearInterval(id)
+          if (onRefresh) onRefresh()
+        }
+      } catch {}
+    }, 20_000)
+    return () => clearInterval(id)
+  }, [video.status, video.id, onRefresh])
 
   const statusColor: Record<string, string> = {
     ready: '#34D399', rendering: '#7A33F5', awaiting_scenes: '#F59E0B', uploading: '#2DAEFF', error: '#EF4444',
@@ -760,9 +779,14 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
         )}
 
         {video.status === 'rendering' && (
-          <button onClick={checkStatus} disabled={checking} style={{ width: '100%', padding: '8px 0', background: 'rgba(122,51,245,0.1)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.2)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: checking ? 0.6 : 1, marginBottom: 6 }}>
-            {checking ? 'Checking…' : 'Check Status'}
-          </button>
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ fontSize: 12, color: '#7A33F5', fontWeight: 600, marginBottom: 6 }}>
+              Rendering your video… usually 2–5 min. This page will update automatically.
+            </div>
+            <button onClick={checkStatus} disabled={checking} style={{ width: '100%', padding: '7px 0', background: 'rgba(122,51,245,0.1)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.2)', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', opacity: checking ? 0.6 : 1 }}>
+              {checking ? 'Checking…' : 'Check Now'}
+            </button>
+          </div>
         )}
 
         {video.status === 'ready' && video.file_url && (

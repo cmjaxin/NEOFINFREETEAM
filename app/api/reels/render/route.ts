@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
       : []
 
     const timeline = {
-      background: { color: '#000000' },
+      background: '#000000',
       tracks: [
         // Video track
         { clips: videoClips },

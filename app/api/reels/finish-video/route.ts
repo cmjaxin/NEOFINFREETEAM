@@ -40,6 +40,16 @@ export async function POST(request: NextRequest) {
       .eq('id', videoId)
     if (vidErr) throw vidErr
 
+    // Auto-trigger render — fire and forget (render route is long-running, don't await)
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000'
+    fetch(`${baseUrl}/api/reels/render`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId }),
+    }).catch(e => console.error('auto-render trigger failed:', e))
+
     return NextResponse.json({ ok: true })
   } catch (e: any) {
     console.error('finish-video error:', e)
