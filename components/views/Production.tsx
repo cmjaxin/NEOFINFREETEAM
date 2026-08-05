@@ -1262,7 +1262,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 }
 
 // ─── Conversion Tab ───────────────────────────────────────────────────────────
-const CONV_HIDDEN = ['gregory allen','greg allen','joel davis','jonathan salgado','marco flores','ryan todey','julie jolivet','rory byrne','rory bryne','joshua mettle']
+const CONV_HIDDEN = ['gregory allen','greg allen','joel davis','jonathan salgado','marco flores','ryan todey','julie jolivet','rory byrne','rory bryne','joshua mettle','torrence','marco','jonathan']
 
 function ConversionTab({ maData }: { maData: MARecord[] }) {
   const year = new Date().getFullYear()
