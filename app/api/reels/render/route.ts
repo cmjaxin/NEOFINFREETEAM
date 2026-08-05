@@ -115,7 +115,9 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
-      const duration = Math.max(0.5, (clip.duration_seconds ?? 5) + 0.5)
+      const trimStart = 0.2
+      const rawDuration = Math.max(0.5, clip.duration_seconds ?? 5)
+      const duration = rawDuration - trimStart
 
       videoElements.push({
         type: 'video',
@@ -125,8 +127,7 @@ export async function POST(request: NextRequest) {
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
-        trim_start: 0.2,  // cut initial silence/black frame from WebM
-        trim_end: 0.3,    // cut tail silence at end
+        trim_start: trimStart,
       })
 
       // Transcribe for captions
