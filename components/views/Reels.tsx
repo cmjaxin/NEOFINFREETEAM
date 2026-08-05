@@ -73,6 +73,8 @@ export default function Reels() {
   useEffect(() => { load() }, [load])
 
   const liveScripts = scripts.filter(s => s.status === 'live')
+  // Admins see all scripts (including drafts) on home so they can test; regular users see only live
+  const homeScripts = isAdmin ? scripts : liveScripts
   const assignedScripts = liveScripts.filter(s => assignedIds.includes(s.id))
 
   // ── Sidebar nav items ──────────────────────────────────────────────────
@@ -188,13 +190,14 @@ export default function Reels() {
           </div>
         ) : tab === 'home' ? (
           <HomeView
-            myVideos={myVideos} assignedScripts={assignedScripts} liveScripts={liveScripts}
+            myVideos={myVideos} assignedScripts={assignedScripts} liveScripts={homeScripts}
             isAdmin={isAdmin} allVideos={allVideos}
             onRecord={(s?: SpliceScript) => { setRecordInitialScript(s ?? null); setShowRecord(true) }}
             profile={profile}
           />
         ) : tab === 'scripts' ? (
-          <ScriptsView scripts={scripts} members={members} onRefresh={load} />
+          <ScriptsView scripts={scripts} members={members} onRefresh={load}
+            onRecord={(s) => { setRecordInitialScript(s); setShowRecord(true) }} />
         ) : tab === 'videos' ? (
           <VideosView videos={allVideos} onRefresh={load} />
         ) : tab === 'team' ? (
@@ -360,7 +363,7 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
 
 // ── Scripts View (Admin) ───────────────────────────────────────────────────
 
-function ScriptsView({ scripts, members, onRefresh }: { scripts: SpliceScript[]; members: SpliceMember[]; onRefresh: () => void }) {
+function ScriptsView({ scripts, members, onRefresh, onRecord }: { scripts: SpliceScript[]; members: SpliceMember[]; onRefresh: () => void; onRecord: (s: SpliceScript) => void }) {
   const supabase = createClient()
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -476,15 +479,16 @@ function ScriptsView({ scripts, members, onRefresh }: { scripts: SpliceScript[];
                     })}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, flexWrap: 'wrap' }}>
+                  <button onClick={() => onRecord(s)} style={{ padding: '7px 16px', background: 'linear-gradient(135deg, #2DAEFF, #7A33F5)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+                    Film Now
+                  </button>
                   <button onClick={() => toggleStatus(s)} style={ghostBtn}>
                     {s.status === 'live' ? 'Set Draft' : 'Go Live'}
                   </button>
-                  {s.status === 'live' && (
-                    <button onClick={() => setAssignScript(s)} style={{ ...ghostBtn, color: '#2DAEFF', borderColor: 'rgba(45,174,255,0.3)' }}>
-                      Push to Team
-                    </button>
-                  )}
+                  <button onClick={() => setAssignScript(s)} style={{ ...ghostBtn, color: '#2DAEFF', borderColor: 'rgba(45,174,255,0.3)' }}>
+                    Push to Team
+                  </button>
                   <button onClick={() => setExpandedId(expandedId === s.id ? null : s.id)} style={{ ...ghostBtn, padding: '6px 10px' }}>
                     {expandedId === s.id ? '▲' : '▼'}
                   </button>
@@ -604,37 +608,57 @@ function TeamView({ members, allVideos }: { members: SpliceMember[]; allVideos: 
 // ── Assign Modal ───────────────────────────────────────────────────────────
 
 function AssignModal({ script, members, onClose }: { script: SpliceScript; members: SpliceMember[]; onClose: () => void }) {
-  const supabase = createClient()
   const [assigned, setAssigned] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
+  const allSelected = members.length > 0 && members.every(m => assigned.has(m.id))
 
   useEffect(() => {
-    supabase.from('splice_script_assignments').select('user_id').eq('script_id', script.id)
-      .then(({ data }) => setAssigned(new Set((data ?? []).map((r: any) => r.user_id))))
-  }, [script.id, supabase])
+    fetch(`/api/reels/assign?scriptId=${script.id}`)
+      .then(r => r.json())
+      .then(d => setAssigned(new Set(d.userIds ?? [])))
+      .catch(() => setLoadError('Failed to load current assignments'))
+  }, [script.id])
 
   function toggle(id: string) {
     setAssigned(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
 
+  function toggleAll() {
+    if (allSelected) setAssigned(new Set())
+    else setAssigned(new Set(members.map(m => m.id)))
+  }
+
   async function save() {
     setSaving(true)
-    await supabase.from('splice_script_assignments').delete().eq('script_id', script.id)
-    if (assigned.size > 0) {
-      await supabase.from('splice_script_assignments').insert(Array.from(assigned).map(user_id => ({ script_id: script.id, user_id })))
-    }
+    const res = await fetch('/api/reels/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scriptId: script.id, userIds: Array.from(assigned) }),
+    })
     setSaving(false)
+    if (!res.ok) { alert('Failed to save — please try again'); return }
     onClose()
   }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#1a2633', border: '1px solid #2d3e4f', borderRadius: 16, width: 440, maxWidth: '94vw', maxHeight: '80vh', overflow: 'auto', padding: 24 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: '#1a2633', border: '1px solid #2d3e4f', borderRadius: 16, width: 460, maxWidth: '94vw', maxHeight: '82vh', display: 'flex', flexDirection: 'column', padding: 24 }}>
         <div style={{ fontWeight: 800, fontSize: 17, color: '#fff', marginBottom: 4 }}>Push Script to Team</div>
-        <div style={{ fontSize: 13, color: '#999', marginBottom: 20 }}>"{script.title}" — selected advisors will see it with a Record Now prompt.</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+        <div style={{ fontSize: 13, color: '#999', marginBottom: 16 }}>"{script.title}" — selected advisors will see a Film Now prompt on their home screen.</div>
+        {loadError && <div style={{ fontSize: 12, color: '#EF4444', marginBottom: 12 }}>{loadError}</div>}
+
+        {/* Select All toggle */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#666', letterSpacing: '.04em', textTransform: 'uppercase' }}>{members.length} advisors</span>
+          <button onClick={toggleAll} style={{ fontSize: 12, fontWeight: 700, color: '#2DAEFF', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            {allSelected ? 'Deselect All' : 'Select All'}
+          </button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
           {members.map(m => (
-            <label key={m.id} onClick={() => toggle(m.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 9, border: `1px solid ${assigned.has(m.id) ? 'rgba(45,174,255,0.3)' : '#2d3e4f'}`, background: assigned.has(m.id) ? 'rgba(45,174,255,0.08)' : 'transparent', cursor: 'pointer' }}>
+            <div key={m.id} onClick={() => toggle(m.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderRadius: 9, border: `1px solid ${assigned.has(m.id) ? 'rgba(45,174,255,0.3)' : '#2d3e4f'}`, background: assigned.has(m.id) ? 'rgba(45,174,255,0.08)' : 'transparent', cursor: 'pointer' }}>
               <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${assigned.has(m.id) ? '#2DAEFF' : '#666'}`, background: assigned.has(m.id) ? '#2DAEFF' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {assigned.has(m.id) && <span style={{ color: '#000a15', fontSize: 12, fontWeight: 900 }}>✓</span>}
               </div>
@@ -645,13 +669,13 @@ function AssignModal({ script, members, onClose }: { script: SpliceScript; membe
                 <div style={{ fontWeight: 600, fontSize: 13.5, color: '#fff' }}>{m.full_name}</div>
                 <div style={{ fontSize: 11.5, color: '#666' }}>{m.email}</div>
               </div>
-            </label>
+            </div>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '10px 0', border: '1px solid #2d3e4f', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'transparent', color: '#999' }}>Cancel</button>
           <button onClick={save} disabled={saving} style={{ flex: 2, padding: '10px 0', background: 'linear-gradient(135deg, #2DAEFF, #7A33F5)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 800, cursor: 'pointer', opacity: saving ? 0.7 : 1 }}>
-            {saving ? 'Saving…' : `Push to ${assigned.size} advisor${assigned.size !== 1 ? 's' : ''}`}
+            {saving ? 'Saving…' : assigned.size === 0 ? 'Remove All Assignments' : `Push to ${assigned.size} advisor${assigned.size !== 1 ? 's' : ''}`}
           </button>
         </div>
       </div>
