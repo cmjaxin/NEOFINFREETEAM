@@ -81,7 +81,7 @@ function buildEndCard(
 
   // Navy background
   clips.push({
-    asset: { type: 'shape', shape: 'rectangle', fill: { color: '#060e1f' }, opacity: 1 },
+    asset: { type: 'shape', shape: 'rectangle', fill: { color: '#060e1f' } },
     start, length: dur,
     width: 1, height: 1, position: 'center',
   })
