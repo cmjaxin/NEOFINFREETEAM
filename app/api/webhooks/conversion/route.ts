@@ -47,21 +47,8 @@ export async function POST(req: NextRequest) {
   for (const entry of entries) {
     const name = canonicalName(entry.name)
 
-    const { data: existing } = await sb
-      .from('conversion_entries')
-      .select('leads, apps, funded')
-      .eq('name', name)
-      .eq('month', month)
-      .maybeSingle()
-
     const { error } = await sb.from('conversion_entries').upsert(
-      {
-        name,
-        month,
-        leads:  (existing?.leads  ?? 0) + (entry.leads ?? 0),
-        apps:    existing?.apps   ?? 0,
-        funded:  existing?.funded ?? 0,
-      },
+      { name, month, leads: entry.leads ?? 0 },
       { onConflict: 'name,month', ignoreDuplicates: false },
     )
 
