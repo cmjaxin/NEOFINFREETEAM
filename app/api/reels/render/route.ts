@@ -37,14 +37,17 @@ async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperW
 
 function buildCaptionElements(words: WhisperWord[], timelineOffset: number, chunkSize = 2): any[] {
   const elements: any[] = []
+  // Whisper timestamps are clip-relative; add a small delay to account for
+  // actual file duration being slightly longer than stored duration_seconds
+  const CAPTION_DELAY = 0.15
   for (let i = 0; i < words.length; i += chunkSize) {
     const group = words.slice(i, i + chunkSize)
     if (!group.length) continue
-    const start = timelineOffset + group[0].start
+    const start = timelineOffset + group[0].start + CAPTION_DELAY
     const nextWordStart = words[i + chunkSize]?.start
     const end = nextWordStart != null
-      ? timelineOffset + nextWordStart - 0.05
-      : timelineOffset + group[group.length - 1].end + 0.3
+      ? timelineOffset + nextWordStart - 0.05 + CAPTION_DELAY
+      : timelineOffset + group[group.length - 1].end + 0.3 + CAPTION_DELAY
     const duration = Math.max(0.4, end - start)
     elements.push({
       type: 'text',
