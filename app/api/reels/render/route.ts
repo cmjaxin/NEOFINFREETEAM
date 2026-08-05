@@ -14,6 +14,62 @@ function supabase() {
   )
 }
 
+interface WhisperWord { word: string; start: number; end: number }
+
+async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperWord[]> {
+  const videoRes = await fetch(clipUrl)
+  if (!videoRes.ok) throw new Error(`Failed to fetch clip: ${clipUrl}`)
+  const buf = await videoRes.arrayBuffer()
+  const form = new FormData()
+  form.append('file', new Blob([buf], { type: 'video/webm' }), 'clip.webm')
+  form.append('model', 'whisper-1')
+  form.append('response_format', 'verbose_json')
+  form.append('timestamp_granularities[]', 'word')
+  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  })
+  if (!res.ok) { console.warn('Whisper error:', await res.text()); return [] }
+  const data = await res.json()
+  return (data.words ?? []) as WhisperWord[]
+}
+
+function buildCaptionElements(words: WhisperWord[], timelineOffset: number, chunkSize = 2): any[] {
+  const elements: any[] = []
+  for (let i = 0; i < words.length; i += chunkSize) {
+    const group = words.slice(i, i + chunkSize)
+    if (!group.length) continue
+    const start = timelineOffset + group[0].start
+    const nextWordStart = words[i + chunkSize]?.start
+    const end = nextWordStart != null
+      ? timelineOffset + nextWordStart - 0.05
+      : timelineOffset + group[group.length - 1].end + 0.3
+    const duration = Math.max(0.4, end - start)
+    elements.push({
+      type: 'text',
+      track: 2,
+      time: start,
+      duration,
+      text: group.map(w => w.word).join(' ').trim().toUpperCase(),
+      font_family: 'Inter',
+      font_weight: '700',
+      font_size: '8 vmin',
+      fill_color: '#ffffff',
+      background_color: 'rgba(0,0,0,0.65)',
+      background_x_padding: '28%',
+      background_y_padding: '18%',
+      background_border_radius: '25%',
+      x: '50%',
+      y: '82%',
+      width: '85%',
+      x_alignment: '50%',
+      y_alignment: '50%',
+    })
+  }
+  return elements
+}
+
 export async function POST(request: NextRequest) {
   let videoId = ''
   try {
@@ -23,6 +79,8 @@ export async function POST(request: NextRequest) {
 
     const creatomateKey = process.env.CREATOMATE_API_KEY
     if (!creatomateKey) return NextResponse.json({ error: 'CREATOMATE_API_KEY not set' }, { status: 500 })
+
+    const openAiKey = process.env.OPENAI_API_KEY
 
     const sb = supabase()
     const { data: video, error: vErr } = await sb
@@ -50,67 +108,55 @@ export async function POST(request: NextRequest) {
     const phone = p?.phone ?? ''
     const email = p?.email ?? ''
 
-    // Build video elements — one per clip, stacked sequentially on track 1
-    // Creatomate handles WebM natively, no transcode step needed
-    const videoElements = clips.map((clip, i) => ({
-      id: `clip-${i}`,
-      type: 'video',
-      track: 1,
-      source: clip.clip_url,
-      fit: 'cover',
-      volume: '100%',
-    }))
+    // Build video elements + transcribe each clip for captions
+    let cursor = 0
+    const videoElements: any[] = []
+    const captionElements: any[] = []
 
-    // Auto-transcript caption element — Creatomate transcribes and times automatically
-    // Linked to all video clips, renders as lower-third ALL CAPS overlay
-    const transcriptElement = {
-      type: 'transcript',
-      track: 2,
-      clip_ids: clips.map((_: any, i: number) => `clip-${i}`),
-      text_transform: 'uppercase',
-      font_family: 'Inter',
-      font_weight: '700',
-      font_size: '8 vmin',
-      fill_color: '#ffffff',
-      background_color: 'rgba(0,0,0,0.6)',
-      background_x_padding: '30%',
-      background_y_padding: '20%',
-      background_border_radius: '20%',
-      x: '50%',
-      y: '82%',
-      width: '85%',
-      x_alignment: '50%',
-      y_alignment: '50%',
-      word_count: 2,
+    for (let i = 0; i < clips.length; i++) {
+      const clip = clips[i]
+      const duration = Math.max(0.5, (clip.duration_seconds ?? 5) + 0.5)
+
+      videoElements.push({
+        type: 'video',
+        track: 1,
+        time: cursor,
+        duration,
+        source: clip.clip_url,
+        fit: 'cover',
+        volume: '100%',
+      })
+
+      // Transcribe for captions
+      if (openAiKey && clip.clip_url) {
+        try {
+          const words = await transcribeClip(clip.clip_url, openAiKey)
+          captionElements.push(...buildCaptionElements(words, cursor))
+        } catch (err) {
+          console.warn(`Transcription failed for clip ${i}:`, err)
+        }
+      }
+
+      cursor += duration
     }
 
-    // End card composition — appears after all clips
+    // End card — navy bg via fill_color on the composition
     const endCardElements: any[] = [
-      // Navy background
-      {
-        type: 'rectangle',
-        track: 1,
-        fill_color: '#060e1f',
-        width: '100%',
-        height: '100%',
-        x: '50%',
-        y: '50%',
-      },
       // NEO logo — top
       {
         type: 'image',
-        track: 2,
+        track: 1,
         source: NEO_LOGO,
-        width: '60%',
+        width: '62%',
         x: '50%',
-        y: '14%',
+        y: '13%',
         x_alignment: '50%',
         y_alignment: '50%',
       },
       // Name
       {
         type: 'text',
-        track: 3,
+        track: 2,
         text: name,
         font_family: 'Inter',
         font_weight: '800',
@@ -125,7 +171,7 @@ export async function POST(request: NextRequest) {
       // Title
       ...(title ? [{
         type: 'text',
-        track: 4,
+        track: 3,
         text: title,
         font_family: 'Inter',
         font_weight: '600',
@@ -137,10 +183,10 @@ export async function POST(request: NextRequest) {
         x_alignment: '50%',
         y_alignment: '50%',
       }] : []),
-      // NMLS + contact info
-      ...(nmls ? [{
+      // NMLS + phone + email stacked
+      ...(nmls || phone || email ? [{
         type: 'text',
-        track: 5,
+        track: 4,
         text: [nmls, phone, email].filter(Boolean).join('\n'),
         font_family: 'Inter',
         font_weight: '400',
@@ -148,7 +194,7 @@ export async function POST(request: NextRequest) {
         fill_color: '#a0b4c8',
         line_height: '160%',
         x: '50%',
-        y: title ? '63%' : '58%',
+        y: title ? '63%' : '57%',
         width: '85%',
         x_alignment: '50%',
         y_alignment: '50%',
@@ -156,9 +202,9 @@ export async function POST(request: NextRequest) {
       // EHL logo
       {
         type: 'image',
-        track: 6,
+        track: 5,
         source: EHL_LOGO,
-        width: '25%',
+        width: '28%',
         x: '50%',
         y: '82%',
         x_alignment: '50%',
@@ -167,7 +213,7 @@ export async function POST(request: NextRequest) {
       // Disclaimer
       {
         type: 'text',
-        track: 7,
+        track: 6,
         text: DISCLAIMER,
         font_family: 'Inter',
         font_weight: '400',
@@ -181,36 +227,34 @@ export async function POST(request: NextRequest) {
       },
     ]
 
-    const endCard = {
-      type: 'composition',
-      track: 1,
-      duration: 7,
-      elements: endCardElements,
-    }
-
-    // Full RenderScript — clips + captions + end card
     const renderScript = {
       output_format: 'mp4',
       width: 720,
       height: 1280,
       frame_rate: 30,
       elements: [
-        // Composition 1: all the footage + auto-captions
+        // Footage + captions composition
         {
           type: 'composition',
           track: 1,
           elements: [
             ...videoElements,
-            transcriptElement,
+            ...captionElements,
           ],
         },
-        // Composition 2: end card (appended after composition 1)
-        endCard,
+        // End card composition — fill_color sets navy background
+        {
+          type: 'composition',
+          track: 1,
+          time: cursor,
+          duration: 7,
+          fill_color: '#060e1f',
+          elements: endCardElements,
+        },
       ],
     }
 
-    const payload = { source: renderScript }
-    console.log('Creatomate payload:', JSON.stringify(payload, null, 2))
+    console.log('Creatomate payload clips:', clips.length, 'captions:', captionElements.length)
 
     const res = await fetch('https://api.creatomate.com/v2/renders', {
       method: 'POST',
@@ -218,7 +262,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${creatomateKey}`,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ source: renderScript }),
     })
 
     const responseText = await res.text()
@@ -227,7 +271,6 @@ export async function POST(request: NextRequest) {
     if (!res.ok) throw new Error('Creatomate error: ' + responseText)
 
     const data = JSON.parse(responseText)
-    // Creatomate returns an array of render objects
     const render = Array.isArray(data) ? data[0] : data
     const renderId = render?.id
 
@@ -235,7 +278,7 @@ export async function POST(request: NextRequest) {
       .update({ status: 'rendering', render_job_id: renderId })
       .eq('id', videoId)
 
-    return NextResponse.json({ renderId, videoId, clipCount: clips.length })
+    return NextResponse.json({ renderId, videoId, clipCount: clips.length, captionCount: captionElements.length })
   } catch (e: any) {
     console.error('Reels render error:', e)
     if (videoId) await supabase().from('splice_videos').update({ status: 'error' }).eq('id', videoId)
