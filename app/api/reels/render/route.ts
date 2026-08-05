@@ -50,7 +50,7 @@ function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkS
   return chunks
 }
 
-// Native Shotstack title — no HTML, consistent font everywhere
+// Native Shotstack title caption — lower third, small size to avoid stretching
 function captionClip(chunk: CaptionChunk) {
   return {
     asset: {
@@ -58,13 +58,12 @@ function captionClip(chunk: CaptionChunk) {
       text: chunk.text.toUpperCase(),
       style: 'minimal',
       color: '#ffffff',
-      size: 'medium',
-      background: '#000000',
+      size: 'small',
     },
     start: chunk.start,
     length: Math.max(0.4, chunk.end - chunk.start),
     position: 'bottom',
-    offset: { x: 0, y: 0.1 },
+    offset: { x: 0, y: 0.15 },
   }
 }
 
@@ -79,11 +78,11 @@ function buildEndCard(
 ): any[] {
   const clips: any[] = []
 
-  // Navy background
+  // Navy background — solid color image scaled to fill frame
   clips.push({
-    asset: { type: 'shape', shape: 'rectangle', fill: { color: '#060e1f' } },
+    asset: { type: 'image', src: 'https://placehold.co/720x1280/060e1f/060e1f.png' },
     start, length: dur,
-    width: 1, height: 1, position: 'center',
+    position: 'center', fit: 'cover',
   })
 
   // NEO logo — top center, small
@@ -143,11 +142,11 @@ function buildEndCard(
     })
   }
 
-  // Disclaimer — very small, bottom
+  // Disclaimer — x-small, bottom
   clips.push({
-    asset: { type: 'title', text: DISCLAIMER, style: 'minimal', color: '#4a6070', size: 'xx-small' },
+    asset: { type: 'title', text: DISCLAIMER, style: 'minimal', color: '#4a6070', size: 'x-small' },
     start, length: dur,
-    position: 'bottom', offset: { x: 0, y: 0.03 },
+    position: 'bottom', offset: { x: 0, y: 0.05 },
   })
 
   return clips
@@ -197,9 +196,9 @@ export async function POST(request: NextRequest) {
         catch (err) { console.warn('Transcription failed, skipping:', err) }
       }
 
-      // Use full raw duration — no trim, no silence detection.
-      // WebM + Shotstack trim is unreliable and causes early cuts and inter-clip pauses.
-      const usedLength = Math.max(0.5, rawDuration)
+      // Add 0.5s buffer — stored duration can be slightly short causing early cuts.
+      // No trim — WebM + Shotstack trim is unreliable and causes pauses between clips.
+      const usedLength = Math.max(0.5, rawDuration + 0.5)
 
       videoClips.push({
         asset: { type: 'video', src: clip.clip_url, volume: 1 },
