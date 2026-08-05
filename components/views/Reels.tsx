@@ -1034,18 +1034,17 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
   function keepClip() {
     if (!pendingClip) return
     const clip = pendingClip
-    setAllClips(prev => {
-      const n = [...prev]
-      n[sceneIdx] = [...(n[sceneIdx] ?? []), clip]
-      return n
-    })
+    // Build updated array synchronously — setAllClips is async so submitAll would
+    // read stale state and miss the last clip if we don't pass it directly
+    const newAllClips = [...allClips]
+    newAllClips[sceneIdx] = [...(newAllClips[sceneIdx] ?? []), clip]
+    setAllClips(newAllClips)
     setPendingClip(null)
-    // Re-attach camera before advancing
     if (streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current
       videoRef.current.play().catch(() => {})
     }
-    advanceScene()
+    advanceScene(newAllClips)
   }
 
   function discardClip() {
@@ -1066,19 +1065,20 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
     setSceneSubStep('ready')
   }
 
-  function advanceScene() {
+  function advanceScene(finalClips?: typeof allClips) {
     resetTeleprompter()
     if (sceneIdx < scenes.length - 1) {
       setSceneIdx(i => i + 1)
       setSceneSubStep('ready')
     } else {
       setStep('uploading')
-      submitAll()
+      submitAll(finalClips)
     }
   }
 
-  async function submitAll() {
+  async function submitAll(finalClips?: typeof allClips) {
     if (!selectedScript || !profile) return
+    const clipsToUpload = finalClips ?? allClips
     setSubmitStatus('Preparing storage…')
     try {
       // Ensure bucket exists (server-side, bypasses RLS)
@@ -1098,12 +1098,12 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       // Upload blobs directly to storage (bucket is public so anon key works)
       const clipRecords: { sceneId: string | null; clipUrl: string; durationSeconds: number; clipOrder: number }[] = []
       let totalClips = 0
-      for (let si = 0; si < allClips.length; si++) totalClips += (allClips[si] ?? []).length
+      for (let si = 0; si < clipsToUpload.length; si++) totalClips += (clipsToUpload[si] ?? []).length
       let uploaded = 0
 
-      for (let si = 0; si < allClips.length; si++) {
+      for (let si = 0; si < clipsToUpload.length; si++) {
         const scene = scenes[si]
-        const sceneClips = allClips[si] ?? []
+        const sceneClips = clipsToUpload[si] ?? []
         for (let ci = 0; ci < sceneClips.length; ci++) {
           const clip = sceneClips[ci]
           uploaded++

@@ -32,7 +32,7 @@ async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperW
   return (data.words ?? []) as WhisperWord[]
 }
 
-function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkSize = 3): CaptionChunk[] {
+function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkSize = 2): CaptionChunk[] {
   const chunks: CaptionChunk[] = []
   for (let i = 0; i < words.length; i += chunkSize) {
     const group = words.slice(i, i + chunkSize)
@@ -50,69 +50,106 @@ function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkS
   return chunks
 }
 
+// Native Shotstack title — no HTML, consistent font everywhere
 function captionClip(chunk: CaptionChunk) {
-  const text = chunk.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').toUpperCase()
   return {
     asset: {
-      type: 'html',
-      html: `<div style="width:680px;box-sizing:border-box;padding:0 16px;text-align:center"><div style="background:rgba(0,0,0,0.82);border-radius:10px;padding:14px 22px;width:100%;box-sizing:border-box"><span style="font-family:Arial,Helvetica,sans-serif;font-size:36px;font-weight:700;color:#ffffff;line-height:1.3;word-break:break-word;white-space:normal;display:block;text-align:center;letter-spacing:0.04em">${text}</span></div></div>`,
-      width: 680,
-      height: 180,
+      type: 'title',
+      text: chunk.text.toUpperCase(),
+      style: 'minimal',
+      color: '#ffffff',
+      size: 'medium',
+      background: '#000000',
     },
     start: chunk.start,
     length: Math.max(0.4, chunk.end - chunk.start),
     position: 'bottom',
-    offset: { x: 0, y: 0.12 },
+    offset: { x: 0, y: 0.1 },
   }
 }
 
-// End card — 1 full-frame HTML text clip + 2 native image clips for logos
-const NEO_LOGO = 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png'
+// End card — all native Shotstack assets, no HTML
+const NEO_LOGO  = 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png'
 const EHL_LOGO  = 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png'
-const DISCLAIMER = '© 2026 Better Home & Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+const DISCLAIMER = 'Equal Housing Lender. NMLS #330511. Not available in all states. © 2026 NEO Home Loans. All rights reserved.'
 
-function endCardClips(
+function buildEndCard(
   name: string, title: string, nmls: string, phone: string, email: string,
   start: number, dur: number,
-) {
-  const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  const infoLines = [nmls, phone, email].filter(Boolean)
-    .map(v => `<div style="font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#b8cfe8;margin:4px 0">${e(v)}</div>`)
-    .join('')
+): any[] {
+  const clips: any[] = []
 
-  // Full-frame HTML — navy bg, centered text block, disclaimer pinned to bottom
-  // Top ~180px left empty for the NEO logo image clip to sit on top
-  // Bottom ~80px left for EHL logo image clip
-  const bodyHtml = `
-    <div style="width:720px;height:1280px;background:#060e1f;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:180px 40px 120px">
-      <div style="text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:46px;font-weight:900;color:#ffffff;line-height:1.1">${e(name)}</div>
-        ${title ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:700;color:#7eb8f7;margin-top:4px">${e(title)}</div>` : ''}
-        <div style="margin-top:14px">${infoLines}</div>
-      </div>
-      <div style="border-top:1px solid rgba(255,255,255,0.18);padding-top:12px;width:100%;text-align:center">
-        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:rgba(255,255,255,0.38);line-height:1.55">${e(DISCLAIMER)}</div>
-      </div>
-    </div>`.replace(/\n\s*/g, '')
+  // Navy background
+  clips.push({
+    asset: { type: 'color', color: '#060e1f' },
+    start, length: dur,
+  })
 
-  const fade = { in: 'fade' }
-  return [
-    // Full-frame HTML: navy bg + all text (top/bottom gaps for image clips)
-    {
-      asset: { type: 'html', html: bodyHtml, width: 720, height: 1280 },
-      start, length: dur, position: 'center', transition: fade,
-    },
-    // NEO logo — small, top-center, sitting in the empty top band
-    {
-      asset: { type: 'image', src: NEO_LOGO },
-      start, length: dur, position: 'top', offset: { x: 0, y: 0.06 }, scale: 0.18, transition: fade,
-    },
-    // EHL logo — bottom-center, above disclaimer
-    {
-      asset: { type: 'image', src: EHL_LOGO },
-      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.06 }, scale: 0.05, transition: fade,
-    },
-  ]
+  // NEO logo — top center, small
+  clips.push({
+    asset: { type: 'image', src: NEO_LOGO },
+    start, length: dur,
+    position: 'top', offset: { x: 0, y: -0.15 }, scale: 0.2,
+  })
+
+  // EHL logo — bottom center, tiny
+  clips.push({
+    asset: { type: 'image', src: EHL_LOGO },
+    start, length: dur,
+    position: 'bottom', offset: { x: 0, y: 0.1 }, scale: 0.06,
+  })
+
+  // Name — large, center
+  clips.push({
+    asset: { type: 'title', text: name, style: 'minimal', color: '#ffffff', size: 'large' },
+    start, length: dur,
+    position: 'center', offset: { x: 0, y: 0.12 },
+  })
+
+  // Title line
+  if (title) {
+    clips.push({
+      asset: { type: 'title', text: title, style: 'minimal', color: '#7eb8f7', size: 'small' },
+      start, length: dur,
+      position: 'center', offset: { x: 0, y: 0.04 },
+    })
+  }
+
+  // NMLS
+  if (nmls) {
+    clips.push({
+      asset: { type: 'title', text: nmls, style: 'minimal', color: '#a0b4c8', size: 'x-small' },
+      start, length: dur,
+      position: 'center', offset: { x: 0, y: title ? -0.03 : 0.04 },
+    })
+  }
+
+  // Phone
+  if (phone) {
+    clips.push({
+      asset: { type: 'title', text: phone, style: 'minimal', color: '#b8cfe8', size: 'x-small' },
+      start, length: dur,
+      position: 'center', offset: { x: 0, y: -0.08 },
+    })
+  }
+
+  // Email
+  if (email) {
+    clips.push({
+      asset: { type: 'title', text: email, style: 'minimal', color: '#b8cfe8', size: 'x-small' },
+      start, length: dur,
+      position: 'center', offset: { x: 0, y: phone ? -0.15 : -0.08 },
+    })
+  }
+
+  // Disclaimer — very small, bottom
+  clips.push({
+    asset: { type: 'title', text: DISCLAIMER, style: 'minimal', color: '#4a6070', size: 'xx-small' },
+    start, length: dur,
+    position: 'bottom', offset: { x: 0, y: 0.03 },
+  })
+
+  return clips
 }
 
 export async function POST(request: NextRequest) {
@@ -159,28 +196,20 @@ export async function POST(request: NextRequest) {
         catch (err) { console.warn('Transcription failed, skipping:', err) }
       }
 
-      // Give a generous pre-speech buffer so first syllable never gets clipped.
-      // Give a generous post-speech buffer so last word isn't cut early.
-      // Only trim silence if speech starts more than 0.15s in to avoid WebM black-frame bug.
-      const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.15) : 0
-      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.4) : rawDuration
-      const usedLength  = Math.max(0.5, speechEnd - speechStart)
-
-      const assetTrim = speechStart > 0.15 ? speechStart : 0
+      // Use full raw duration — no trim, no silence detection.
+      // WebM + Shotstack trim is unreliable and causes early cuts and inter-clip pauses.
+      const usedLength = Math.max(0.5, rawDuration)
 
       videoClips.push({
-        asset: { type: 'video', src: clip.clip_url, volume: 1, ...(assetTrim > 0 ? { trim: assetTrim } : {}) },
+        asset: { type: 'video', src: clip.clip_url, volume: 1 },
         start: cursor,
         length: usedLength,
         fit: 'cover',
       })
 
-      // Caption word timestamps are relative to clip start; offset for trim + timeline position
+      // Caption timestamps are relative to clip start; offset for timeline position
       if (words.length > 0) {
-        const adjusted = words
-          .map(w => ({ ...w, start: w.start - speechStart, end: w.end - speechStart }))
-          .filter(w => w.end > 0 && w.start < usedLength)
-        allCaptionChunks.push(...groupWordsToChunks(adjusted, cursor))
+        allCaptionChunks.push(...groupWordsToChunks(words, cursor))
       }
 
       cursor += usedLength
@@ -189,21 +218,19 @@ export async function POST(request: NextRequest) {
     const endCardStart = cursor
     const endCardDur   = 7
     const p = profile as any
-    const ecClips = endCardClips(
+    const ecClips = buildEndCard(
       p?.full_name ?? '', p?.title ?? '',
       p?.nmls ? `NMLS# ${p.nmls}` : '', p?.phone ?? '', p?.email ?? '',
       endCardStart, endCardDur,
     )
 
     // Track order: first track = top layer in Shotstack
-    // Captions on top, then end card logos, then end card body, then video clips at bottom
-    const [ecBody, ecLogo, ecEHL] = ecClips
+    // Captions on top, end card clips on separate tracks, video clips at bottom
     const tracks: any[] = []
     if (allCaptionChunks.length > 0) tracks.push({ clips: allCaptionChunks.map(captionClip) })
-    tracks.push({ clips: [ecLogo] })
-    tracks.push({ clips: [ecEHL] })
-    tracks.push({ clips: [ecBody] })       // end card body on its own track — NOT mixed with video clips
-    tracks.push({ clips: videoClips })     // video clips on their own bottom track
+    // Each end card clip on its own track to avoid Shotstack conflicts
+    for (const ec of ecClips) tracks.push({ clips: [ec] })
+    tracks.push({ clips: videoClips })
 
     const timeline = { background: '#000000', tracks }
 
