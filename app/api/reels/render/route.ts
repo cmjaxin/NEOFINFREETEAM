@@ -161,19 +161,15 @@ export async function POST(request: NextRequest) {
     const displayEmail = p?.email ?? ''
 
     // NEO logo hosted on the deployed app
-    const appBase = process.env.NEXT_PUBLIC_APP_URL
-      ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://finfree-team-hq.vercel.app')
-    const neoLogoUrl = `${appBase}/neo-logo.png`
+    const NEO_LOGO = 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png'
+    const EHL_LOGO = 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png'
 
     const DISCLAIMER = '© 2026 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
 
-    // Single HTML end card — full layout in one asset
     const endCardHtml = `
 <div style="width:1080px;height:1920px;background:#060e1f;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:120px 80px 80px;box-sizing:border-box">
-  <!-- Logo -->
-  <div style="display:flex;align-items:center;justify-content:center">
-    <img src="${neoLogoUrl}" style="width:320px;height:auto;filter:brightness(0) invert(1)" />
-  </div>
+  <!-- NEO Logo -->
+  <img src="${NEO_LOGO}" style="width:340px;height:auto" />
 
   <!-- Advisor info -->
   <div style="text-align:center">
@@ -186,9 +182,12 @@ export async function POST(request: NextRequest) {
     </div>
   </div>
 
-  <!-- Disclaimer -->
+  <!-- Disclaimer + Equal Housing -->
   <div style="border-top:1px solid rgba(255,255,255,0.15);padding-top:32px;width:100%">
-    <p style="font-family:Montserrat,Arial,sans-serif;font-size:18px;color:rgba(255,255,255,0.45);line-height:1.55;text-align:center;margin:0">${DISCLAIMER}</p>
+    <p style="font-family:Montserrat,Arial,sans-serif;font-size:18px;color:rgba(255,255,255,0.45);line-height:1.55;text-align:center;margin:0 0 28px">${DISCLAIMER}</p>
+    <div style="display:flex;justify-content:center">
+      <img src="${EHL_LOGO}" style="width:72px;height:auto;opacity:0.6" />
+    </div>
   </div>
 </div>`
 
