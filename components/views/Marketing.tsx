@@ -93,6 +93,7 @@ interface TplField {
   panY: number       // 0–1 vertical pan within box, 0.5 = centered
   fontColor: string
   bold: boolean
+  textAlign?: 'left' | 'center' | 'right'
 }
 
 interface TplPage { bg_url: string; fields: TplField[] }
@@ -146,16 +147,20 @@ async function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
-function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number) {
+function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, maxW: number, lineH: number, align: 'left'|'center'|'right' = 'left') {
   const words = text.split(' ')
   let line = '', cy = y
+  const drawLine = (l: string) => {
+    const tx = align === 'center' ? x + maxW / 2 : align === 'right' ? x + maxW : x
+    ctx.textAlign = align; ctx.fillText(l, tx, cy); ctx.textAlign = 'left'
+  }
   for (const word of words) {
     const test = line + word + ' '
     if (ctx.measureText(test).width > maxW && line) {
-      ctx.fillText(line.trim(), x, cy); line = word + ' '; cy += lineH
+      drawLine(line.trim()); line = word + ' '; cy += lineH
     } else { line = test }
   }
-  if (line.trim()) ctx.fillText(line.trim(), x, cy)
+  if (line.trim()) drawLine(line.trim())
 }
 
 async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, values: FieldValues, w: number, h: number) {
@@ -211,12 +216,18 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     } else if (meta.isMultiline) {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
       ctx.fillStyle = f.fontColor
-      wrapText(ctx, val, px, py, (f.rectW || 0.45) * w, fs * 1.45)
+      wrapText(ctx, val, px, py, (f.rectW || 0.45) * w, fs * 1.45, f.textAlign ?? 'left')
     } else {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
       ctx.fillStyle = f.fontColor
-      if (f.rectW) wrapText(ctx, val, px, py, f.rectW * w, fs * 1.35)
-      else ctx.fillText(val, px, py)
+      if (f.rectW) {
+        wrapText(ctx, val, px, py, f.rectW * w, fs * 1.35, f.textAlign ?? 'left')
+      } else {
+        const align = f.textAlign ?? 'left'
+        ctx.textAlign = align
+        ctx.fillText(val, px, py)
+        ctx.textAlign = 'left'
+      }
     }
   }
 }
@@ -998,19 +1009,9 @@ function EditorCanvas({ page, dispW, dispH, selectedIds, onSelect, onMove, onMov
         ctx.fillRect(px, py - fs, rw, rh); ctx.restore()
         ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3])
         ctx.strokeRect(px, py - fs, rw, rh); ctx.setLineDash([])
-        // Draw wrapped placeholder text inside box
         ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter,Arial`
         ctx.fillStyle = f.fontColor
-        const lines = (meta.placeholder || meta.label).split(' ')
-        let line = '', cy = py
-        for (const word of lines) {
-          const test = line + word + ' '
-          if (ctx.measureText(test).width > rw - 6 && line) {
-            ctx.fillText(line.trim(), px + 4, cy); line = word + ' '; cy += fs * 1.35
-            if (cy > py - fs + rh) break
-          } else { line = test }
-        }
-        if (line.trim() && cy <= py - fs + rh) ctx.fillText(line.trim(), px + 4, cy)
+        wrapText(ctx, meta.placeholder || meta.label, px + 4, py, rw - 8, fs * 1.35, f.textAlign ?? 'left')
         // Bottom-right resize grip
         const gx = px + rw - 12, gy = py - fs + rh - 12
         ctx.save(); ctx.globalAlpha = 0.55; ctx.strokeStyle = meta.color; ctx.lineWidth = 2; ctx.setLineDash([])
@@ -1028,8 +1029,12 @@ function EditorCanvas({ page, dispW, dispH, selectedIds, onSelect, onMove, onMov
         ctx.save(); ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3])
         ctx.strokeRect(px - 2, py - fs, tw + 4, fs + 5); ctx.restore()
         ctx.fillStyle = f.fontColor
-        if (hasWidth) wrapText(ctx, text, px, py, maxW, fs * 1.35)
-        else ctx.fillText(text, px, py)
+        if (hasWidth) {
+          wrapText(ctx, text, px, py, maxW, fs * 1.35, f.textAlign ?? 'left')
+        } else {
+          const align = f.textAlign ?? 'left'
+          ctx.textAlign = align; ctx.fillText(text, px, py); ctx.textAlign = 'left'
+        }
         boundsRef.current.set(f.id, { x: px - 2, y: py - fs - 2, w: tw + 4, h: fs + 8 })
       }
 
@@ -1563,9 +1568,18 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                       style={{ width: 34, height: 28, border: '1px solid #D1D5DB', cursor: 'pointer', borderRadius: 5, padding: 2 }} />
                     <span style={{ fontSize: 11, fontFamily: 'monospace' }}>{selected.fontColor}</span>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 14, cursor: 'pointer' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, marginBottom: 10, cursor: 'pointer' }}>
                     <input type="checkbox" checked={selected.bold} onChange={e => updateField(selected.id, { bold: e.target.checked })} />Bold
                   </label>
+                  <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 5 }}>Alignment</label>
+                  <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
+                    {(['left','center','right'] as const).map(a => (
+                      <button key={a} onClick={() => updateField(selected.id, { textAlign: a })}
+                        style={{ flex: 1, padding: '6px 0', border: `1px solid ${(selected.textAlign ?? 'left') === a ? '#0A2540' : '#D1D5DB'}`, borderRadius: 7, background: (selected.textAlign ?? 'left') === a ? '#0A2540' : '#fff', color: (selected.textAlign ?? 'left') === a ? '#fff' : '#6B7280', fontSize: 14, cursor: 'pointer', fontWeight: 600 }}>
+                        {a === 'left' ? 'Left' : a === 'center' ? 'Center' : 'Right'}
+                      </button>
+                    ))}
+                  </div>
                 </>
               )}
               <button onClick={() => removeField(selected.id)} style={{ width: '100%', background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 8, padding: '8px 0', fontWeight: 700, fontSize: 12, cursor: 'pointer', marginBottom: 10 }}>Remove Field</button>
