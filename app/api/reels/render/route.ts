@@ -81,8 +81,9 @@ function buildEndCard(
 
   // Navy background
   clips.push({
-    asset: { type: 'color', color: '#060e1f' },
+    asset: { type: 'shape', shape: 'rectangle', fill: { color: '#060e1f' }, opacity: 1 },
     start, length: dur,
+    width: 1, height: 1, position: 'center',
   })
 
   // NEO logo — top center, small
