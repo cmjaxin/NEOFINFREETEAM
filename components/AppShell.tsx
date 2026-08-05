@@ -58,7 +58,7 @@ function Shell() {
           {view === 'profile' && <EmployeeProfile />}
           {view === 'marketing' && <Marketing />}
           {view === 'reels' && <Reels />}
-          {view === 'conversion' && <Conversion isAdmin={profile.role === 'admin'} />}
+          {view === 'conversion' && <Conversion isAdmin={profile?.role === 'admin'} />}
         </div>
       </main>
 
