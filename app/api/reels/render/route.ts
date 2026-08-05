@@ -51,19 +51,18 @@ function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkS
 }
 
 function captionClip(chunk: CaptionChunk) {
-  const text = chunk.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  const text = chunk.text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').toUpperCase()
   return {
     asset: {
       type: 'html',
-      // Render into a 700px canvas; the pill is display:block width:100% so it never overflows
-      html: `<div style="width:700px;box-sizing:border-box;padding:0 20px;text-align:center"><div style="background:rgba(0,0,0,0.78);border-radius:10px;padding:12px 20px;width:100%;box-sizing:border-box"><span style="font-family:Arial,Helvetica,sans-serif;font-size:34px;font-weight:900;color:#ffffff;line-height:1.3;word-break:break-word;white-space:normal;display:block;text-align:center">${text}</span></div></div>`,
-      width: 700,
-      height: 160,
+      html: `<div style="width:680px;box-sizing:border-box;padding:0 16px;text-align:center"><div style="background:rgba(0,0,0,0.82);border-radius:10px;padding:14px 22px;width:100%;box-sizing:border-box"><span style="font-family:Arial,Helvetica,sans-serif;font-size:36px;font-weight:700;color:#ffffff;line-height:1.3;word-break:break-word;white-space:normal;display:block;text-align:center;letter-spacing:0.04em">${text}</span></div></div>`,
+      width: 680,
+      height: 180,
     },
     start: chunk.start,
     length: Math.max(0.4, chunk.end - chunk.start),
     position: 'bottom',
-    offset: { x: 0, y: 0.10 },
+    offset: { x: 0, y: 0.12 },
   }
 }
 
@@ -160,14 +159,14 @@ export async function POST(request: NextRequest) {
         catch (err) { console.warn('Transcription failed, skipping:', err) }
       }
 
-      // speechStart: cut silence before first word. Use 0 if speech detected immediately.
-      // WebM seekability varies — only pass trim if speechStart is meaningful (>0.1s)
-      // so we don't waste silence but also don't hit the black-frame WebM seek bug on tiny values.
-      const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.05) : 0
-      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.05) : rawDuration
+      // Give a generous pre-speech buffer so first syllable never gets clipped.
+      // Give a generous post-speech buffer so last word isn't cut early.
+      // Only trim silence if speech starts more than 0.15s in to avoid WebM black-frame bug.
+      const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.15) : 0
+      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.4) : rawDuration
       const usedLength  = Math.max(0.5, speechEnd - speechStart)
 
-      const assetTrim = speechStart > 0.1 ? speechStart : 0
+      const assetTrim = speechStart > 0.15 ? speechStart : 0
 
       videoClips.push({
         asset: { type: 'video', src: clip.clip_url, volume: 1, ...(assetTrim > 0 ? { trim: assetTrim } : {}) },
@@ -196,15 +195,15 @@ export async function POST(request: NextRequest) {
       endCardStart, endCardDur,
     )
 
-    // Track order: first track = top layer
+    // Track order: first track = top layer in Shotstack
+    // Captions on top, then end card logos, then end card body, then video clips at bottom
+    const [ecBody, ecLogo, ecEHL] = ecClips
     const tracks: any[] = []
     if (allCaptionChunks.length > 0) tracks.push({ clips: allCaptionChunks.map(captionClip) })
-
-    // End card: 3 clips each in own track (logo on top of html bg, EHL on top too)
-    const [ecBody, ecLogo, ecEHL] = ecClips
     tracks.push({ clips: [ecLogo] })
     tracks.push({ clips: [ecEHL] })
-    tracks.push({ clips: [ecBody, ...videoClips] })
+    tracks.push({ clips: [ecBody] })       // end card body on its own track — NOT mixed with video clips
+    tracks.push({ clips: videoClips })     // video clips on their own bottom track
 
     const timeline = { background: '#000000', tracks }
 
@@ -213,7 +212,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': shotStackApiKey },
       body: JSON.stringify({
         timeline,
-        output: { format: 'mp4', resolution: 'sd', aspectRatio: '9:16', fps: 25 },
+        output: { format: 'mp4', size: { width: 720, height: 1280 }, fps: 30 },
       }),
     })
 
