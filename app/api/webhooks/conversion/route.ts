@@ -3,10 +3,38 @@ import { createClient } from '@supabase/supabase-js'
 
 // Maps names from external lead system → canonical production dashboard names
 const NAME_ALIASES: Record<string, string> = {
-  'matt smith':    'Matthew Smith',
-  'matthew smith': 'Matthew Smith',
-  'scott breen':   'Michael Breen',
-  'mike breen':    'Michael Breen',
+  // Matthew Smith
+  'matt smith':       'Matthew Smith',
+  // Benjamin Kyle
+  'ben kyle':         'Benjamin Kyle',
+  'benji kyle':       'Benjamin Kyle',
+  // Michael Jones
+  'mike jones':       'Michael Jones',
+  // Michael Breen
+  'scott breen':      'Michael Breen',
+  'mike breen':       'Michael Breen',
+  // Joshua Mettle
+  'josh mettle':      'Joshua Mettle',
+  // Gregory Allen
+  'greg allen':       'Gregory Allen',
+  // Scott DiGregorio
+  'scott degregorio': 'Scott DiGregorio',
+  // Aaron Thomas
+  'aaron thomas':     'Aaron Thomas',
+  // Katrinka Condie
+  'kat condie':       'Katrinka Condie',
+  // David Nelson
+  'dave nelson':      'David Nelson',
+  // Jason Drobeck
+  'jason drobeck':    'Jason Drobeck',
+  // Justin Padron
+  'justin padron':    'Justin Padron',
+  // Drake Bloebaum
+  'drake bloebaum':   'Drake Bloebaum',
+  // Ross Zimmerman
+  'ross zimmerman':   'Ross Zimmerman',
+  // Skyler Ford
+  'sky ford':         'Skyler Ford',
 }
 
 function canonicalName(raw: string): string {
