@@ -778,6 +778,13 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     }
   }, [step, sceneSubStep])
 
+  // Set teleprompter to mid-screen start position whenever entering/changing a scene
+  useEffect(() => {
+    if (step !== 'scene' || sceneSubStep === 'review-clip') return
+    const id = setTimeout(() => setTeleprompterStart(), 80)
+    return () => clearTimeout(id)
+  }, [step, sceneIdx, sceneSubStep])
+
   async function startCamera() {
     setError('')
     try {
@@ -800,7 +807,16 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
   function stopCamera() { streamRef.current?.getTracks().forEach(t => t.stop()); streamRef.current = null }
 
   async function handleSelectScript(s: SpliceScript) {
-    setSelectedScript(s); setStep('scene'); setSceneSubStep('ready'); setSceneIdx(0); setAllClips([])
+    // Always fetch full script with scenes so we have scene text + duration
+    const { data } = await supabase
+      .from('splice_scripts')
+      .select('*, splice_scenes(*)')
+      .eq('id', s.id)
+      .single()
+    const full: SpliceScript = data
+      ? { ...data, scenes: ((data as any).splice_scenes ?? []).sort((a: any, b: any) => a.scene_order - b.scene_order) }
+      : s
+    setSelectedScript(full); setStep('scene'); setSceneSubStep('ready'); setSceneIdx(0); setAllClips([])
     await startCamera()
   }
 
@@ -817,23 +833,26 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     await startCamera()
   }
 
+  function setTeleprompterStart() {
+    if (!textRef.current || !promptContainerRef.current) return
+    const startY = promptContainerRef.current.clientHeight * 0.42
+    textRef.current.style.transform = `translateY(${startY}px)`
+  }
+
   function startScrollAnimation(durationSeconds: number) {
     cancelAnimationFrame(scrollAnimRef.current)
     if (!textRef.current || !promptContainerRef.current) return
-    const containerH = promptContainerRef.current.clientHeight
+    const screenH = promptContainerRef.current.clientHeight
     const textH = textRef.current.scrollHeight
-    // Scroll text from its mid-screen start position all the way up past the container
-    const initialOffset = containerH * 0.45  // text starts at ~45% down (mid-screen)
-    const totalScroll = initialOffset + textH  // scroll all text through the top
-    scrollOffsetRef.current = 0
-    textRef.current.style.transform = `translateY(${initialOffset}px)`
+    const startY = screenH * 0.42
+    const endY = -(textH + 40)
+    const totalScroll = startY - endY
+    textRef.current.style.transform = `translateY(${startY}px)`
     const totalMs = (durationSeconds / scrollSpeed) * 1000
     const startTime = performance.now()
     const tick = (now: number) => {
       const pct = Math.min((now - startTime) / totalMs, 1)
-      const offset = initialOffset - pct * totalScroll
-      scrollOffsetRef.current = pct * totalScroll
-      if (textRef.current) textRef.current.style.transform = `translateY(${offset}px)`
+      if (textRef.current) textRef.current.style.transform = `translateY(${startY - pct * totalScroll}px)`
       if (pct < 1) scrollAnimRef.current = requestAnimationFrame(tick)
     }
     scrollAnimRef.current = requestAnimationFrame(tick)
@@ -842,12 +861,7 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
   function resetTeleprompter() {
     cancelAnimationFrame(scrollAnimRef.current)
     scrollOffsetRef.current = 0
-    if (textRef.current && promptContainerRef.current) {
-      const initialOffset = promptContainerRef.current.clientHeight * 0.45
-      textRef.current.style.transform = `translateY(${initialOffset}px)`
-    } else if (textRef.current) {
-      textRef.current.style.transform = 'translateY(0px)'
-    }
+    requestAnimationFrame(() => setTeleprompterStart())
   }
 
   function startCountdown() {
@@ -1303,40 +1317,35 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
                     </div>
                   </div>
 
-                  {/* ── TELEPROMPTER — full screen overlay, text scrolls mid→up ── */}
+                  {/* ── TELEPROMPTER — text starts mid-screen and scrolls up ── */}
                   {currentScene?.text && sceneSubStep !== 'countdown' && (
-                    <div
-                      ref={promptContainerRef}
-                      style={{
-                        position: 'absolute', inset: 0,
-                        overflow: 'hidden',
-                        zIndex: 10,
-                        // Fade text at top and bottom edges — no hard clip
-                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 18%, black 72%, transparent 100%)',
-                        maskImage: 'linear-gradient(to bottom, transparent 0%, black 18%, black 72%, transparent 100%)',
-                      }}
-                    >
-                      <p
-                        ref={textRef}
-                        style={{
-                          position: 'absolute',
-                          left: 0, right: 0,
-                          padding: '0 28px',
-                          fontSize: 30,
-                          lineHeight: 1.75,
-                          color: 'rgba(255,255,255,0.82)',
-                          fontWeight: 800,
-                          margin: 0,
-                          whiteSpace: 'pre-wrap',
-                          textAlign: 'center',
-                          textShadow: '0 2px 12px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,1)',
-                          willChange: 'transform',
-                          // Initial position set by resetTeleprompter / startScrollAnimation
-                        }}
-                      >
-                        {currentScene.text}
-                      </p>
-                    </div>
+                    <>
+                      {/* Measurement + scroll container — NO overflow:hidden so text never clips */}
+                      <div ref={promptContainerRef} style={{ position: 'absolute', inset: 0, zIndex: 10, pointerEvents: 'none' }}>
+                        <p
+                          ref={textRef}
+                          style={{
+                            position: 'absolute',
+                            left: 0, right: 0, top: 0,
+                            padding: '0 32px',
+                            fontSize: 32,
+                            lineHeight: 1.8,
+                            color: 'rgba(255,255,255,0.85)',
+                            fontWeight: 800,
+                            margin: 0,
+                            whiteSpace: 'pre-wrap',
+                            textAlign: 'center',
+                            textShadow: '0 2px 16px rgba(0,0,0,1), 0 0 4px rgba(0,0,0,1)',
+                            willChange: 'transform',
+                          }}
+                        >
+                          {currentScene.text}
+                        </p>
+                      </div>
+                      {/* Fade strips — top and bottom, over the text, pointer-events:none */}
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '22%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%)', zIndex: 11, pointerEvents: 'none' }} />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '28%', background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)', zIndex: 11, pointerEvents: 'none' }} />
+                    </>
                   )}
 
                   {/* ── BOTTOM CONTROLS ── */}
