@@ -617,7 +617,17 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
           <span style={{ width: 7, height: 7, borderRadius: 2, background: meta.color, display: 'inline-block', flexShrink: 0 }} />
           {meta.label}
         </label>
-        {ft === 'pa_date' ? (
+        {ft === 'nmls' ? (
+          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #E5E7EB', borderRadius: 8, overflow: 'hidden', fontSize: 13 }}>
+            <span style={{ padding: '9px 10px', background: '#F3F4F6', color: '#6B7280', fontWeight: 600, whiteSpace: 'nowrap', borderRight: '1px solid #E5E7EB' }}>NMLS#</span>
+            <input
+              value={values.nmls.replace(/^NMLS#\s*/i, '')}
+              onChange={e => setValues(v => ({ ...v, nmls: `NMLS# ${e.target.value}` }))}
+              placeholder="123456"
+              style={{ flex: 1, border: 'none', padding: '9px 12px', fontSize: 13, outline: 'none', minWidth: 0 }}
+            />
+          </div>
+        ) : ft === 'pa_date' ? (
           <input type="date" onChange={e => {
             if (!e.target.value) { setValues(v => ({ ...v, [ft]: '' })); return }
             const [y, m, d] = e.target.value.split('-').map(Number)
