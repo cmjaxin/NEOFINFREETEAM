@@ -94,6 +94,17 @@ export default function Reels() {
         }
         @media (max-width: 639px) {
           .splice-sidebar { display: none !important; }
+          .splice-modal {
+            border-radius: 0 !important;
+            margin: 0 !important;
+            max-width: 100vw !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+          }
+          .splice-main-pad { padding: 16px !important; }
+          .splice-h1 { font-size: 22px !important; }
+          .splice-card-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 
@@ -235,9 +246,9 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
   const renderingCount = allVideos.filter(v => v.status === 'rendering').length
 
   return (
-    <div style={{ padding: 'clamp(16px, 4vw, 36px)', maxWidth: 920, margin: '0 auto' }}>
+    <div className="splice-main-pad" style={{ padding: '28px 32px', maxWidth: 920, margin: '0 auto' }}>
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 'clamp(20px, 5vw, 28px)', fontWeight: 900, color: '#fff', margin: '0 0 6px', letterSpacing: '-.01em' }}>
+        <h1 className="splice-h1" style={{ fontSize: 28, fontWeight: 900, color: '#fff', margin: '0 0 6px', letterSpacing: '-.01em' }}>
           Hey {profile?.full_name?.split(' ')[0] ?? 'there'}
         </h1>
         <p style={{ fontSize: 14, color: '#999', margin: 0 }}>
@@ -299,7 +310,7 @@ function HomeView({ myVideos, assignedScripts, liveScripts, isAdmin, allVideos, 
             </button>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
+          <div className="splice-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
             {myVideos.map(v => <VideoCard key={v.id} video={v} onRefresh={onRecord} />)}
           </div>
         )}
@@ -350,16 +361,19 @@ function ScriptsView({ scripts, members, onRefresh }: { scripts: SpliceScript[];
   }
 
   async function del(id: string) {
-    if (!confirm('Delete this script?')) return
+    if (!confirm('Delete this script? This cannot be undone.')) return
+    // cascade: remove assignments and scenes first (FK constraints)
+    await supabase.from('splice_script_assignments').delete().eq('script_id', id)
+    await supabase.from('splice_scenes').delete().eq('script_id', id)
     await supabase.from('splice_scripts').delete().eq('id', id)
     onRefresh()
   }
 
   return (
-    <div style={{ padding: '32px 36px', maxWidth: 920, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+    <div className="splice-main-pad" style={{ padding: '28px 32px', maxWidth: 920, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>Scripts</h2>
+          <h2 className="splice-h1" style={{ fontSize: 22, fontWeight: 800, color: '#fff', margin: '0 0 4px' }}>Scripts</h2>
           <p style={{ fontSize: 13, color: '#999', margin: 0 }}>Create and publish scripts for your team to record</p>
         </div>
         <button onClick={() => setShowForm(s => !s)} style={darkBtn}>{showForm ? 'Cancel' : '+ New Script'}</button>
@@ -919,11 +933,6 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
 
   return (
     <div onClick={handleClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <style>{`
-        @media (max-width: 639px) {
-          .splice-modal { border-radius: 0 !important; margin: 0 !important; height: 100dvh !important; max-height: 100dvh !important; }
-        }
-      `}</style>
       <div className="splice-modal" onClick={e => e.stopPropagation()} style={{ background: '#1a2633', border: '1px solid rgba(45,174,255,0.2)', borderRadius: 18, width: '100%', maxWidth: step === 'scene' ? 700 : 660, maxHeight: '95vh', overflow: 'auto', margin: 12, display: 'flex', flexDirection: 'column' }}>
 
         {/* Header */}
@@ -1041,7 +1050,24 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
                               if (!res.ok) throw new Error(data.error ?? 'AI request failed')
                               setAiResult(data)
                               setComposeTitle(data.title ?? aiTopic)
-                              setComposeScenes(data.scenes.map((s: any) => ({ kind: s.kind, text: s.text, duration_seconds: s.duration_seconds ?? (s.kind === 'hook' ? 25 : s.kind === 'body' ? 60 : 15) })))
+                              // Split any body scene into 3 shorter clips
+                              const expanded: typeof DEFAULT_COMPOSE = []
+                              for (const s of data.scenes) {
+                                if (s.kind === 'body') {
+                                  const sentences = (s.text as string).match(/[^.!?]+[.!?]+/g) ?? [s.text]
+                                  const third = Math.ceil(sentences.length / 3)
+                                  const parts = [
+                                    sentences.slice(0, third).join(' ').trim(),
+                                    sentences.slice(third, third * 2).join(' ').trim(),
+                                    sentences.slice(third * 2).join(' ').trim(),
+                                  ].filter(Boolean)
+                                  const dur = Math.round((s.duration_seconds ?? 60) / parts.length)
+                                  parts.forEach(text => expanded.push({ kind: 'body', text, duration_seconds: dur }))
+                                } else {
+                                  expanded.push({ kind: s.kind, text: s.text, duration_seconds: s.duration_seconds ?? (s.kind === 'hook' ? 20 : 15) })
+                                }
+                              }
+                              setComposeScenes(expanded)
                             } catch (e: any) { setAiError(e.message) }
                             setAiLoading(false)
                           }}
