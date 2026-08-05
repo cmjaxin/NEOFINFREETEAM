@@ -1630,6 +1630,12 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
               </>)}
               {(meta.isMultiline) && (<>
                 <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Font size — <strong>{Math.round(selected.fontSize * 100)}%</strong>
+                </label>
+                <input type="range" min={1} max={15} step={0.5} value={Math.round(selected.fontSize * 100)}
+                  onChange={e => updateField(selected.id, { fontSize: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
                   Width — <strong>{Math.round((selected.rectW || 0.45) * 100)}%</strong>
                 </label>
                 <input type="range" min={10} max={100} step={1} value={Math.round((selected.rectW || 0.45) * 100)}
