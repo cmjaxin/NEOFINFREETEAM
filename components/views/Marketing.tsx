@@ -515,9 +515,60 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const [downloading, setDownloading] = useState(false)
   const [headshotUploading, setHeadshotUploading] = useState(false)
   const [mobileTab, setMobileTab] = useState<'preview' | 'fill'>('fill')
+  const [posOverrides, setPosOverrides] = useState<Record<string, {x: number; y: number}>>({})
   const previewRef = useRef<HTMLCanvasElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{id: string; ox: number; oy: number; mx0: number; my0: number} | null>(null)
+  const posOverridesRef = useRef<Record<string, {x: number; y: number}>>({})
+
+  function getPageWithOverrides(page: TplPage, overrides = posOverridesRef.current): TplPage {
+    if (Object.keys(overrides).length === 0) return page
+    return { ...page, fields: page.fields.map(f => { const o = overrides[f.id]; return o ? { ...f, x: o.x, y: o.y } : f }) }
+  }
+
+  function canvasFraction(clientX: number, clientY: number) {
+    const c = previewRef.current; if (!c) return { x: 0, y: 0 }
+    const r = c.getBoundingClientRect()
+    return { x: (clientX - r.left) / r.width, y: (clientY - r.top) / r.height }
+  }
+
+  function hitTest(fx: number, fy: number): TplField | null {
+    const page = template.pages[pageIdx]
+    for (const f of page.fields) {
+      const ox = posOverridesRef.current[f.id]?.x ?? f.x
+      const oy = posOverridesRef.current[f.id]?.y ?? f.y
+      if (Math.abs(fx - ox) < 0.06 && Math.abs(fy - oy) < 0.06) return f
+    }
+    return null
+  }
+
+  function handlePreviewMouseDown(e: React.MouseEvent<HTMLCanvasElement>) {
+    const { x, y } = canvasFraction(e.clientX, e.clientY)
+    const field = hitTest(x, y); if (!field) return
+    e.preventDefault()
+    const ox = posOverridesRef.current[field.id]?.x ?? field.x
+    const oy = posOverridesRef.current[field.id]?.y ?? field.y
+    dragRef.current = { id: field.id, ox, oy, mx0: x, my0: y }
+  }
+
+  function handlePreviewMouseMove(e: React.MouseEvent<HTMLCanvasElement>) {
+    if (!dragRef.current) return
+    e.preventDefault()
+    const { x, y } = canvasFraction(e.clientX, e.clientY)
+    const { id, ox, oy, mx0, my0 } = dragRef.current
+    const nx = Math.max(0, Math.min(1, ox + x - mx0))
+    const ny = Math.max(0, Math.min(1, oy + y - my0))
+    posOverridesRef.current = { ...posOverridesRef.current, [id]: { x: nx, y: ny } }
+    setPosOverrides({ ...posOverridesRef.current })
+    const canvas = previewRef.current, container = containerRef.current
+    if (!canvas || !container) return
+    const maxW = Math.min(container.clientWidth, 560)
+    const previewH = Math.round(maxW * (size.h / size.w))
+    renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, maxW, previewH).catch(() => {})
+  }
+
+  function handlePreviewMouseUp() { dragRef.current = null }
 
   const usedFields = new Set<FieldType>()
   template.pages.forEach(p => p.fields.forEach(f => usedFields.has(f.type) || usedFields.add(f.type)))
@@ -531,7 +582,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(renderPreview, 200)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [values, pageIdx])
+  }, [values, pageIdx, posOverrides])
 
   async function renderPreview() {
     const canvas = previewRef.current, container = containerRef.current
@@ -539,40 +590,49 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     setRendering(true)
     const maxW = Math.min(container.clientWidth, 560)
     const previewH = Math.round(maxW * (size.h / size.w))
-    try { await renderPageToCanvas(canvas, template.pages[pageIdx], values, maxW, previewH) } catch {}
+    try { await renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, maxW, previewH) } catch {}
     setRendering(false)
   }
 
   async function downloadPNG() {
     setDownloading(true)
-    for (let i = 0; i < template.pages.length; i++) {
-      const c = document.createElement('canvas')
-      await renderPageToCanvas(c, template.pages[i], values, size.w, size.h)
-      const a = document.createElement('a')
-      const suffix = template.pages.length > 1 ? `_p${i + 1}` : ''
-      a.href = c.toDataURL('image/png')
-      a.download = `${template.name.replace(/\s+/g, '_')}${suffix}.png`
-      a.click()
-    }
+    try {
+      for (let i = 0; i < template.pages.length; i++) {
+        const c = document.createElement('canvas')
+        await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h)
+        const suffix = template.pages.length > 1 ? `_p${i + 1}` : ''
+        const a = document.createElement('a')
+        a.href = c.toDataURL('image/png')
+        a.download = `${template.name.replace(/\s+/g, '_')}${suffix}.png`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        // small delay between downloads so browser doesn't block them
+        if (i < template.pages.length - 1) await new Promise(r => setTimeout(r, 300))
+      }
+    } catch (e) { console.error(e) }
     setDownloading(false)
   }
 
   async function downloadPDF() {
     setDownloading(true)
-    const images: string[] = []
-    for (let i = 0; i < template.pages.length; i++) {
-      const c = document.createElement('canvas')
-      await renderPageToCanvas(c, template.pages[i], values, size.w, size.h)
-      images.push(c.toDataURL('image/png'))
-    }
-    const isLetter = template.canvas_size === 'flyer_letter'
-    const pw = isLetter ? '8.5in' : `${size.w}px`, ph = isLetter ? '11in' : `${size.h}px`
-    const win = window.open('', '_blank')!
-    win.document.write(`<!DOCTYPE html><html><head><style>
-      @page{size:${pw} ${ph};margin:0}body{margin:0;padding:0}img{width:100vw;height:100vh;object-fit:fill;display:block;page-break-after:always}
-    </style></head><body>${images.map(src => `<img src="${src}"/>`).join('')}</body></html>`)
-    win.document.close()
-    setTimeout(() => win.print(), 400)
+    try {
+      const images: string[] = []
+      for (let i = 0; i < template.pages.length; i++) {
+        const c = document.createElement('canvas')
+        await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h)
+        images.push(c.toDataURL('image/png'))
+      }
+      const isLetter = template.canvas_size === 'flyer_letter'
+      const pw = isLetter ? '8.5in' : `${size.w}px`, ph = isLetter ? '11in' : `${size.h}px`
+      const win = window.open('', '_blank')
+      if (!win) { alert('Please allow pop-ups for this site to download the PDF.'); setDownloading(false); return }
+      win.document.write(`<!DOCTYPE html><html><head><style>
+        @page{size:${pw} ${ph};margin:0}body{margin:0;padding:0}img{width:100vw;height:100vh;object-fit:fill;display:block;page-break-after:always}
+      </style></head><body>${images.map(src => `<img src="${src}"/>`).join('')}</body></html>`)
+      win.document.close()
+      setTimeout(() => { win.print() }, 600)
+    } catch (e) { console.error(e) }
     setDownloading(false)
   }
 
@@ -707,7 +767,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
         {/* Canvas preview */}
         <div ref={containerRef} className="mkt-modal-canvas" data-hidden={mobileTab !== 'preview' ? 'true' : undefined}>
           <div style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
-            <canvas ref={previewRef} style={{ width: '100%', aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.7)', opacity: rendering ? 0.5 : 1, transition: 'opacity .15s' }} />
+            <canvas ref={previewRef} onMouseDown={handlePreviewMouseDown} onMouseMove={handlePreviewMouseMove} onMouseUp={handlePreviewMouseUp} onMouseLeave={handlePreviewMouseUp} style={{ width: '100%', aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.7)', opacity: rendering ? 0.5 : 1, transition: 'opacity .15s', cursor: 'grab' }} />
             {rendering && (
               <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ background: 'rgba(0,0,0,.55)', color: '#fff', borderRadius: 8, padding: '8px 18px', fontSize: 13 }}>Updating…</div>
