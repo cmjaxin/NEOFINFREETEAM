@@ -28,7 +28,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   const inits = initials(profile?.full_name ?? '')
 
-  const isColin = profile?.email?.toLowerCase() === 'colin.jenson@neohomeloans.com'
+  const SPLICE_ALLOWED = ['colin.jenson@neohomeloans.com', 'katrinka.condie@neohomeloans.com']
+  const isColin = SPLICE_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
   const isAdmin = profile?.role === 'admin' || isColin
 
   function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels') {
