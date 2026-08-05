@@ -991,13 +991,12 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       return n
     })
     setPendingClip(null)
-    resetTeleprompter()
-    // Re-attach camera
+    // Re-attach camera before advancing
     if (streamRef.current && videoRef.current) {
       videoRef.current.srcObject = streamRef.current
       videoRef.current.play().catch(() => {})
     }
-    setSceneSubStep('ready')
+    advanceScene()
   }
 
   function discardClip() {
