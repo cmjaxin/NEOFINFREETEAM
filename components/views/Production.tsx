@@ -71,6 +71,18 @@ interface BranchGroup {
   members: MARecord[]
 }
 
+interface OPSPersonRecord {
+  name: string
+  monthlyFamilies: number[]
+  ytdFamilies: number
+}
+
+interface OPSData {
+  pe:  OPSPersonRecord[]  // Loan Specialists (Assigned PE)
+  lca: OPSPersonRecord[]  // Production Partners (Assigned LCA)
+  ir:  OPSPersonRecord[]  // Credit Analysts (Initial Reviewer Full Name)
+}
+
 type PeriodStr = 'ytd'|'range'|'0'|'1'|'2'|'3'|'4'|'5'|'6'|'7'|'8'|'9'|'10'|'11'
 
 // ─── Seed MA data ─────────────────────────────────────────────────────────────
@@ -310,6 +322,43 @@ function parseFundingsWeekly(rows: CsvRow[], source: 'sg'|'d2c'): Map<string, { 
     result.set(wk, { label: v.label, byBranch })
   }
   return result
+}
+
+function parseOpsStats(rows: CsvRow[]): OPSData {
+  const peMap  = new Map<string, OPSPersonRecord>()
+  const lcaMap = new Map<string, OPSPersonRecord>()
+  const irMap  = new Map<string, OPSPersonRecord>()
+  const seen   = new Set<string>()
+
+  for (const row of rows) {
+    const loanId = String(row['Loan File ID'] ?? row['LoanFileID'] ?? '').trim()
+    if (loanId && seen.has(loanId)) continue
+    if (loanId) seen.add(loanId)
+
+    const dateRaw = row['Funded Date'] ?? row['Close Date'] ?? row['Actual funding Date'] ?? row['Actual Funding Date'] ?? ''
+    const dt = dateRaw ? parseDate(dateRaw as string) : null
+    const mo = dt ? dt.getMonth() : -1
+
+    const pe  = String(row['Assigned PE']  ?? '').trim()
+    const lca = String(row['Assigned LCA'] ?? '').trim()
+    const ir  = String(row['Initial Reviewer Full Name'] ?? '').trim()
+
+    for (const [name, map] of [[pe, peMap], [lca, lcaMap], [ir, irMap]] as [string, Map<string, OPSPersonRecord>][]) {
+      if (!name) continue
+      const key = normName(name)
+      if (!map.has(key)) map.set(key, { name, monthlyFamilies: Array(12).fill(0) as number[], ytdFamilies: 0 })
+      const rec = map.get(key)!
+      rec.ytdFamilies += 1
+      if (mo >= 0) rec.monthlyFamilies[mo] += 1
+    }
+  }
+
+  const sort = (arr: OPSPersonRecord[]) => arr.sort((a, b) => b.ytdFamilies - a.ytdFamilies)
+  return {
+    pe:  sort(Array.from(peMap.values())),
+    lca: sort(Array.from(lcaMap.values())),
+    ir:  sort(Array.from(irMap.values())),
+  }
 }
 
 // LCs whose records should be credited to "Assigned MA Support" instead
@@ -1893,6 +1942,98 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
   )
 }
 
+// ─── OPS Stats Tab ───────────────────────────────────────────────────────────
+const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+function OpsStatsTab({ opsData }: { opsData: OPSData }) {
+  const [selectedMonth, setSelectedMonth] = useState<number | 'ytd'>('ytd')
+  const currentMonth = new Date().getMonth()
+
+  function OpsSection({ title, icon, people }: { title: string; icon: string; people: OPSPersonRecord[] }) {
+    if (people.length === 0) return (
+      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 32, textAlign: 'center', color: C.muted, fontSize: 14, marginBottom: 24 }}>
+        <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
+        <div style={{ fontWeight: 700, color: C.dim, marginBottom: 6 }}>{title}</div>
+        <div>No data yet. Upload a funded production CSV to populate.</div>
+      </div>
+    )
+
+    const sorted = [...people].sort((a, b) => {
+      const av = selectedMonth === 'ytd' ? a.ytdFamilies : (a.monthlyFamilies[selectedMonth as number] ?? 0)
+      const bv = selectedMonth === 'ytd' ? b.ytdFamilies : (b.monthlyFamilies[selectedMonth as number] ?? 0)
+      return bv - av
+    })
+    const maxVal = Math.max(...sorted.map(p => selectedMonth === 'ytd' ? p.ytdFamilies : (p.monthlyFamilies[selectedMonth as number] ?? 0)), 1)
+
+    return (
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+          <span style={{ fontSize: 22 }}>{icon}</span>
+          <div style={{ fontSize: 16, fontWeight: 800, color: C.navy }}>{title}</div>
+          <div style={{ fontSize: 12, color: C.muted, background: `rgba(91,203,245,0.1)`, borderRadius: 99, padding: '3px 10px', marginLeft: 2 }}>
+            {sorted.length} people
+          </div>
+        </div>
+        <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}`, background: '#F8FAFC' }}>
+                <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 700, color: C.dim, width: 40 }}>#</th>
+                <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 700, color: C.dim }}>Name</th>
+                <th style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700, color: C.dim }}>Families</th>
+                <th style={{ padding: '10px 16px', width: '35%' }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((p, i) => {
+                const val = selectedMonth === 'ytd' ? p.ytdFamilies : (p.monthlyFamilies[selectedMonth as number] ?? 0)
+                const pct = val / maxVal
+                return (
+                  <tr key={p.name} style={{ borderBottom: i < sorted.length - 1 ? `1px solid ${C.border}` : 'none' }}>
+                    <td style={{ padding: '11px 16px', color: C.muted, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</td>
+                    <td style={{ padding: '11px 16px', fontWeight: 600, color: C.text }}>{p.name}</td>
+                    <td style={{ padding: '11px 16px', textAlign: 'right', fontWeight: 700, color: C.navy, fontVariantNumeric: 'tabular-nums' }}>{val}</td>
+                    <td style={{ padding: '11px 16px' }}>
+                      <div style={{ height: 8, borderRadius: 4, background: C.border, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct * 100}%`, background: `linear-gradient(90deg, #5BCBF5, #0A2540)`, borderRadius: 4, transition: 'width 0.3s' }} />
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.navy }}>OPS Team Stats</div>
+          <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>Families helped serve per OPS team member</div>
+        </div>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button onClick={() => setSelectedMonth('ytd')} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${selectedMonth === 'ytd' ? C.navy : C.border}`, background: selectedMonth === 'ytd' ? C.navy : C.white, color: selectedMonth === 'ytd' ? '#fff' : C.dim, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+            YTD
+          </button>
+          {MONTH_LABELS.slice(0, currentMonth + 1).map((lbl, idx) => (
+            <button key={idx} onClick={() => setSelectedMonth(idx)} style={{ padding: '6px 12px', borderRadius: 8, border: `1px solid ${selectedMonth === idx ? C.navy : C.border}`, background: selectedMonth === idx ? C.navy : C.white, color: selectedMonth === idx ? '#fff' : C.dim, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <OpsSection title="Production Partners" icon="🤝" people={opsData.lca} />
+      <OpsSection title="Credit Analysts" icon="📊" people={opsData.ir} />
+      <OpsSection title="Loan Specialists" icon="📋" people={opsData.pe} />
+    </div>
+  )
+}
+
 // ─── Changemaker helpers ──────────────────────────────────────────────────────
 const PROJ_FACTOR = 365 / 196
 
@@ -1919,11 +2060,13 @@ export default function Production() {
   const [maData, setMaData] = useState<MARecord[]>([])
   const [weeklyData, setWeeklyData] = useState<WeeklyRow[]>([])
   const [prevYearData, setPrevYearData] = useState<MARecord[]>([])
-  const [activeTab, setActiveTab] = useState<'branch'|'apps'|'conversion'>('branch')
+  const [opsData, setOpsData] = useState<OPSData>({ pe: [], lca: [], ir: [] })
+  const [activeTab, setActiveTab] = useState<'branch'|'apps'|'conversion'|'ops'>('branch')
   const [dataLoaded, setDataLoaded] = useState(false)
   const maTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const weeklyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prevTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const opsTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const supabase = createClient()
 
@@ -1935,6 +2078,7 @@ export default function Production() {
         if (row.key === 'ma_data' && Array.isArray(row.data) && (row.data as MARecord[]).length > 0) setMaData(row.data as MARecord[])
         if (row.key === 'weekly_data' && Array.isArray(row.data) && (row.data as WeeklyRow[]).length > 0) setWeeklyData(row.data as WeeklyRow[])
         if (row.key === 'prev_year_data' && Array.isArray(row.data) && (row.data as MARecord[]).length > 0) setPrevYearData(row.data as MARecord[])
+        if (row.key === 'ops_data' && row.data && typeof row.data === 'object') setOpsData(row.data as OPSData)
       }
       setDataLoaded(true)
     })
@@ -1955,6 +2099,7 @@ export default function Production() {
   useEffect(() => { makeSaver(maTimer, 'ma_data')(maData, dataLoaded) }, [maData, dataLoaded])
   useEffect(() => { makeSaver(weeklyTimer, 'weekly_data')(weeklyData, dataLoaded) }, [weeklyData, dataLoaded])
   useEffect(() => { makeSaver(prevTimer, 'prev_year_data')(prevYearData, dataLoaded) }, [prevYearData, dataLoaded])
+  useEffect(() => { makeSaver(opsTimer, 'ops_data')(opsData, dataLoaded) }, [opsData, dataLoaded])
 
   const handlePrevYearUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
@@ -1993,6 +2138,7 @@ export default function Production() {
 
   const handleFundingsUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
+    setOpsData(parseOpsStats(rows))
     const sgRows = rows.filter(r => rowSource(r) === 'sg')
     const d2cRows = rows.filter(r => rowSource(r) === 'd2c')
     const parsedSG = parseFundingsRows(sgRows.length ? sgRows : rows, sgRows.length ? 'sg' : 'all')
@@ -2178,10 +2324,11 @@ export default function Production() {
     })))
   }, [])
 
-  const tabOpts: Array<{ id: 'branch'|'apps'|'conversion'; label: string }> = [
+  const tabOpts: Array<{ id: 'branch'|'apps'|'conversion'|'ops'; label: string }> = [
     { id: 'branch', label: 'Production' },
     { id: 'apps', label: 'Applications' },
     { id: 'conversion', label: 'Conversion' },
+    { id: 'ops', label: 'OPS Stats' },
   ]
 
   return (
@@ -2222,6 +2369,7 @@ export default function Production() {
       {activeTab === 'branch' && <BranchProductionTab maData={maData} prevYearData={prevYearData} onFundingsUpload={handleFundingsUpload} onPrevYearUpload={handlePrevYearUpload} onClearPrevYear={handleClearPrevYear} isAdmin={isAdmin} />}
       {activeTab === 'apps' && <ApplicationsTab maData={maData} prevYearData={prevYearData} weeklyData={weeklyData} onAppsUpload={(f, s) => handleAppsUpload(f, s)} onWeekUpload={handleWeekUpload} onClearApps={handleClearApps} isAdmin={isAdmin} />}
       {activeTab === 'conversion' && <ConversionTab maData={maData} />}
+      {activeTab === 'ops' && <OpsStatsTab opsData={opsData} />}
     </div>
   )
 }
