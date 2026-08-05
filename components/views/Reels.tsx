@@ -628,13 +628,31 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
   video: SpliceVideo; isAdmin?: boolean; onRender?: () => void; rendering?: boolean; onDelete?: () => void; onRefresh?: () => void
 }) {
   const supabase = createClient()
+  const [checking, setChecking] = useState(false)
+
   const statusColor: Record<string, string> = {
     ready: '#34D399', rendering: '#7A33F5', awaiting_scenes: '#F59E0B', uploading: '#2DAEFF', error: '#EF4444',
   }
   const statusLabel: Record<string, string> = {
-    ready: 'Ready', rendering: 'Rendering', awaiting_scenes: 'Awaiting Render', uploading: 'Uploading', error: 'Error',
+    ready: 'Ready', rendering: 'Rendering…', awaiting_scenes: 'Awaiting Render', uploading: 'Uploading', error: 'Error',
   }
   const color = statusColor[video.status] ?? '#666'
+
+  async function checkStatus() {
+    setChecking(true)
+    try {
+      const res = await fetch('/api/reels/render-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId: video.id }),
+      })
+      const data = await res.json()
+      if (data.status === 'ready' || data.status === 'error') {
+        if (onRefresh) onRefresh()
+      }
+    } catch {}
+    setChecking(false)
+  }
 
   async function deleteThis() {
     if (!confirm('Delete this video?')) return
@@ -646,35 +664,47 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
 
   return (
     <div style={{ background: '#1a2633', border: '1px solid #2d3e4f', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ aspectRatio: '16/9', background: '#0d1220', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <div style={{ aspectRatio: '9/16', background: '#0d1220', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', maxHeight: 280 }}>
         {video.file_url
           ? <video src={video.file_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} controls />
-          : <div style={{ color: '#2d3e4f', fontSize: 13, fontWeight: 600 }}>No preview</div>}
+          : (
+            <div style={{ textAlign: 'center', color: '#2d3e4f' }}>
+              <div style={{ fontSize: 32, marginBottom: 6, opacity: 0.4 }}>▶</div>
+              <div style={{ fontSize: 11, fontWeight: 600 }}>{statusLabel[video.status] ?? video.status}</div>
+            </div>
+          )}
+        <span style={{ position: 'absolute', top: 8, right: 8, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: color + '33', color, backdropFilter: 'blur(4px)' }}>
+          {statusLabel[video.status] ?? video.status}
+        </span>
       </div>
       <div style={{ padding: '12px 14px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4, gap: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', minWidth: 0 }}>
-            {(video as any).splice_scripts?.title ?? 'My Script'}
-          </div>
-          <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: color + '22', color, whiteSpace: 'nowrap' }}>
-            {statusLabel[video.status] ?? video.status}
-          </span>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
+          {(video as any).splice_scripts?.title ?? 'My Script'}
         </div>
         {isAdmin && (video as any).profiles?.full_name && (
-          <div style={{ fontSize: 11.5, color: '#999', marginBottom: 4 }}>{(video as any).profiles.full_name}</div>
+          <div style={{ fontSize: 11.5, color: '#999', marginBottom: 2 }}>{(video as any).profiles.full_name}</div>
         )}
-        <div style={{ fontSize: 11, color: '#666' }}>{new Date(video.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+        <div style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>{new Date(video.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+
         {isAdmin && video.status === 'awaiting_scenes' && (
-          <button onClick={onRender} disabled={rendering} style={{ marginTop: 10, width: '100%', padding: '8px 0', background: 'rgba(122,51,245,0.15)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.3)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: rendering ? 0.6 : 1 }}>
-            {rendering ? 'Starting render…' : 'Trigger Render'}
+          <button onClick={onRender} disabled={rendering} style={{ width: '100%', padding: '8px 0', background: 'rgba(122,51,245,0.15)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.3)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: rendering ? 0.6 : 1, marginBottom: 6 }}>
+            {rendering ? 'Starting…' : 'Trigger Render'}
           </button>
         )}
+
+        {video.status === 'rendering' && (
+          <button onClick={checkStatus} disabled={checking} style={{ width: '100%', padding: '8px 0', background: 'rgba(122,51,245,0.1)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.2)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: checking ? 0.6 : 1, marginBottom: 6 }}>
+            {checking ? 'Checking…' : 'Check Status'}
+          </button>
+        )}
+
         {video.status === 'ready' && video.file_url && (
-          <a href={video.file_url} download target="_blank" rel="noopener noreferrer" style={{ display: 'block', marginTop: 10, padding: '8px 0', background: 'rgba(45,174,255,0.1)', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 7, textAlign: 'center', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+          <a href={video.file_url} download target="_blank" rel="noopener noreferrer" style={{ display: 'block', padding: '9px 0', background: 'linear-gradient(135deg,rgba(45,174,255,0.15),rgba(122,51,245,0.15))', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 7, textAlign: 'center', fontSize: 13, fontWeight: 700, textDecoration: 'none', marginBottom: 6 }}>
             Download to Device
           </a>
         )}
-        <button onClick={deleteThis} style={{ marginTop: 8, width: '100%', padding: '7px 0', background: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+
+        <button onClick={deleteThis} style={{ width: '100%', padding: '7px 0', background: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
           Delete
         </button>
       </div>
@@ -706,9 +736,9 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
   const [sceneSubStep, setSceneSubStep] = useState<SceneSubStep>('ready')
   const [selectedScript, setSelectedScript] = useState<SpliceScript | null>(null)
   const [sceneIdx, setSceneIdx] = useState(0)
-  // allClips[sceneIdx] = array of clips recorded for that scene
-  const [allClips, setAllClips] = useState<{ blob: Blob; url: string }[][]>([])
-  const [pendingClip, setPendingClip] = useState<{ blob: Blob; url: string } | null>(null)
+  // allClips[sceneIdx] = array of clips recorded for that scene (includes per-clip duration)
+  const [allClips, setAllClips] = useState<{ blob: Blob; url: string; duration: number }[][]>([])
+  const [pendingClip, setPendingClip] = useState<{ blob: Blob; url: string; duration: number } | null>(null)
   const [countdown, setCountdown] = useState(3)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
@@ -831,9 +861,9 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     recorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: mimeType })
       const url = URL.createObjectURL(blob)
-      setPendingClip({ blob, url })
+      // capture elapsed at stop time via ref so the closure sees the current value
+      setElapsed(e => { setPendingClip({ blob, url, duration: e }); return e })
       setSceneSubStep('review-clip')
-      // detach camera so review video can play
       if (videoRef.current) videoRef.current.srcObject = null
     }
     recorder.start(250)
@@ -846,9 +876,10 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
 
   function keepClip() {
     if (!pendingClip) return
+    const clip = pendingClip
     setAllClips(prev => {
       const n = [...prev]
-      n[sceneIdx] = [...(n[sceneIdx] ?? []), pendingClip]
+      n[sceneIdx] = [...(n[sceneIdx] ?? []), clip]
       return n
     })
     setPendingClip(null)
@@ -905,7 +936,7 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
           const { error: uploadErr } = await supabase.storage.from('splice-clips').upload(path, clip.blob, { contentType: 'video/webm', upsert: true })
           if (uploadErr) throw uploadErr
           const { data: urlData } = supabase.storage.from('splice-clips').getPublicUrl(path)
-          await supabase.from('splice_video_clips').insert({ video_id: video.id, scene_id: scene?.id, clip_url: urlData.publicUrl, duration_seconds: elapsed, clip_order: ci })
+          await supabase.from('splice_video_clips').insert({ video_id: video.id, scene_id: scene?.id, clip_url: urlData.publicUrl, duration_seconds: clip.duration, clip_order: ci })
         }
       }
       await supabase.from('splice_videos').update({ status: 'awaiting_scenes' }).eq('id', video.id)
