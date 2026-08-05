@@ -1228,11 +1228,50 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
   const [pageIdx, setPageIdx] = useState(0)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [pdfLoading, setPdfLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [thumbFile, setThumbFile] = useState<File | null>(null)
   const [thumbUrl, setThumbUrl] = useState<string>(editTemplate?.thumbnail_url ?? '')
   const bgInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
   const thumbInputRef = useRef<HTMLInputElement>(null)
+
+  async function handlePdfUpload(file: File) {
+    setPdfLoading(true)
+    setMsg('')
+    try {
+      const pdfjsLib = await import('pdfjs-dist')
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString()
+      const arrayBuffer = await file.arrayBuffer()
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+      const newPages: EditorPage[] = []
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const pdfPage = await pdf.getPage(i)
+        const viewport = pdfPage.getViewport({ scale: 2 })
+        const canvas = document.createElement('canvas')
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        const ctx = canvas.getContext('2d')!
+        await pdfPage.render({ canvasContext: ctx as unknown as CanvasRenderingContext2D, viewport, canvas }).promise
+        const blob = await new Promise<Blob>(res => canvas.toBlob(b => res(b!), 'image/png'))
+        newPages.push({ bgFile: new File([blob], `page_${i}.png`, { type: 'image/png' }), bgUrl: URL.createObjectURL(blob), fields: [] })
+      }
+      setPages(newPages)
+      setPageIdx(0)
+      setSelectedIds([])
+      // Auto-set canvas size based on first page aspect ratio
+      const firstPage = await pdf.getPage(1)
+      const vp = firstPage.getViewport({ scale: 1 })
+      const ratio = vp.height / vp.width
+      if (Math.abs(ratio - 1650 / 1275) < 0.05) setCanvasSize('pre_approval')
+      else if (Math.abs(ratio - 1) < 0.05) setCanvasSize('square')
+      else if (ratio > 1.2) setCanvasSize('flyer_letter')
+      setMsg(`✓ Loaded ${newPages.length} page${newPages.length > 1 ? 's' : ''} from PDF`)
+    } catch (e: any) {
+      setMsg(`Error reading PDF: ${e.message}`)
+    }
+    setPdfLoading(false)
+  }
 
   const size = CANVAS_SIZES[canvasSize]
   const page = pages[pageIdx]
@@ -1429,15 +1468,21 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
 
       {/* Canvas */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
           <input ref={bgInputRef} type="file" accept="image/*" style={{ display: 'none' }}
             onChange={e => { const f = e.target.files?.[0]; if (f) { updatePage(pageIdx, { bgFile: f, bgUrl: URL.createObjectURL(f) }) } e.target.value = '' }} />
+          <input ref={pdfInputRef} type="file" accept="application/pdf" style={{ display: 'none' }}
+            onChange={e => { const f = e.target.files?.[0]; if (f) handlePdfUpload(f); e.target.value = '' }} />
+          <button onClick={() => pdfInputRef.current?.click()} disabled={pdfLoading}
+            style={{ background: '#7C3AED', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: pdfLoading ? 'default' : 'pointer', opacity: pdfLoading ? 0.7 : 1 }}>
+            {pdfLoading ? '⏳ Loading PDF…' : '📄 Upload PDF'}
+          </button>
           <button onClick={() => bgInputRef.current?.click()}
             style={{ background: '#0A2540', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            {page.bgUrl ? '🖼 Replace Background' : '⬆ Upload Background'}
+            {page.bgUrl ? '🖼 Replace Page Background' : '⬆ Upload Background (Image)'}
           </button>
           <span style={{ fontSize: 11, color: '#9CA3AF' }}>
-            {page.bgUrl ? 'Click canvas to place a field · drag to reposition' : 'Upload a background image to begin'}
+            {page.bgUrl ? 'Click canvas to place a field · drag to reposition' : 'Upload a PDF to auto-import all pages, or upload an image'}
           </span>
         </div>
         <EditorCanvas
