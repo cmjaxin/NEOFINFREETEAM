@@ -30,7 +30,7 @@ type FieldType =
   | 'property_address' | 'property_price' | 'property_beds' | 'property_baths' | 'property_sqft' | 'property_extras' | 'property_header' | 'property_description'
   | 'property_image' | 'property_image_2' | 'property_image_3' | 'property_image_4'
   | 'open_house_date' | 'open_house_time'
-  | 'pa_regarding' | 'pa_date' | 'pa_loan_type' | 'pa_purchase_price' | 'pa_loan_amount' | 'pa_occupancy'
+  | 'pa_regarding' | 'pa_date' | 'pa_loan_type' | 'pa_purchase_price' | 'pa_down_payment' | 'pa_loan_amount' | 'pa_occupancy' | 'pa_address'
 
 interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
 
@@ -64,8 +64,10 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   open_house_time:      { label: 'Open House Time',   color: '#0284C7', placeholder: '1:00 PM – 4:00 PM' },
   pa_regarding:         { label: 'Regarding',         color: '#1D4ED8', placeholder: 'John & Jane Smith' },
   pa_date:              { label: 'Date',               color: '#0F766E', placeholder: 'January 18, 2026' },
+  pa_address:           { label: 'Property Address',  color: '#6366F1', placeholder: '123 Main St, Austin, TX 78701' },
   pa_loan_type:         { label: 'Loan Type/Product', color: '#7C3AED', placeholder: 'Conventional 30-Year Fixed' },
   pa_purchase_price:    { label: 'Purchase Price',    color: '#15803D', placeholder: '$550,000' },
+  pa_down_payment:      { label: 'Down Payment',      color: '#0891B2', placeholder: '$110,000' },
   pa_loan_amount:       { label: 'Loan Amount',       color: '#B45309', placeholder: '$440,000' },
   pa_occupancy:         { label: 'Occupancy Type',    color: '#BE185D', placeholder: 'Primary Residence' },
 }
@@ -74,7 +76,7 @@ const FIELD_GROUPS: Record<string, FieldType[]> = {
   'Advisor':  ['name', 'title', 'nmls', 'email', 'phone', 'headshot'],
   'Partner':  ['partner_name', 'partner_title', 'partner_company', 'partner_phone', 'partner_email', 'partner_headshot', 'partner_logo'],
   'Property': ['property_address', 'property_price', 'property_beds', 'property_baths', 'property_sqft', 'property_extras', 'property_header', 'property_description', 'property_image', 'property_image_2', 'property_image_3', 'property_image_4', 'open_house_date', 'open_house_time'],
-  'Pre-Approval': ['pa_regarding', 'pa_date', 'pa_loan_type', 'pa_purchase_price', 'pa_loan_amount', 'pa_occupancy'],
+  'Pre-Approval': ['pa_regarding', 'pa_date', 'pa_address', 'pa_loan_type', 'pa_purchase_price', 'pa_down_payment', 'pa_loan_amount', 'pa_occupancy'],
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -235,7 +237,7 @@ function initValues(profile: { full_name: string; title: string; email: string; 
     property_address: '', property_price: '', property_beds: '', property_baths: '', property_sqft: '', property_extras: '',
     property_header: '', property_description: '',
     property_image: '', property_image_2: '', property_image_3: '', property_image_4: '', open_house_date: '', open_house_time: '',
-    pa_regarding: '', pa_date: '', pa_loan_type: '', pa_purchase_price: '', pa_loan_amount: '', pa_occupancy: '',
+    pa_regarding: '', pa_date: '', pa_address: '', pa_loan_type: '', pa_purchase_price: '', pa_down_payment: '', pa_loan_amount: '', pa_occupancy: '',
   }
 }
 
@@ -501,7 +503,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
 
   const hasPartnerFields = ['partner_name','partner_title','partner_company','partner_phone','partner_email','partner_headshot','partner_logo'].some(t => usedFields.has(t as FieldType))
   const hasPropertyFields = ['property_address','property_price','property_beds','property_baths','property_sqft','property_extras','property_header','property_description','property_image','property_image_2','property_image_3','property_image_4','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
-  const hasPreApprovalFields = ['pa_regarding','pa_date','pa_loan_type','pa_purchase_price','pa_loan_amount','pa_occupancy'].some(t => usedFields.has(t as FieldType))
+  const hasPreApprovalFields = ['pa_regarding','pa_date','pa_address','pa_loan_type','pa_purchase_price','pa_down_payment','pa_loan_amount','pa_occupancy'].some(t => usedFields.has(t as FieldType))
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -758,7 +760,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
               <>
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('Pre-Approval')}
-                {(['pa_regarding','pa_date','pa_loan_type','pa_purchase_price','pa_loan_amount','pa_occupancy'] as FieldType[]).filter(ft => usedFields.has(ft)).map(ft => fieldInput(ft))}
+                {(['pa_regarding','pa_date','pa_address','pa_loan_type','pa_purchase_price','pa_down_payment','pa_loan_amount','pa_occupancy'] as FieldType[]).map(ft => fieldInput(ft))}
               </>
             )}
           </div>
