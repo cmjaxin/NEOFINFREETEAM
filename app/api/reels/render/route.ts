@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': shotStackApiKey },
       body: JSON.stringify({
         timeline,
-        output: { format: 'mp4', resolution: 'hd', aspectRatio: '9:16', fps: 30 },
+        output: { format: 'mp4', resolution: 'sd', aspectRatio: '9:16', fps: 25 },
       }),
     })
 
