@@ -915,16 +915,26 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     if (!selectedScript || !profile) return
     setSubmitStatus('Preparing storage…')
     try {
+      // Ensure bucket exists (server-side, bypasses RLS)
       await fetch('/api/reels/ensure-bucket', { method: 'POST' })
+
+      // Create video record server-side (bypasses RLS)
       setSubmitStatus('Creating video record…')
-      const { data: video, error: vErr } = await supabase.from('splice_videos').insert({ script_id: selectedScript.id, user_id: profile.id, status: 'uploading' }).select().single()
-      if (vErr || !video) throw vErr ?? new Error('Failed to create video')
+      const startRes = await fetch('/api/reels/start-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scriptId: selectedScript.id, userId: profile.id }),
+      })
+      const startData = await startRes.json()
+      if (!startRes.ok || !startData.videoId) throw new Error(startData.error ?? 'Failed to create video')
+      const videoId = startData.videoId
+
+      // Upload blobs directly to storage (bucket is public so anon key works)
+      const clipRecords: { sceneId: string | null; clipUrl: string; durationSeconds: number; clipOrder: number }[] = []
       let totalClips = 0
-      for (let si = 0; si < allClips.length; si++) {
-        const sceneClips = allClips[si] ?? []
-        totalClips += sceneClips.length
-      }
+      for (let si = 0; si < allClips.length; si++) totalClips += (allClips[si] ?? []).length
       let uploaded = 0
+
       for (let si = 0; si < allClips.length; si++) {
         const scene = scenes[si]
         const sceneClips = allClips[si] ?? []
@@ -932,14 +942,24 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
           const clip = sceneClips[ci]
           uploaded++
           setSubmitStatus(`Uploading clip ${uploaded} of ${totalClips}…`)
-          const path = `splice-clips/${video.id}/scene-${si}-clip-${ci}.webm`
+          const path = `splice-clips/${videoId}/scene-${si}-clip-${ci}.webm`
           const { error: uploadErr } = await supabase.storage.from('splice-clips').upload(path, clip.blob, { contentType: 'video/webm', upsert: true })
           if (uploadErr) throw uploadErr
           const { data: urlData } = supabase.storage.from('splice-clips').getPublicUrl(path)
-          await supabase.from('splice_video_clips').insert({ video_id: video.id, scene_id: scene?.id, clip_url: urlData.publicUrl, duration_seconds: clip.duration, clip_order: ci })
+          clipRecords.push({ sceneId: scene?.id ?? null, clipUrl: urlData.publicUrl, durationSeconds: clip.duration, clipOrder: ci })
         }
       }
-      await supabase.from('splice_videos').update({ status: 'awaiting_scenes' }).eq('id', video.id)
+
+      // Save clip records + mark video ready — server-side (bypasses RLS)
+      setSubmitStatus('Saving…')
+      const finishRes = await fetch('/api/reels/finish-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, clips: clipRecords }),
+      })
+      const finishData = await finishRes.json()
+      if (!finishRes.ok) throw new Error(finishData.error ?? 'Failed to save clips')
+
       setSubmitStatus(''); setStep('done')
     } catch (e: any) { setError('Upload failed: ' + e.message); setStep('scene'); setSceneSubStep('ready') }
   }

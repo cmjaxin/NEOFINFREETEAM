@@ -5,8 +5,7 @@
       "name": "finfree-team-hq",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
-      "port": 3001,
-      "cwd": "/Users/colinjenson/Downloads/finfree-team-hq"
+      "port": 3001
     }
   ]
 }

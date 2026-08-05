@@ -73,20 +73,36 @@ input:focus, textarea:focus { outline: none; }
 @media (max-width: 768px) {
   .mkt-page { padding: 16px; }
   .mkt-header { margin-bottom: 16px; }
+  .mkt-tabs { gap: 6px; }
   .mkt-tabs button { font-size: 12px !important; padding: 7px 12px !important; }
-  .mkt-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .mkt-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+
+  /* Modal header — wrap onto two lines, tighten padding */
+  .mkt-modal-header {
+    height: auto !important;
+    min-height: 52px;
+    padding: 10px 14px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .mkt-modal-header-left { gap: 10px !important; min-width: 0; }
+  .mkt-modal-header-left span:last-child { display: none; } /* hide size label on mobile */
+  .mkt-modal-header-title { font-size: 14px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 
   /* Stack modal vertically */
   .mkt-modal-body { flex-direction: column; }
-  .mkt-modal-canvas { padding: 16px; flex: none; }
-  .mkt-modal-panel { width: 100% !important; flex: 1; border-left: none; border-top: 1px solid #E5E7EB; }
+  .mkt-modal-canvas { padding: 12px 16px; flex: none; max-height: 42vh; }
+  .mkt-modal-panel { width: 100% !important; flex: 1; border-left: none; border-top: 1px solid #E5E7EB; overflow-y: auto; }
 
   /* Show/hide via data-tab */
   .mkt-modal-switcher { display: flex; gap: 0; border-bottom: 1px solid #E5E7EB; flex-shrink: 0; }
-  .mkt-modal-switcher button { flex: 1; padding: 11px 0; font-size: 13px; font-weight: 700; border: none; background: none; cursor: pointer; color: #6B7280; border-bottom: 3px solid transparent; }
+  .mkt-modal-switcher button { flex: 1; padding: 12px 0; font-size: 14px; font-weight: 700; border: none; background: none; cursor: pointer; color: #6B7280; border-bottom: 3px solid transparent; }
   .mkt-modal-switcher button.active { color: #0A2540; border-bottom-color: #0A2540; }
   .mkt-modal-canvas[data-hidden="true"] { display: none; }
   .mkt-modal-panel[data-hidden="true"] { display: none; }
+
+  /* Panel inner padding */
+  .mkt-modal-panel > div { padding: 16px !important; }
 }
 
 @keyframes fadein {

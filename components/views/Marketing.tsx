@@ -640,10 +640,10 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.8)', zIndex: 1000, display: 'flex', flexDirection: 'column' }} onClick={onClose}>
       {/* Header */}
-      <div style={{ background: '#0A2540', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 20, padding: 0 }}>✕</button>
-          <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{template.name}</span>
+      <div className="mkt-modal-header" style={{ background: '#0A2540', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        <div className="mkt-modal-header-left" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 20, padding: 0, flexShrink: 0 }}>✕</button>
+          <span className="mkt-modal-header-title" style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>{template.name}</span>
           <span style={{ color: 'rgba(255,255,255,.4)', fontSize: 13 }}>{size.label}</span>
         </div>
         {template.pages.length > 1 && (
