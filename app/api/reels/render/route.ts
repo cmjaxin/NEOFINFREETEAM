@@ -125,6 +125,8 @@ export async function POST(request: NextRequest) {
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
+        trim_start: 0.2,  // cut initial silence/black frame from WebM
+        trim_end: 0.3,    // cut tail silence at end
       })
 
       // Transcribe for captions
@@ -233,7 +235,6 @@ export async function POST(request: NextRequest) {
       height: 1280,
       frame_rate: 30,
       elements: [
-        // Footage + captions composition
         {
           type: 'composition',
           track: 1,
@@ -241,15 +242,6 @@ export async function POST(request: NextRequest) {
             ...videoElements,
             ...captionElements,
           ],
-        },
-        // End card composition — fill_color sets navy background
-        {
-          type: 'composition',
-          track: 1,
-          time: cursor,
-          duration: 7,
-          fill_color: '#060e1f',
-          elements: endCardElements,
         },
       ],
     }
