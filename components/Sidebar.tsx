@@ -31,7 +31,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const isColin = profile?.email?.toLowerCase() === 'colin.jenson@neohomeloans.com'
   const isAdmin = profile?.role === 'admin' || isColin
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'conversion') {
     setView(id)
     onClose()
   }
@@ -43,6 +43,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
     { id: 'reels' as const,       label: 'Splice' },
+    { id: 'conversion' as const,  label: 'Conversion' },
     { id: 'terminated' as const,  label: 'Terminated' },
     { id: 'templates' as const,   label: 'Templates' },
   ]
