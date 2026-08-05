@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
     if (!videoId) return NextResponse.json({ error: 'videoId required' }, { status: 400 })
 
     const sb = supabase()
-
     const { data: video } = await sb
       .from('splice_videos')
       .select('render_job_id, status')
@@ -25,30 +24,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: video?.status ?? 'unknown' })
     }
 
-    const apiKey = process.env.SHOTSTACK_API_KEY!
-    const baseUrl = (process.env.SHOTSTACK_API_URL ?? 'https://api.shotstack.io/stage/render')
-      .replace('/render', '')
-
-    const res = await fetch(`${baseUrl}/render/${video.render_job_id}`, {
-      headers: { 'x-api-key': apiKey },
+    const creatomateKey = process.env.CREATOMATE_API_KEY!
+    const res = await fetch(`https://api.creatomate.com/v1/renders/${video.render_job_id}`, {
+      headers: { 'Authorization': `Bearer ${creatomateKey}` },
     })
-    if (!res.ok) throw new Error('Shotstack poll failed: ' + await res.text())
+    if (!res.ok) throw new Error('Creatomate poll failed: ' + await res.text())
 
     const data = await res.json()
-    const shotStatus = data.response?.status // queued | fetching | rendering | saving | done | failed
-    const fileUrl = data.response?.url
+    // Creatomate statuses: planned | waiting | transcribing | rendering | succeeded | failed
+    const renderStatus = data.status
+    const fileUrl = data.url
 
-    if (shotStatus === 'done' && fileUrl) {
+    if (renderStatus === 'succeeded' && fileUrl) {
       await sb.from('splice_videos').update({ status: 'ready', file_url: fileUrl }).eq('id', videoId)
       return NextResponse.json({ status: 'ready', fileUrl })
     }
 
-    if (shotStatus === 'failed') {
+    if (renderStatus === 'failed') {
       await sb.from('splice_videos').update({ status: 'error' }).eq('id', videoId)
-      return NextResponse.json({ status: 'error' })
+      return NextResponse.json({ status: 'error', error: data.error_message })
     }
 
-    return NextResponse.json({ status: 'rendering', shotStatus })
+    return NextResponse.json({ status: 'rendering', renderStatus })
   } catch (e: any) {
     console.error('Render status error:', e)
     return NextResponse.json({ error: e.message }, { status: 500 })
