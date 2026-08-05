@@ -696,6 +696,7 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
   video: SpliceVideo; isAdmin?: boolean; onRender?: () => void; rendering?: boolean; onDelete?: () => void; onRefresh?: () => void
 }) {
   const [checking, setChecking] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // Auto-poll every 20s while rendering
   useEffect(() => {
@@ -786,9 +787,37 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
         )}
 
         {video.status === 'ready' && video.file_url && (
-          <a href={video.file_url} download target="_blank" rel="noopener noreferrer" style={{ display: 'block', padding: '9px 0', background: 'linear-gradient(135deg,rgba(45,174,255,0.15),rgba(122,51,245,0.15))', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 7, textAlign: 'center', fontSize: 13, fontWeight: 700, textDecoration: 'none', marginBottom: 6 }}>
-            Download to Device
-          </a>
+          <button
+            onClick={async () => {
+              const url = video.file_url!
+              // On iOS/mobile use Web Share API so the native share sheet appears with "Save Video"
+              if (typeof navigator.share === 'function' && navigator.canShare) {
+                try {
+                  setSaving(true)
+                  const res = await fetch(url)
+                  const blob = await res.blob()
+                  const file = new File([blob], 'splice-video.mp4', { type: 'video/mp4' })
+                  if (navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: 'My Splice Video' })
+                  } else {
+                    window.open(url, '_blank')
+                  }
+                } catch {
+                  window.open(url, '_blank')
+                } finally {
+                  setSaving(false)
+                }
+              } else {
+                // Desktop: trigger download
+                const a = document.createElement('a')
+                a.href = url; a.download = 'splice-video.mp4'; a.click()
+              }
+            }}
+            disabled={saving}
+            style={{ width: '100%', padding: '9px 0', background: 'linear-gradient(135deg,rgba(45,174,255,0.15),rgba(122,51,245,0.15))', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.3)', borderRadius: 7, textAlign: 'center', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 6, opacity: saving ? 0.6 : 1 }}
+          >
+            {saving ? 'Preparing…' : '↓ Save Video'}
+          </button>
         )}
 
         <button onClick={deleteThis} style={{ width: '100%', padding: '7px 0', background: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
