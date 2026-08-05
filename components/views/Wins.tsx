@@ -238,6 +238,13 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
       reactions:    {},
       image_url,
     })
+    // Notify tagged employees via email (fire and forget)
+    fetch('/api/wins/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tagged_ids: tagged, tagged_names: taggedEmps.map(e => e.name), body: body.trim(), author_name: authorName }),
+    })
+
     setBody(''); setTagged([]); setImgFile(null); setImgPreview(null)
     if (fileRef.current) fileRef.current.value = ''
     setSubmitting(false); setPosted(true)
