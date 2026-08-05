@@ -40,7 +40,7 @@ function groupWordsToChunks(words: WhisperWord[], timelineOffset: number, chunkS
     const nextStart = words[i + chunkSize]?.start
     const end = nextStart != null
       ? timelineOffset + nextStart - 0.05
-      : timelineOffset + group[group.length - 1].end + 0.25
+      : timelineOffset + group[group.length - 1].end + 0.2
     chunks.push({
       text: group.map(w => w.word).join(' ').trim(),
       start: timelineOffset + group[0].start,
@@ -55,19 +55,19 @@ function captionClip(chunk: CaptionChunk) {
   return {
     asset: {
       type: 'html',
-      // 600px wide container with word-wrap so text never overflows the 720px frame
-      html: `<div style="width:600px;text-align:center;padding:0 10px;box-sizing:border-box"><div style="background:rgba(0,0,0,0.75);border-radius:12px;padding:14px 22px;display:inline-block;max-width:100%"><span style="font-family:Arial,Helvetica,sans-serif;font-size:44px;font-weight:900;color:#fff;line-height:1.25;word-break:break-word;white-space:normal">${text}</span></div></div>`,
-      width: 620,
-      height: 200,
+      // Render into a 700px canvas; the pill is display:block width:100% so it never overflows
+      html: `<div style="width:700px;box-sizing:border-box;padding:0 20px;text-align:center"><div style="background:rgba(0,0,0,0.78);border-radius:10px;padding:12px 20px;width:100%;box-sizing:border-box"><span style="font-family:Arial,Helvetica,sans-serif;font-size:34px;font-weight:900;color:#ffffff;line-height:1.3;word-break:break-word;white-space:normal;display:block;text-align:center">${text}</span></div></div>`,
+      width: 700,
+      height: 160,
     },
     start: chunk.start,
     length: Math.max(0.4, chunk.end - chunk.start),
     position: 'bottom',
-    offset: { x: 0, y: 0.12 },
+    offset: { x: 0, y: 0.10 },
   }
 }
 
-// End card — separate Shotstack clips so images load via native asset renderer
+// End card — 1 full-frame HTML text clip + 2 native image clips for logos
 const NEO_LOGO = 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png'
 const EHL_LOGO  = 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png'
 const DISCLAIMER = '© 2026 Better Home & Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
@@ -78,45 +78,40 @@ function endCardClips(
 ) {
   const e = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   const infoLines = [nmls, phone, email].filter(Boolean)
-    .map(v => `<p style="font-family:Arial,Helvetica,sans-serif;font-size:26px;color:#b8cfe8;margin:0;padding:5px 0">${e(v)}</p>`)
+    .map(v => `<div style="font-family:Arial,Helvetica,sans-serif;font-size:22px;color:#b8cfe8;margin:4px 0">${e(v)}</div>`)
     .join('')
 
-  const nameHtml = `<div style="text-align:center;width:660px">
-    <p style="font-family:Arial,Helvetica,sans-serif;font-size:54px;font-weight:900;color:#ffffff;margin:0 0 10px">${e(name)}</p>
-    ${title ? `<p style="font-family:Arial,Helvetica,sans-serif;font-size:30px;font-weight:700;color:#7eb8f7;margin:0 0 18px">${e(title)}</p>` : ''}
-    ${infoLines}
-  </div>`
-
-  const disclaimerHtml = `<div style="text-align:center;width:660px;border-top:1px solid rgba(255,255,255,0.2);padding-top:14px">
-    <p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:rgba(255,255,255,0.4);line-height:1.55;margin:0">${e(DISCLAIMER)}</p>
-  </div>`
+  // Full-frame HTML — navy bg, centered text block, disclaimer pinned to bottom
+  // Top ~180px left empty for the NEO logo image clip to sit on top
+  // Bottom ~80px left for EHL logo image clip
+  const bodyHtml = `
+    <div style="width:720px;height:1280px;background:#060e1f;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:180px 40px 120px">
+      <div style="text-align:center;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:46px;font-weight:900;color:#ffffff;line-height:1.1">${e(name)}</div>
+        ${title ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:700;color:#7eb8f7;margin-top:4px">${e(title)}</div>` : ''}
+        <div style="margin-top:14px">${infoLines}</div>
+      </div>
+      <div style="border-top:1px solid rgba(255,255,255,0.18);padding-top:12px;width:100%;text-align:center">
+        <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:rgba(255,255,255,0.38);line-height:1.55">${e(DISCLAIMER)}</div>
+      </div>
+    </div>`.replace(/\n\s*/g, '')
 
   const fade = { in: 'fade' }
   return [
-    // Navy background
+    // Full-frame HTML: navy bg + all text (top/bottom gaps for image clips)
     {
-      asset: { type: 'html', html: '<div style="width:720px;height:1280px;background:#060e1f"></div>', width: 720, height: 1280 },
+      asset: { type: 'html', html: bodyHtml, width: 720, height: 1280 },
       start, length: dur, position: 'center', transition: fade,
     },
-    // NEO logo — small, pinned near top (offset.y positive = push down from top anchor)
+    // NEO logo — small, top-center, sitting in the empty top band
     {
       asset: { type: 'image', src: NEO_LOGO },
-      start, length: dur, position: 'top', offset: { x: 0, y: 0.08 }, scale: 0.22, transition: fade,
+      start, length: dur, position: 'top', offset: { x: 0, y: 0.06 }, scale: 0.18, transition: fade,
     },
-    // Name / title / contact — center, shifted slightly up so logo has room
-    {
-      asset: { type: 'html', html: nameHtml, width: 660, height: 340 },
-      start, length: dur, position: 'center', offset: { x: 0, y: 0.05 }, transition: fade,
-    },
-    // Disclaimer
-    {
-      asset: { type: 'html', html: disclaimerHtml, width: 660, height: 220 },
-      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.10 }, transition: fade,
-    },
-    // Equal Housing logo — native image asset
+    // EHL logo — bottom-center, above disclaimer
     {
       asset: { type: 'image', src: EHL_LOGO },
-      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.04 }, scale: 0.06, transition: fade,
+      start, length: dur, position: 'bottom', offset: { x: 0, y: 0.06 }, scale: 0.05, transition: fade,
     },
   ]
 }
@@ -165,20 +160,23 @@ export async function POST(request: NextRequest) {
         catch (err) { console.warn('Transcription failed, skipping:', err) }
       }
 
-      // Use speech timestamps for tight cuts — trim silence before first word and after last word
-      // Small padding so first/last syllable isn't clipped
+      // speechStart: cut silence before first word. Use 0 if speech detected immediately.
+      // WebM seekability varies — only pass trim if speechStart is meaningful (>0.1s)
+      // so we don't waste silence but also don't hit the black-frame WebM seek bug on tiny values.
       const speechStart = words.length > 0 ? Math.max(0, words[0].start - 0.05) : 0
-      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.08) : rawDuration
+      const speechEnd   = words.length > 0 ? Math.min(rawDuration, words[words.length - 1].end + 0.05) : rawDuration
       const usedLength  = Math.max(0.5, speechEnd - speechStart)
 
+      const assetTrim = speechStart > 0.1 ? speechStart : 0
+
       videoClips.push({
-        asset: { type: 'video', src: clip.clip_url, volume: 1, trim: speechStart },
+        asset: { type: 'video', src: clip.clip_url, volume: 1, ...(assetTrim > 0 ? { trim: assetTrim } : {}) },
         start: cursor,
         length: usedLength,
         fit: 'cover',
       })
 
-      // Caption chunks: word timestamps are relative to clip start; adjust for trim and timeline position
+      // Caption word timestamps are relative to clip start; offset for trim + timeline position
       if (words.length > 0) {
         const adjusted = words
           .map(w => ({ ...w, start: w.start - speechStart, end: w.end - speechStart }))
@@ -198,18 +196,15 @@ export async function POST(request: NextRequest) {
       endCardStart, endCardDur,
     )
 
-    // Tracks: top layer first
-    // End card has 5 clips across multiple layers — put them all in one track (Shotstack handles z-order by track index)
+    // Track order: first track = top layer
     const tracks: any[] = []
     if (allCaptionChunks.length > 0) tracks.push({ clips: allCaptionChunks.map(captionClip) })
 
-    // End card layers (each in its own track so z-order is correct: logo over bg, text over bg)
-    const [ecBg, ecLogo, ecName, ecDisclaimer, ecEHL] = ecClips
+    // End card: 3 clips each in own track (logo on top of html bg, EHL on top too)
+    const [ecBody, ecLogo, ecEHL] = ecClips
     tracks.push({ clips: [ecLogo] })
-    tracks.push({ clips: [ecName] })
-    tracks.push({ clips: [ecDisclaimer] })
     tracks.push({ clips: [ecEHL] })
-    tracks.push({ clips: [ecBg, ...videoClips] })
+    tracks.push({ clips: [ecBody, ...videoClips] })
 
     const timeline = { background: '#000000', tracks }
 
