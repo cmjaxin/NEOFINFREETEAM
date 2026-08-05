@@ -362,16 +362,8 @@ function ScriptsView({ scripts, members, onRefresh }: { scripts: SpliceScript[];
 
   async function del(id: string) {
     if (!confirm('Delete this script? This cannot be undone.')) return
-    // cascade: clips → videos → assignments → scenes → script
-    const { data: videos } = await supabase.from('splice_videos').select('id').eq('script_id', id)
-    if (videos?.length) {
-      const videoIds = videos.map((v: any) => v.id)
-      await supabase.from('splice_video_clips').delete().in('video_id', videoIds)
-      await supabase.from('splice_videos').delete().in('id', videoIds)
-    }
-    await supabase.from('splice_script_assignments').delete().eq('script_id', id)
-    await supabase.from('splice_scenes').delete().eq('script_id', id)
-    await supabase.from('splice_scripts').delete().eq('id', id)
+    const res = await fetch('/api/reels/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'script', id }) })
+    if (!res.ok) { alert('Delete failed — please try again'); return }
     onRefresh()
   }
 
@@ -504,8 +496,8 @@ function VideosView({ videos, onRefresh }: { videos: SpliceVideo[]; onRefresh: (
 
   async function deleteVideo(videoId: string) {
     if (!confirm('Delete this video and all its clips?')) return
-    await supabase.from('splice_video_clips').delete().eq('video_id', videoId)
-    await supabase.from('splice_videos').delete().eq('id', videoId)
+    const res = await fetch('/api/reels/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'video', id: videoId }) })
+    if (!res.ok) { alert('Delete failed — please try again'); return }
     onRefresh()
   }
 
@@ -662,8 +654,8 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
 
   async function deleteThis() {
     if (!confirm('Delete this video?')) return
-    await supabase.from('splice_video_clips').delete().eq('video_id', video.id)
-    await supabase.from('splice_videos').delete().eq('id', video.id)
+    const res = await fetch('/api/reels/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'video', id: video.id }) })
+    if (!res.ok) { alert('Delete failed — please try again'); return }
     if (onDelete) onDelete()
     if (onRefresh) onRefresh()
   }
