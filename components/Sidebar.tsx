@@ -65,12 +65,24 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
         FinFree Division · Team HQ
       </div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {navItems.map(({ id, label }) => (
-          <button key={id} onClick={() => handleNav(id)} style={navStyle(view === id)}>
-            <span style={{ width: 7, height: 7, borderRadius: 2, background: 'currentColor', opacity: .75, flexShrink: 0 }} />
-            {label}
-          </button>
-        ))}
+        {navItems.map(({ id, label }) => {
+          const isSplice = id === 'reels'
+          const spliceDisabled = isSplice && !isColin
+          return (
+            <button
+              key={id}
+              onClick={() => !spliceDisabled && handleNav(id)}
+              style={{
+                ...navStyle(view === id),
+                cursor: spliceDisabled ? 'default' : 'pointer',
+                opacity: spliceDisabled ? 0.5 : 1,
+              }}
+            >
+              <span style={{ width: 7, height: 7, borderRadius: 2, background: 'currentColor', opacity: .75, flexShrink: 0 }} />
+              {isSplice && !isColin ? 'Splice (Coming Soon)' : label}
+            </button>
+          )
+        })}
       </nav>
       <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.12)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
