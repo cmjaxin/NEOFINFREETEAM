@@ -215,7 +215,8 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     } else {
       ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter, Arial, sans-serif`
       ctx.fillStyle = f.fontColor
-      ctx.fillText(val, px, py)
+      if (f.rectW) wrapText(ctx, val, px, py, f.rectW * w, fs * 1.35)
+      else ctx.fillText(val, px, py)
     }
   }
 }
@@ -1017,13 +1018,18 @@ function EditorCanvas({ page, dispW, dispH, selectedIds, onSelect, onMove, onMov
         ctx.restore()
         boundsRef.current.set(f.id, { x: px, y: py - fs, w: rw, h: rh })
       } else {
-        // Single-line text: WYSIWYG — shows placeholder at actual configured size & color
+        // Single-line (or width-wrapped) text
         ctx.font = `${f.bold ? 'bold ' : ''}${fs}px Inter,Arial`
         const text = meta.placeholder || meta.label
-        const tw = ctx.measureText(text).width
-        ctx.save(); ctx.globalAlpha = 0.52; ctx.fillStyle = '#000'
-        ctx.fillRect(px - 2, py - fs, tw + 4, fs + 5); ctx.restore()
-        ctx.fillStyle = f.fontColor; ctx.fillText(text, px, py)
+        const hasWidth = (f.rectW || 0) > 0
+        const maxW = hasWidth ? f.rectW * dispW : dispW
+        const tw = Math.min(ctx.measureText(text).width, maxW)
+        // Dashed outline so field is visible without a background fill
+        ctx.save(); ctx.strokeStyle = meta.color; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3])
+        ctx.strokeRect(px - 2, py - fs, tw + 4, fs + 5); ctx.restore()
+        ctx.fillStyle = f.fontColor
+        if (hasWidth) wrapText(ctx, text, px, py, maxW, fs * 1.35)
+        else ctx.fillText(text, px, py)
         boundsRef.current.set(f.id, { x: px - 2, y: py - fs - 2, w: tw + 4, h: fs + 8 })
       }
 
@@ -1527,6 +1533,12 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
                 </label>
                 <input type="range" min={1} max={15} step={0.5} value={Math.round(selected.fontSize * 100)}
                   onChange={e => updateField(selected.id, { fontSize: Number(e.target.value) / 100 })}
+                  style={{ width: '100%', marginBottom: 10 }} />
+                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 4 }}>
+                  Wrap width — <strong>{selected.rectW ? `${Math.round(selected.rectW * 100)}%` : 'off'}</strong>
+                </label>
+                <input type="range" min={0} max={100} step={1} value={Math.round((selected.rectW || 0) * 100)}
+                  onChange={e => updateField(selected.id, { rectW: Number(e.target.value) / 100 || 0 })}
                   style={{ width: '100%', marginBottom: 12 }} />
               </>)}
               {(meta.isMultiline) && (<>
