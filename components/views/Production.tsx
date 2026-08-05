@@ -1310,7 +1310,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      <div style={{ fontSize: 13, color: C.muted }}>Year-to-date {year} conversion rates</div>
+      <div style={{ fontSize: 13, color: C.muted }}>Year-to-date {year} conversion rates (current MAs)</div>
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
