@@ -778,19 +778,30 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     }
   }, [step, sceneSubStep])
 
-  // Set teleprompter to mid-screen start position whenever entering/changing a scene
+  // Set teleprompter start position when scene is ready/visible
   useEffect(() => {
     if (step !== 'scene' || sceneSubStep === 'review-clip') return
     const id = setTimeout(() => setTeleprompterStart(), 80)
     return () => clearTimeout(id)
   }, [step, sceneIdx, sceneSubStep])
 
+  // Start scroll AFTER sceneSubStep becomes 'recording' so the teleprompter is mounted
+  useEffect(() => {
+    if (step !== 'scene' || sceneSubStep !== 'recording') return
+    // Small delay to let React render the teleprompter before measuring it
+    const id = setTimeout(() => {
+      if (currentScene?.duration_seconds) startScrollAnimation(currentScene.duration_seconds)
+    }, 50)
+    return () => clearTimeout(id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sceneSubStep])
+
   async function startCamera() {
     setError('')
     try {
       const constraints: MediaStreamConstraints = {
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: true,
+        video: { width: { ideal: 1920 }, height: { ideal: 1080 }, facingMode: 'user', frameRate: { ideal: 30 } },
+        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 48000 },
       }
       const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
@@ -874,7 +885,7 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     chunksRef.current = []
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
       : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4'
-    const recorder = new MediaRecorder(streamRef.current, { mimeType })
+    const recorder = new MediaRecorder(streamRef.current, { mimeType, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 192_000 })
     recorderRef.current = recorder
     recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
     recorder.onstop = () => {
@@ -888,7 +899,8 @@ function RecordModal({ scripts, assignedScripts, profile, onClose }: {
     recorder.start(250)
     setSceneSubStep('recording'); setElapsed(0)
     timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000)
-    if (currentScene?.duration_seconds) startScrollAnimation(currentScene.duration_seconds)
+    // scroll is started by useEffect watching sceneSubStep === 'recording'
+    // so the teleprompter has time to mount before we measure it
   }
 
   function stopRecording() { clearTimer(); cancelAnimationFrame(scrollAnimRef.current); recorderRef.current?.stop() }
