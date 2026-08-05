@@ -80,6 +80,12 @@ export default function Wins() {
   const [loading, setLoading]   = useState(true)
 
   const activeEmps = employees.filter(e => (e as any).status !== 'terminated')
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string; email: string }[]>([])
+
+  useEffect(() => {
+    sb.from('profiles').select('id,full_name,email').eq('status','approved').order('full_name')
+      .then(({ data }) => setProfiles(data ?? []))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPosts = useCallback(async () => {
     setLoading(true)
@@ -161,7 +167,7 @@ export default function Wins() {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', padding: '28px 24px 64px' }}>
           <SubmitWinCard
-            employees={activeEmps}
+            profiles={profiles}
             authorName={profile?.full_name ?? 'Team'}
             onSubmit={fetchPosts}
           />
@@ -190,8 +196,10 @@ export default function Wins() {
 }
 
 // ── Submit card ──────────────────────────────────────────────────────────────
-function SubmitWinCard({ employees, authorName, onSubmit }: {
-  employees: Employee[]
+type TagProfile = { id: string; full_name: string; email: string }
+
+function SubmitWinCard({ profiles, authorName, onSubmit }: {
+  profiles: TagProfile[]
   authorName: string
   onSubmit: () => void
 }) {
@@ -204,8 +212,8 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
   const [posted, setPosted]         = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const taggedEmps = employees.filter(e => tagged.includes(e.id))
-  const canSubmit  = body.trim().length > 0 && tagged.length > 0
+  const taggedProfiles = profiles.filter(p => tagged.includes(p.id))
+  const canSubmit      = body.trim().length > 0 && tagged.length > 0
 
   function pickImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -229,20 +237,21 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
         image_url = pub.publicUrl
       }
     }
+    const taggedNames = taggedProfiles.map(p => p.full_name)
     await sb.from('wins').insert({
       employee_id:  tagged[0],
       body:         body.trim(),
       author_name:  authorName,
       tagged_ids:   tagged,
-      tagged_names: taggedEmps.map(e => e.name),
+      tagged_names: taggedNames,
       reactions:    {},
       image_url,
     })
-    // Notify tagged employees via email (fire and forget)
+    // Notify tagged users via email (fire and forget)
     fetch('/api/wins/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tagged_ids: tagged, tagged_names: taggedEmps.map(e => e.name), body: body.trim(), author_name: authorName }),
+      body: JSON.stringify({ tagged_ids: tagged, tagged_names: taggedNames, body: body.trim(), author_name: authorName }),
     })
 
     setBody(''); setTagged([]); setImgFile(null); setImgPreview(null)
@@ -289,7 +298,7 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
         <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
           🏷️ Tag team members
         </div>
-        <EmployeeMultiSelect employees={employees} selected={tagged} onChange={setTagged} />
+        <ProfileMultiSelect profiles={profiles} selected={tagged} onChange={setTagged} />
       </div>
 
       {/* Footer */}
@@ -324,9 +333,9 @@ function SubmitWinCard({ employees, authorName, onSubmit }: {
   )
 }
 
-// ── Employee multi-select (fixed-position dropdown to avoid overflow clipping) ─
-function EmployeeMultiSelect({ employees, selected, onChange }: {
-  employees: Employee[]
+// ── Profile multi-select (fixed-position dropdown to avoid overflow clipping) ─
+function ProfileMultiSelect({ profiles, selected, onChange }: {
+  profiles: TagProfile[]
   selected: string[]
   onChange: (ids: string[]) => void
 }) {
@@ -340,7 +349,7 @@ function EmployeeMultiSelect({ employees, selected, onChange }: {
     function handler(e: MouseEvent) {
       if (
         triggerRef.current && !triggerRef.current.contains(e.target as Node) &&
-        dropRef.current   && !dropRef.current.contains(e.target as Node)
+        dropRef.current    && !dropRef.current.contains(e.target as Node)
       ) { setOpen(false); setSearch('') }
     }
     document.addEventListener('mousedown', handler)
@@ -356,27 +365,22 @@ function EmployeeMultiSelect({ employees, selected, onChange }: {
     onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
   }
 
-  const filtered   = employees.filter(e => e.name.toLowerCase().includes(search.toLowerCase()))
-  const selectedEmps = employees.filter(e => selected.includes(e.id))
+  const filtered      = profiles.filter(p => p.full_name.toLowerCase().includes(search.toLowerCase()))
+  const selectedProfs = profiles.filter(p => selected.includes(p.id))
 
   return (
     <>
       <div
         ref={triggerRef}
         onClick={openDropdown}
-        style={{
-          border: `1.5px solid ${open ? C.accent : C.border}`, borderRadius: 10,
-          padding: '8px 12px', cursor: 'pointer', display: 'flex', flexWrap: 'wrap',
-          gap: 6, minHeight: 42, alignItems: 'center', background: C.white,
-          transition: 'border-color 0.12s',
-        }}
+        style={{ border: `1.5px solid ${open ? C.accent : C.border}`, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', display: 'flex', flexWrap: 'wrap', gap: 6, minHeight: 42, alignItems: 'center', background: C.white, transition: 'border-color 0.12s' }}
       >
-        {selectedEmps.length === 0
+        {selectedProfs.length === 0
           ? <span style={{ color: C.muted, fontSize: 13 }}>Select teammates...</span>
-          : selectedEmps.map(e => (
-            <span key={e.id} style={{ background: avatarColor(e.name), color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
-              {e.name}
-              <span onClick={ev => { ev.stopPropagation(); toggle(e.id) }} style={{ cursor: 'pointer', opacity: .8, fontSize: 10 }}>✕</span>
+          : selectedProfs.map(p => (
+            <span key={p.id} style={{ background: avatarColor(p.full_name), color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 5 }}>
+              {p.full_name}
+              <span onClick={ev => { ev.stopPropagation(); toggle(p.id) }} style={{ cursor: 'pointer', opacity: .8, fontSize: 10 }}>✕</span>
             </span>
           ))
         }
@@ -384,46 +388,34 @@ function EmployeeMultiSelect({ employees, selected, onChange }: {
       </div>
 
       {open && rect && (
-        <div
-          ref={dropRef}
-          style={{
-            position: 'fixed',
-            top: rect.bottom + 4,
-            left: rect.left,
-            width: rect.width,
-            zIndex: 9999,
-            background: C.white,
-            border: `1px solid ${C.border}`,
-            borderRadius: 12,
-            boxShadow: '0 8px 32px rgba(10,37,64,0.14)',
-            overflow: 'hidden',
-          }}
-        >
-          <div style={{ padding: '8px 12px', borderBottom: `1px solid ${C.bg}` }}>
+        <div ref={dropRef} style={{ position: 'fixed', top: rect.bottom + 4, left: rect.left, width: rect.width, zIndex: 9999, background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: '0 8px 32px rgba(10,37,64,0.14)', overflow: 'hidden' }}>
+          <div style={{ padding: '8px 12px', borderBottom: `1px solid ${C.bg}`, display: 'flex', gap: 8, alignItems: 'center' }}>
             <input
               autoFocus
               value={search}
               onChange={e => setSearch(e.target.value)}
               onClick={e => e.stopPropagation()}
               placeholder="Search teammates..."
-              style={{ width: '100%', border: 'none', outline: 'none', fontSize: 13, color: C.text, background: 'transparent', fontFamily: 'inherit' }}
+              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, color: C.text, background: 'transparent', fontFamily: 'inherit' }}
             />
+            <button
+              onClick={e => { e.stopPropagation(); const allIds = filtered.map(p => p.id); const allSelected = allIds.every(id => selected.includes(id)); onChange(allSelected ? selected.filter(id => !allIds.includes(id)) : [...new Set([...selected, ...allIds])]) }}
+              style={{ fontSize: 11, fontWeight: 700, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', padding: '2px 4px' }}
+            >
+              {filtered.every(p => selected.includes(p.id)) ? 'Deselect All' : 'Select All'}
+            </button>
           </div>
           <div style={{ maxHeight: 220, overflowY: 'auto' }}>
             {filtered.length === 0
               ? <div style={{ padding: '12px 14px', fontSize: 13, color: C.muted }}>No results</div>
-              : filtered.map(e => {
-                const sel = selected.includes(e.id)
+              : filtered.map(p => {
+                const sel = selected.includes(p.id)
                 return (
-                  <div
-                    key={e.id}
-                    onClick={() => toggle(e.id)}
-                    style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, background: sel ? 'rgba(91,203,245,0.07)' : 'transparent', transition: 'background 0.1s' }}
-                  >
-                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: avatarColor(e.name), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
-                      {initials(e.name)}
+                  <div key={p.id} onClick={() => toggle(p.id)} style={{ padding: '9px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, background: sel ? 'rgba(91,203,245,0.07)' : 'transparent', transition: 'background 0.1s' }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: avatarColor(p.full_name), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 11, flexShrink: 0 }}>
+                      {initials(p.full_name)}
                     </div>
-                    <span style={{ fontSize: 13, fontWeight: sel ? 700 : 500, color: C.text, flex: 1 }}>{e.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: sel ? 700 : 500, color: C.text, flex: 1 }}>{p.full_name}</span>
                     {sel && <span style={{ color: C.accent, fontWeight: 700, fontSize: 15 }}>✓</span>}
                   </div>
                 )

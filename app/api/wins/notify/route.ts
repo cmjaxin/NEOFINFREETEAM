@@ -18,23 +18,23 @@ export async function POST(req: NextRequest) {
   if (!tagged_ids?.length || !body) return NextResponse.json({ ok: true })
 
   const sb = admin()
-  const { data: employees } = await sb
-    .from('employees')
-    .select('id, name, work_email')
+  const { data: profiles } = await sb
+    .from('profiles')
+    .select('id, full_name, email')
     .in('id', tagged_ids)
 
   const results = []
-  for (const emp of employees ?? []) {
-    if (!emp.work_email) continue
+  for (const prof of profiles ?? []) {
+    if (!prof.email) continue
 
-    const othersTagged = tagged_names.filter((n: string) => n !== emp.name)
+    const othersTagged = tagged_names.filter((n: string) => n !== prof.full_name)
     const alsoTagged   = othersTagged.length > 0
       ? `<p style="margin:0 0 8px;color:#5C6570;font-size:14px;">Also tagged: ${othersTagged.join(', ')}</p>`
       : ''
 
     const { error } = await resend.emails.send({
       from:    'Team Wins <FINFREEwins@neoentrepreneurhomeloans.com>',
-      to:      emp.work_email,
+      to:      prof.email,
       subject: `🏆 ${author_name} tagged you in a team win!`,
       html: `
         <!DOCTYPE html>
@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
       `,
     })
 
-    results.push({ name: emp.name, email: emp.work_email, error: error?.message ?? null })
+    results.push({ name: prof.full_name, email: prof.email, error: error?.message ?? null })
   }
 
   return NextResponse.json({ results })
