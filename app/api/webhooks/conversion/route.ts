@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+// Maps names from external lead system → canonical production dashboard names
+const NAME_ALIASES: Record<string, string> = {
+  'matt smith':    'Matthew Smith',
+  'matthew smith': 'Matthew Smith',
+  'scott breen':   'Michael Breen',
+  'mike breen':    'Michael Breen',
+}
+
+function canonicalName(raw: string): string {
+  return NAME_ALIASES[raw.trim().toLowerCase()] ?? raw.trim()
+}
+
 function admin() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,7 +45,7 @@ export async function POST(req: NextRequest) {
   const results: { name: string; status: string }[] = []
 
   for (const entry of entries) {
-    const name = entry.name.trim()
+    const name = canonicalName(entry.name)
 
     const { data: existing } = await sb
       .from('conversion_entries')

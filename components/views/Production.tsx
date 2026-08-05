@@ -1262,19 +1262,20 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
 }
 
 // ─── Conversion Tab ───────────────────────────────────────────────────────────
+const CONV_HIDDEN = ['gregory allen','greg allen','joel davis','jonathan salgado','marco flores','ryan todey','julie jolivet','rory byrne','rory bryne','joshua mettle']
+
 function ConversionTab({ maData }: { maData: MARecord[] }) {
-  const now = new Date()
-  const [monthIdx, setMonthIdx] = useState(now.getMonth())
-  const [year]                  = useState(now.getFullYear())
-  const [leads, setLeads]       = useState<Record<string, number>>({})
-  const [loading, setLoading]   = useState(true)
+  const year = new Date().getFullYear()
+  const [leads, setLeads]   = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+
+  const visible = maData.filter(m => !CONV_HIDDEN.includes(normName(m.name)))
 
   useEffect(() => {
-    if (!maData.length) return
-    const month = `${year}-${String(monthIdx + 1).padStart(2, '0')}`
-    const names = maData.map(m => m.name).join(',')
+    if (!visible.length) return
+    const names = visible.map(m => m.name).join(',')
     setLoading(true)
-    fetch(`/api/conversion?month=${month}&names=${encodeURIComponent(names)}`)
+    fetch(`/api/conversion?year=${year}&names=${encodeURIComponent(names)}`)
       .then(r => r.json())
       .then(d => {
         const map: Record<string, number> = {}
@@ -1282,19 +1283,20 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
         setLeads(map)
         setLoading(false)
       })
-  }, [maData, monthIdx, year])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maData, year])
 
   function pct(num: number, denom: number) {
     if (!denom) return '—'
     return (num / denom * 100).toFixed(1) + '%'
   }
 
-  const rows = maData.map(ma => ({
+  const rows = visible.map(ma => ({
     name:   ma.name,
     leads:  leads[ma.name] ?? 0,
-    apps:   ma.monthlyRespaApps[monthIdx]   ?? 0,
-    funded: ma.monthlyFamilies[monthIdx]    ?? 0,
-  }))
+    apps:   ma.ytdRespaApps   ?? 0,
+    funded: ma.ytdFamilies    ?? 0,
+  })).sort((a, b) => b.funded - a.funded)
 
   const totals = rows.reduce(
     (acc, r) => ({ leads: acc.leads + r.leads, apps: acc.apps + r.apps, funded: acc.funded + r.funded }),
@@ -1308,12 +1310,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* Month selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={() => setMonthIdx(i => Math.max(0, i - 1))} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 7, padding: '5px 10px', cursor: 'pointer', color: C.text }}>‹</button>
-        <span style={{ fontSize: 14, fontWeight: 700, color: C.navy, minWidth: 100, textAlign: 'center' }}>{MONTHS[monthIdx]} {year}</span>
-        <button onClick={() => setMonthIdx(i => Math.min(11, i + 1))} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 7, padding: '5px 10px', cursor: 'pointer', color: C.text }}>›</button>
-      </div>
+      <div style={{ fontSize: 13, color: C.muted }}>Year-to-date {year} conversion rates</div>
 
       {/* Summary cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
@@ -1339,8 +1336,8 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
             <tr style={{ background: C.white }}>
               <th style={th}>Name</th>
               <th style={th}>Leads</th>
-              <th style={th}>Apps</th>
-              <th style={th}>Funded</th>
+              <th style={th}>Apps (YTD)</th>
+              <th style={th}>Funded (YTD)</th>
               <th style={th}>L→A</th>
               <th style={th}>L→F</th>
               <th style={th}>A→F</th>

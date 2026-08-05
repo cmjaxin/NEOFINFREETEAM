@@ -9,30 +9,30 @@ function admin() {
   )
 }
 
-// GET /api/conversion?month=2026-08&names=Matt Smith,Ben Kyle
+// GET /api/conversion?year=2026&names=Matt Smith,Ben Kyle
 export async function GET(req: NextRequest) {
   const supabase = await serverClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const month = req.nextUrl.searchParams.get('month') ?? new Date().toISOString().slice(0, 7)
+  const year = req.nextUrl.searchParams.get('year') ?? new Date().getFullYear().toString()
   const namesParam = req.nextUrl.searchParams.get('names') ?? ''
   const names = namesParam ? namesParam.split(',').map(n => n.trim()).filter(Boolean) : []
 
   const sb = admin()
-  const query = sb.from('conversion_entries').select('*').eq('month', month)
-  const { data: entries } = names.length ? await query.in('name', names) : await query
+  let query = sb.from('conversion_entries').select('name,leads').like('month', `${year}-%`)
+  if (names.length) query = query.in('name', names)
+  const { data: entries } = await query
 
-  const entryMap = Object.fromEntries((entries ?? []).map((e: any) => [e.name, e]))
+  // Sum all monthly lead entries per name
+  const leadMap: Record<string, number> = {}
+  for (const e of entries ?? []) {
+    leadMap[e.name] = (leadMap[e.name] ?? 0) + (e.leads ?? 0)
+  }
 
-  const rows = names.map(name => ({
-    name,
-    leads:  entryMap[name]?.leads  ?? 0,
-    apps:   entryMap[name]?.apps   ?? 0,
-    funded: entryMap[name]?.funded ?? 0,
-  }))
+  const rows = names.map(name => ({ name, leads: leadMap[name] ?? 0 }))
 
-  return NextResponse.json({ month, rows })
+  return NextResponse.json({ year, rows })
 }
 
 // POST /api/conversion — admin saves apps/funded for a person
