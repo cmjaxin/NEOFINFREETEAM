@@ -362,7 +362,13 @@ function ScriptsView({ scripts, members, onRefresh }: { scripts: SpliceScript[];
 
   async function del(id: string) {
     if (!confirm('Delete this script? This cannot be undone.')) return
-    // cascade: remove assignments and scenes first (FK constraints)
+    // cascade: clips → videos → assignments → scenes → script
+    const { data: videos } = await supabase.from('splice_videos').select('id').eq('script_id', id)
+    if (videos?.length) {
+      const videoIds = videos.map((v: any) => v.id)
+      await supabase.from('splice_video_clips').delete().in('video_id', videoIds)
+      await supabase.from('splice_videos').delete().in('id', videoIds)
+    }
     await supabase.from('splice_script_assignments').delete().eq('script_id', id)
     await supabase.from('splice_scenes').delete().eq('script_id', id)
     await supabase.from('splice_scripts').delete().eq('id', id)
