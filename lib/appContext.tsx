@@ -62,7 +62,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
   const [state, setState] = useState<AppState>({
     profile, employees: [], children: {}, coaching: {}, wins: {}, completions: {},
     welcomeTemplate: DEFAULT_WELCOME, pendingProfiles: [],
-    view: (() => { try { return (localStorage.getItem('hq_view') as View) ?? 'dashboard' } catch { return 'dashboard' } })(),
+    view: (() => { try { return (localStorage.getItem('hq_view') as View) ?? 'production' } catch { return 'production' } })(),
     selectedId: null, profileTab: 'profile', profileFrom: 'dashboard',
     showAdd: false, showSettings: false, search: '', dirSearch: '', roleFilter: 'all',
   })
