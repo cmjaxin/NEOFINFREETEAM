@@ -597,20 +597,32 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   async function downloadPNG() {
     setDownloading(true)
     try {
+      const baseName = template.name.replace(/\s+/g, '_')
+      const files: File[] = []
       for (let i = 0; i < template.pages.length; i++) {
         const c = document.createElement('canvas')
         await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h)
         const suffix = template.pages.length > 1 ? `_p${i + 1}` : ''
-        const a = document.createElement('a')
-        a.href = c.toDataURL('image/png')
-        a.download = `${template.name.replace(/\s+/g, '_')}${suffix}.png`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        // small delay between downloads so browser doesn't block them
-        if (i < template.pages.length - 1) await new Promise(r => setTimeout(r, 300))
+        const blob = await new Promise<Blob>(res => c.toBlob(b => res(b!), 'image/png'))
+        files.push(new File([blob], `${baseName}${suffix}.png`, { type: 'image/png' }))
       }
-    } catch (e) { console.error(e) }
+      // Use native share sheet on mobile (iOS save to Photos/Files)
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files, title: template.name })
+      } else {
+        // Desktop fallback — trigger download for each file
+        for (const file of files) {
+          const url = URL.createObjectURL(file)
+          const a = document.createElement('a')
+          a.href = url; a.download = file.name
+          document.body.appendChild(a); a.click(); document.body.removeChild(a)
+          URL.revokeObjectURL(url)
+          if (files.length > 1) await new Promise(r => setTimeout(r, 300))
+        }
+      }
+    } catch (e: any) {
+      if (e?.name !== 'AbortError') console.error(e)
+    }
     setDownloading(false)
   }
 
