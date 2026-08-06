@@ -45,6 +45,16 @@ function Shell() {
             </svg>
           </button>
           <Image src="/neo-logo.png" alt="NEO Home Loans" width={110} height={36} style={{ height: 32, width: 'auto' }} priority />
+          <button
+            onClick={() => window.location.reload()}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', marginLeft: 'auto' }}
+            aria-label="Reload app"
+          >
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+          </button>
         </div>
 
         <div className="main-content" style={{ flex: 1, overflowY: 'auto' }}>
