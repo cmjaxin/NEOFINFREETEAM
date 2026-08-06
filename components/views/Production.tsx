@@ -1123,7 +1123,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Controls */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+      <div className="prod-controls" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
         <ToggleGroup options={PERIOD_OPTS} value={period} onChange={v => setPeriod(v as PeriodStr)} />
         {hasPrevYear && (
           <ToggleGroup
@@ -1163,19 +1163,20 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
       </div>
 
       {/* Team charts: volume + families, with prior year overlay if uploaded */}
-      <div style={{ display: 'flex', gap: 16 }}>
-        <Card style={{ flex: 1 }}>
+      <div className="prod-charts-row" style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <Card style={{ flex: 1, minWidth: 260 }}>
           <CardHead title="Monthly Volume" subtitle={hasPrevYearForSelected ? 'Current year vs prior year' : 'All team members'} />
           <HoverBarChart values={teamVolume} labels={MONTHS} color="#7c3aed" fmt={fmtVol} primaryLabel="This Year" secondValues={prevTeamVolume} secondColor="#a78bfa" secondLabel="Last Year" />
         </Card>
-        <Card style={{ flex: 1 }}>
+        <Card style={{ flex: 1, minWidth: 260 }}>
           <CardHead title="Monthly Families" subtitle={hasPrevYearForSelected ? 'Current year vs prior year' : 'All team members'} />
           <HoverBarChart values={teamFamilies} labels={MONTHS} color={C.accent} fmt={String} primaryLabel="This Year" secondValues={prevTeamFamilies} secondColor="#93c5fd" secondLabel="Last Year" />
         </Card>
       </div>
 
       {/* Leaderboard */}
-      <Card style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="prod-leaderboard-wrap" style={{ overflowX: 'auto' }}>
+      <Card style={{ padding: 0, overflow: 'hidden', minWidth: 640 }}>
         {/* Column headers */}
         <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px, 220px) 160px 130px 130px 200px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
@@ -1289,6 +1290,7 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
           </div>
         )}
       </Card>
+      </div>{/* end prod-leaderboard-wrap */}
 
       {/* Upload section — admin only */}
       {isAdmin && (
@@ -1362,7 +1364,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
       <div style={{ fontSize: 13, color: C.muted }}>Year-to-date {year} conversion rates (current MAs)</div>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
+      <div className="prod-conv-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
         {[
           { label: 'Total Leads',        val: loading ? '—' : totals.leads.toString() },
           { label: 'Initial Apps (YTD)', val: totals.apps.toString() },
@@ -1379,7 +1381,8 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
       </div>
 
       {/* Table */}
-      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ overflowX: 'auto' }}>
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden', minWidth: 500 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: C.white }}>
@@ -1418,6 +1421,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
           </tfoot>
         </table>
       </div>
+      </div>{/* end overflow-x:auto */}
 
       <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
         Apps and Funded pull from production data. Leads are pushed daily via webhook.
@@ -1647,7 +1651,8 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
           </div>
 
           {/* Leaderboard */}
-          <Card style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ overflowX: 'auto' }}>
+          <Card style={{ padding: 0, overflow: 'hidden', minWidth: 580 }}>
             {/* Column headers */}
             <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
               <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
@@ -1745,11 +1750,12 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
               </div>
             )}
           </Card>
+          </div>{/* end overflow-x:auto */}
 
           {/* Upload section — admin only */}
           {isAdmin && (
-            <div style={{ display: 'flex', gap: 16 }}>
-              <Card style={{ flex: 1, borderTop: '3px solid #16a34a' }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <Card style={{ flex: 1, minWidth: 260, borderTop: '3px solid #16a34a' }}>
                 <CardHead title="Upload Self-Gen Applications" subtitle="One report for all SG apps — RESPA and Initial pulled by date field" />
                 <UploadZone
                   label="Drop Self-Gen Applications CSV / XLSX"
@@ -1762,7 +1768,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                   loading={sgLoading} message={sgMsg}
                 />
               </Card>
-              <Card style={{ flex: 1, borderTop: '3px solid #7c3aed' }}>
+              <Card style={{ flex: 1, minWidth: 260, borderTop: '3px solid #7c3aed' }}>
                 <CardHead title="Upload D2C Applications" subtitle="One report for all D2C apps — RESPA and Initial pulled by date field" />
                 <UploadZone
                   label="Drop D2C Applications CSV / XLSX"
@@ -1859,7 +1865,8 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                 .sort((a, b) => b.initial !== a.initial ? b.initial - a.initial : b.respa - a.respa)
               const maxWkRespa = Math.max(...wkFiltered.map(e => e.initial), 1)
               return (
-                <Card style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                <Card style={{ padding: 0, overflow: 'hidden', minWidth: 580 }}>
                   {/* Headers */}
                   <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
@@ -1931,6 +1938,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                     )
                   })}
                 </Card>
+                </div>{/* end overflow-x:auto */}
               )
             })() : (
               <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>No data for this week / source. Upload SG and D2C reports to populate.</div></Card>
@@ -2332,8 +2340,8 @@ export default function Production() {
   ]
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', padding: '24px 32px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
+    <div className="prod-page" style={{ background: C.bg, minHeight: '100vh', padding: '24px 32px' }}>
+      <div className="prod-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>2026 FinFree Division</div>
@@ -2352,7 +2360,7 @@ export default function Production() {
         </button>}
       </div>
 
-      <div style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
+      <div className="prod-tabs" style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24, overflowX: 'auto' }}>
         {tabOpts.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
             padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
