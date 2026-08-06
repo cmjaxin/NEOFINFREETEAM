@@ -2341,7 +2341,7 @@ export default function Production() {
   ]
 
   return (
-    <div className="prod-page" style={{ background: C.bg, minHeight: '100vh', padding: '24px 32px' }}>
+    <div className="prod-page" style={{ background: C.bg, minHeight: '100vh' }}>
       <div className="prod-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Production Dashboard</div>
@@ -2361,7 +2361,7 @@ export default function Production() {
         </button>}
       </div>
 
-      <div className="prod-tabs" style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24, overflowX: 'auto' }}>
+      <div className="prod-tabs" style={{ display: 'flex', gap: 2, borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
         {tabOpts.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
             padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer',
