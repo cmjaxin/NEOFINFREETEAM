@@ -229,10 +229,14 @@ function SubmitWinCard({ profiles, authorName, onSubmit }: {
     setSubmitting(true)
     let image_url: string | null = null
     if (imgFile) {
+      await fetch('/api/wins/ensure-bucket', { method: 'POST' })
       const ext  = imgFile.name.split('.').pop()
-      const path = `${Date.now()}.${ext}`
-      const { data: up } = await sb.storage.from('win-images').upload(path, imgFile, { upsert: true })
-      if (up) {
+      const path = `wins/${Date.now()}.${ext}`
+      const { data: up, error: upErr } = await sb.storage.from('win-images').upload(path, imgFile, { upsert: true })
+      if (upErr) {
+        console.error('Win image upload failed:', upErr)
+        alert(`Photo upload failed: ${upErr.message}. The win will post without the photo.`)
+      } else if (up) {
         const { data: pub } = sb.storage.from('win-images').getPublicUrl(up.path)
         image_url = pub.publicUrl
       }
