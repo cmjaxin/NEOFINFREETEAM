@@ -515,6 +515,11 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const [downloading, setDownloading] = useState(false)
   const [headshotUploading, setHeadshotUploading] = useState(false)
   const [mobileTab, setMobileTab] = useState<'preview' | 'fill'>('fill')
+  function switchToPreview() {
+    setMobileTab('preview')
+    // Canvas was hidden (display:none), so containerRef.clientWidth was 0 — re-render after show
+    requestAnimationFrame(() => renderPreview())
+  }
   const [posOverrides, setPosOverrides] = useState<Record<string, {x: number; y: number}>>({})
   const previewRef = useRef<HTMLCanvasElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -779,7 +784,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
         {/* Mobile tab switcher */}
         <div className="mkt-modal-switcher">
           <button className={mobileTab === 'fill' ? 'active' : ''} onClick={() => setMobileTab('fill')}>✏ Fill In</button>
-          <button className={mobileTab === 'preview' ? 'active' : ''} onClick={() => setMobileTab('preview')}>👁 Preview</button>
+          <button className={mobileTab === 'preview' ? 'active' : ''} onClick={switchToPreview}>👁 Preview</button>
         </div>
 
         {/* Canvas preview */}
@@ -877,11 +882,13 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
                 {(['pa_regarding','pa_date','pa_address','pa_loan_type','pa_purchase_price','pa_down_payment','pa_loan_amount','pa_occupancy'] as FieldType[]).map(ft => fieldInput(ft))}
               </>
             )}
-            <>
-              <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
-              {sectionHead('Testimonial')}
-              {(['testimonial_review','testimonial_name'] as FieldType[]).map(ft => fieldInput(ft, true))}
-            </>
+            {hasTestimonialFields && (
+              <>
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
+                {sectionHead('Testimonial')}
+                {(['testimonial_review','testimonial_name'] as FieldType[]).map(ft => fieldInput(ft))}
+              </>
+            )}
             {usedFields.has('tca_image') && (
               <>
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />

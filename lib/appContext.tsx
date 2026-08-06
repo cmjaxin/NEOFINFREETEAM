@@ -132,6 +132,22 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
 
   useEffect(() => { reload() }, [reload])
 
+  useEffect(() => {
+    // Push an initial history entry so back has somewhere to go
+    history.replaceState({ view: state.view }, '')
+
+    function onPopState(e: PopStateEvent) {
+      const v = e.state?.view as View | undefined
+      if (v) {
+        setState(s => ({ ...s, view: v }))
+        try { localStorage.setItem('hq_view', v) } catch {}
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const progress = useCallback((emp: Employee) => {
     const items = allItemsFor(emp.onboarding_role)
     const compList = state.completions[emp.id] ?? []
@@ -143,7 +159,11 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
   const ctx: AppContextValue = {
     ...state,
     supabase,
-    setView: (v) => { try { localStorage.setItem('hq_view', v) } catch {} setState(s => ({ ...s, view: v })) },
+    setView: (v) => {
+      try { localStorage.setItem('hq_view', v) } catch {}
+      history.pushState({ view: v }, '')
+      setState(s => ({ ...s, view: v }))
+    },
     setSelectedId: (id) => setState(s => ({ ...s, selectedId: id })),
     setProfileTab: (t) => setState(s => ({ ...s, profileTab: t })),
     setProfileFrom: (v) => setState(s => ({ ...s, profileFrom: v })),
