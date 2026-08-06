@@ -637,11 +637,17 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
       }
       const isLetter = template.canvas_size === 'flyer_letter'
       const pw = isLetter ? '8.5in' : `${size.w}px`, ph = isLetter ? '11in' : `${size.h}px`
+      // Only add page-break-after on images that aren't the last one
+      const imgTags = images.map((src, i) =>
+        `<img src="${src}" style="page-break-after:${i < images.length - 1 ? 'always' : 'avoid'}"/>`
+      ).join('')
       const win = window.open('', '_blank')
       if (!win) { alert('Please allow pop-ups for this site to download the PDF.'); setDownloading(false); return }
       win.document.write(`<!DOCTYPE html><html><head><style>
-        @page{size:${pw} ${ph};margin:0}body{margin:0;padding:0}img{width:100vw;height:100vh;object-fit:fill;display:block;page-break-after:always}
-      </style></head><body>${images.map(src => `<img src="${src}"/>`).join('')}</body></html>`)
+        @page{size:${pw} ${ph};margin:0}
+        body{margin:0;padding:0}
+        img{width:100%;height:auto;display:block;object-fit:fill}
+      </style></head><body>${imgTags}</body></html>`)
       win.document.close()
       setTimeout(() => { win.print() }, 600)
     } catch (e) { console.error(e) }
