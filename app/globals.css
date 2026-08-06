@@ -109,16 +109,43 @@ input:focus, textarea:focus { outline: none; }
 .prod-page { padding: 24px 32px; }
 
 @media (max-width: 768px) {
-  .prod-page { padding: 16px; }
+  .prod-page { padding: 12px; }
 
-  .prod-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .prod-header { flex-direction: column; gap: 8px; align-items: flex-start; }
+  .prod-header > div:first-child > div:first-child { font-size: 18px !important; }
 
-  .prod-tabs { gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .prod-tabs button { padding: 10px 14px; font-size: 13px; flex-shrink: 0; }
+  /* Tabs: compact, horizontally scrollable, no wrapping */
+  .prod-tabs {
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-bottom: 16px !important;
+    border-bottom-width: 1px !important;
+  }
+  .prod-tabs::-webkit-scrollbar { display: none; }
+  .prod-tabs button { padding: 9px 14px !important; font-size: 12px !important; flex-shrink: 0; white-space: nowrap; }
 
-  .prod-conv-grid { grid-template-columns: repeat(3,1fr); }
+  /* Controls: scroll horizontally, don't wrap */
+  .prod-controls {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+    gap: 8px !important;
+  }
+  .prod-controls::-webkit-scrollbar { display: none; }
 
-  .prod-controls { flex-direction: column; align-items: flex-start; }
+  /* Charts: stack full width */
+  .prod-charts-row { flex-direction: column; }
+  .prod-charts-row > * { min-width: unset !important; }
+
+  /* Leaderboard: ensure horizontal scroll works */
+  .prod-leaderboard-wrap { margin: 0 -12px; padding: 0 12px; }
+
+  /* Conversion grid: 3 columns */
+  .prod-conv-grid { grid-template-columns: repeat(3,1fr) !important; }
 }
 
 @keyframes fadein {

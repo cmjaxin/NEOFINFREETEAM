@@ -23,43 +23,55 @@ function Shell() {
   const [pullY, setPullY] = useState(0)
   const [releasing, setReleasing] = useState(false)
   const touchStartY = useRef(0)
+  const pullYRef = useRef(0)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const THRESHOLD = 72
+  const THRESHOLD = 110
 
   useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-
     function onTouchStart(e: TouchEvent) {
       touchStartY.current = e.touches[0].clientY
+      pullYRef.current = 0
     }
     function onTouchMove(e: TouchEvent) {
-      if (el!.scrollTop > 0) return
+      // Check the main scroll container's scroll position
+      const scrollTop = scrollRef.current?.scrollTop ?? 0
+      if (scrollTop > 0) {
+        if (pullYRef.current > 0) {
+          pullYRef.current = 0
+          setPullY(0)
+        }
+        return
+      }
       const dy = e.touches[0].clientY - touchStartY.current
       if (dy > 0) {
-        e.preventDefault()
-        setPullY(Math.min(dy * 0.45, THRESHOLD + 20))
+        const clamped = Math.min(dy * 0.3, THRESHOLD + 24)
+        pullYRef.current = clamped
+        setPullY(clamped)
+      } else if (pullYRef.current > 0) {
+        pullYRef.current = 0
+        setPullY(0)
       }
     }
     function onTouchEnd() {
-      if (pullY >= THRESHOLD) {
+      if (pullYRef.current >= THRESHOLD) {
         setReleasing(true)
         setTimeout(() => window.location.reload(), 300)
       } else {
         setReleasing(false)
         setPullY(0)
+        pullYRef.current = 0
       }
     }
 
-    el.addEventListener('touchstart', onTouchStart, { passive: true })
-    el.addEventListener('touchmove', onTouchMove, { passive: false })
-    el.addEventListener('touchend', onTouchEnd)
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: true })
+    window.addEventListener('touchend', onTouchEnd)
     return () => {
-      el.removeEventListener('touchstart', onTouchStart)
-      el.removeEventListener('touchmove', onTouchMove)
-      el.removeEventListener('touchend', onTouchEnd)
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
     }
-  }, [pullY])
+  }, [])
 
   const pullPct = Math.min(pullY / THRESHOLD, 1)
   const ready = pullY >= THRESHOLD
@@ -90,31 +102,32 @@ function Shell() {
           <Image src="/neo-logo.png" alt="NEO Home Loans" width={110} height={36} style={{ height: 32, width: 'auto' }} priority />
         </div>
 
-        <div ref={scrollRef} className="main-content" style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
-          {/* Pull-to-refresh indicator */}
-          {pullY > 4 && (
+        {/* Pull-to-refresh indicator — fixed so it overlays Reels/full-screen views */}
+        {pullY > 4 && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            pointerEvents: 'none',
+            paddingTop: Math.max(0, pullY - 34) / 2,
+          }}>
             <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
+              width: 38, height: 38, borderRadius: '50%',
+              background: '#0A2540', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              height: pullY, overflow: 'hidden', pointerEvents: 'none',
-              transition: releasing ? 'height 0.2s' : 'none',
+              opacity: Math.min(pullPct * 2, 1),
+              transform: `scale(${0.4 + pullPct * 0.6}) rotate(${pullPct * 240}deg)`,
+              transition: releasing ? 'transform 0.25s, opacity 0.2s' : 'none',
+              boxShadow: '0 2px 16px rgba(10,37,64,0.35)',
+              marginTop: 10,
             }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: '50%',
-                background: '#0A2540', color: '#fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: pullPct,
-                transform: `scale(${0.5 + pullPct * 0.5}) rotate(${pullPct * 240}deg)`,
-                transition: releasing ? 'transform 0.25s' : 'none',
-                boxShadow: '0 2px 12px rgba(10,37,64,0.25)',
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                </svg>
-              </div>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
             </div>
-          )}
+          </div>
+        )}
+        <div ref={scrollRef} className="main-content" style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
           {view === 'dashboard' && <OnboardingDashboard />}
           {view === 'directory' && <TeamDirectory />}
           {view === 'terminated' && <Terminated />}
