@@ -62,7 +62,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
   const [state, setState] = useState<AppState>({
     profile, employees: [], children: {}, coaching: {}, wins: {}, completions: {},
     welcomeTemplate: DEFAULT_WELCOME, pendingProfiles: [],
-    view: (() => { try { return (localStorage.getItem('hq_view') as View) ?? 'production' } catch { return 'production' } })(),
+    view: (() => { try { return (sessionStorage.getItem('hq_view') as View) ?? 'production' } catch { return 'production' } })(),
     selectedId: null, profileTab: 'profile', profileFrom: 'dashboard',
     showAdd: false, showSettings: false, search: '', dirSearch: '', roleFilter: 'all',
   })
@@ -140,7 +140,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
       const v = e.state?.view as View | undefined
       if (v) {
         setState(s => ({ ...s, view: v }))
-        try { localStorage.setItem('hq_view', v) } catch {}
+        try { sessionStorage.setItem('hq_view', v) } catch {}
       }
     }
     window.addEventListener('popstate', onPopState)
@@ -160,7 +160,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
     ...state,
     supabase,
     setView: (v) => {
-      try { localStorage.setItem('hq_view', v) } catch {}
+      try { sessionStorage.setItem('hq_view', v) } catch {}
       history.pushState({ view: v }, '')
       setState(s => ({ ...s, view: v }))
     },
