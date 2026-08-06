@@ -34,7 +34,7 @@ async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperW
 
 function buildCaptionElements(words: WhisperWord[], timelineOffset: number, chunkSize = 2): any[] {
   const elements: any[] = []
-  const CAPTION_DELAY = 0.15
+  const CAPTION_DELAY = 0.4
   for (let i = 0; i < words.length; i += chunkSize) {
     const group = words.slice(i, i + chunkSize)
     if (!group.length) continue
