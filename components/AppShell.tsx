@@ -34,7 +34,7 @@ function Shell() {
       touchStartY.current = e.touches[0].clientY
     }
     function onTouchMove(e: TouchEvent) {
-      if (el.scrollTop > 0) return
+      if (el!.scrollTop > 0) return
       const dy = e.touches[0].clientY - touchStartY.current
       if (dy > 0) {
         e.preventDefault()

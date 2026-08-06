@@ -1867,6 +1867,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
               return (
                 <div style={{ overflowX: 'auto' }}>
                 <Card style={{ padding: 0, overflow: 'hidden', minWidth: 580 }}>
+
                   {/* Headers */}
                   <div style={{ display: 'grid', gridTemplateColumns: '48px minmax(140px,1fr) 120px 120px 160px 160px', gap: 0, padding: '10px 20px', background: C.bg, borderBottom: `1px solid ${C.border}` }}>
                     <div style={{ fontSize: 11, color: C.muted, fontWeight: 700 }}>#</div>
@@ -1938,7 +1939,7 @@ function ApplicationsTab({ maData, prevYearData, weeklyData, onAppsUpload, onWee
                     )
                   })}
                 </Card>
-                </div>{/* end overflow-x:auto */}
+                </div>
               )
             })() : (
               <Card><div style={{ color: C.muted, fontSize: 13, textAlign: 'center', padding: 24 }}>No data for this week / source. Upload SG and D2C reports to populate.</div></Card>
