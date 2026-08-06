@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { AppProvider } from '@/lib/appContext'
 import Sidebar from '@/components/Sidebar'
 import OnboardingDashboard from '@/components/views/OnboardingDashboard'
@@ -20,6 +20,49 @@ import Image from 'next/image'
 function Shell() {
   const { view, showAdd, showSettings, profile } = useApp()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [pullY, setPullY] = useState(0)
+  const [releasing, setReleasing] = useState(false)
+  const touchStartY = useRef(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const THRESHOLD = 72
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    function onTouchStart(e: TouchEvent) {
+      touchStartY.current = e.touches[0].clientY
+    }
+    function onTouchMove(e: TouchEvent) {
+      if (el.scrollTop > 0) return
+      const dy = e.touches[0].clientY - touchStartY.current
+      if (dy > 0) {
+        e.preventDefault()
+        setPullY(Math.min(dy * 0.45, THRESHOLD + 20))
+      }
+    }
+    function onTouchEnd() {
+      if (pullY >= THRESHOLD) {
+        setReleasing(true)
+        setTimeout(() => window.location.reload(), 300)
+      } else {
+        setReleasing(false)
+        setPullY(0)
+      }
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+    }
+  }, [pullY])
+
+  const pullPct = Math.min(pullY / THRESHOLD, 1)
+  const ready = pullY >= THRESHOLD
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -45,19 +88,33 @@ function Shell() {
             </svg>
           </button>
           <Image src="/neo-logo.png" alt="NEO Home Loans" width={110} height={36} style={{ height: 32, width: 'auto' }} priority />
-          <button
-            onClick={() => window.location.reload()}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', marginLeft: 'auto' }}
-            aria-label="Reload app"
-          >
-            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-            </svg>
-          </button>
         </div>
 
-        <div className="main-content" style={{ flex: 1, overflowY: 'auto' }}>
+        <div ref={scrollRef} className="main-content" style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+          {/* Pull-to-refresh indicator */}
+          {pullY > 4 && (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              height: pullY, overflow: 'hidden', pointerEvents: 'none',
+              transition: releasing ? 'height 0.2s' : 'none',
+            }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: '50%',
+                background: '#0A2540', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: pullPct,
+                transform: `scale(${0.5 + pullPct * 0.5}) rotate(${pullPct * 240}deg)`,
+                transition: releasing ? 'transform 0.25s' : 'none',
+                boxShadow: '0 2px 12px rgba(10,37,64,0.25)',
+              }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </div>
+            </div>
+          )}
           {view === 'dashboard' && <OnboardingDashboard />}
           {view === 'directory' && <TeamDirectory />}
           {view === 'terminated' && <Terminated />}
@@ -67,7 +124,7 @@ function Shell() {
           {view === 'profile' && <EmployeeProfile />}
           {view === 'marketing' && <Marketing />}
           {view === 'reels' && <Reels />}
-        </div>
+        </div>{/* end main-content */}
       </main>
 
       {showAdd && <AddEmployeeModal />}
