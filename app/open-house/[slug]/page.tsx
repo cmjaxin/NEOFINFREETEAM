@@ -1,8 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { buildScenarios, cumulativeCost, fmtDollars, fmtRate, TCAInputs, LoanScenario } from '@/lib/openHouseMath'
-import Image from 'next/image'
+import { buildScenarios, cumulativeCost, totalOutOfPocket, breakevenMonths, fmtDollars, fmtRate, TCAInputs, LoanScenario } from '@/lib/openHouseMath'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -93,52 +92,87 @@ function PaymentBars({ scenarios }: { scenarios: LoanScenario[] }) {
 function ComparisonTable({ scenarios, inputs }: { scenarios: LoanScenario[]; inputs: TCAInputs }) {
   const checkpoints = [60, 120, 180, 360]
   const labels = ['5 Years', '10 Years', '15 Years', '30 Years']
+  const { downPct } = inputs
+
+  // Breakeven between market and first SA scenario
+  const saScenario = scenarios.find(s => s.label !== 'Market Rate')
+  const market = scenarios[0]
+  const breakeven = saScenario ? breakevenMonths(market, saScenario, downPct) : null
+  const breakevenYrs = breakeven ? (breakeven / 12).toFixed(1) : null
+
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 500 }}>
-        <thead>
-          <tr style={{ background: '#F8FAFC' }}>
-            <th style={{ textAlign: 'left', padding: '10px 16px', color: C.muted, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>Cost Through</th>
-            {scenarios.map(s => (
-              <th key={s.label} style={{ textAlign: 'right', padding: '10px 16px', color: s.color, fontWeight: 700, borderBottom: `2px solid ${s.color}` }}>{s.label}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {checkpoints.map((m, i) => (
-            <tr key={m} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : '#F8FAFC' }}>
-              <td style={{ padding: '10px 16px', fontWeight: 600, color: C.dim }}>{labels[i]}</td>
-              {scenarios.map(s => {
-                const cost = cumulativeCost(s, m)
-                const best = Math.min(...scenarios.map(x => cumulativeCost(x, m)))
-                const isBest = Math.abs(cost - best) < 1
-                return (
-                  <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: isBest ? 800 : 500, color: isBest ? C.green : C.dim }}>
-                    {fmtDollars(cost)}
-                    {isBest && <span style={{ fontSize: 10, color: C.green, marginLeft: 4 }}>✓ Best</span>}
-                  </td>
-                )
-              })}
+    <div>
+      {/* Breakeven callout */}
+      {breakeven && (
+        <div style={{ background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 22 }}>📈</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: C.green }}>Breakeven at {breakevenYrs} years</div>
+            <div style={{ fontSize: 12, color: C.dim, marginTop: 2 }}>
+              After {breakevenYrs} years, the Seller Advantage loan saves more total money than the higher purchase price cost — and keeps saving every month after.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 500 }}>
+          <thead>
+            <tr style={{ background: '#F8FAFC' }}>
+              <th style={{ textAlign: 'left', padding: '10px 16px', color: C.muted, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}>Total Out-of-Pocket</th>
+              {scenarios.map(s => (
+                <th key={s.label} style={{ textAlign: 'right', padding: '10px 16px', color: s.color, fontWeight: 700, borderBottom: `2px solid ${s.color}` }}>{s.label}</th>
+              ))}
             </tr>
-          ))}
-          <tr style={{ background: '#F0F9FF', borderTop: `2px solid ${C.accent}` }}>
-            <td style={{ padding: '10px 16px', fontWeight: 700, color: C.navy }}>Down Payment</td>
-            {scenarios.map(s => (
-              <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: C.dim }}>
-                {fmtDollars(s.purchasePrice * inputs.downPct)}
-              </td>
+            <tr style={{ background: '#F8FAFC', borderBottom: `1px solid ${C.border}` }}>
+              <td style={{ padding: '6px 16px', fontSize: 11, color: C.muted, fontStyle: 'italic' }}>Down payment + all monthly costs</td>
+              {scenarios.map(s => <td key={s.label} />)}
+            </tr>
+          </thead>
+          <tbody>
+            {checkpoints.map((m, i) => (
+              <tr key={m} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : '#F8FAFC' }}>
+                <td style={{ padding: '10px 16px', fontWeight: 600, color: C.dim }}>{labels[i]}</td>
+                {scenarios.map(s => {
+                  const cost = totalOutOfPocket(s, m, downPct)
+                  const best = Math.min(...scenarios.map(x => totalOutOfPocket(x, m, downPct)))
+                  const isBest = Math.abs(cost - best) < 1
+                  return (
+                    <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: isBest ? 800 : 500, color: isBest ? C.green : C.dim }}>
+                      {fmtDollars(cost)}
+                      {isBest && <span style={{ fontSize: 10, color: C.green, marginLeft: 4 }}>✓ Best</span>}
+                    </td>
+                  )
+                })}
+              </tr>
             ))}
-          </tr>
-          <tr style={{ background: '#F0F9FF' }}>
-            <td style={{ padding: '10px 16px', fontWeight: 700, color: C.navy }}>Loan Amount</td>
-            {scenarios.map(s => (
-              <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: C.dim }}>
-                {fmtDollars(s.loanAmount)}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+            <tr style={{ background: '#F0F9FF', borderTop: `2px solid ${C.accent}` }}>
+              <td style={{ padding: '10px 16px', fontWeight: 700, color: C.navy }}>Down Payment</td>
+              {scenarios.map(s => (
+                <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: C.dim }}>
+                  {fmtDollars(s.purchasePrice * downPct)}
+                </td>
+              ))}
+            </tr>
+            <tr style={{ background: '#F0F9FF' }}>
+              <td style={{ padding: '10px 16px', fontWeight: 700, color: C.navy }}>Loan Amount</td>
+              {scenarios.map(s => (
+                <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: C.dim }}>
+                  {fmtDollars(s.loanAmount)}
+                </td>
+              ))}
+            </tr>
+            <tr style={{ background: '#F0F9FF' }}>
+              <td style={{ padding: '10px 16px', fontWeight: 700, color: C.navy }}>Monthly P&I</td>
+              {scenarios.map(s => (
+                <td key={s.label} style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 700, color: s.color }}>
+                  {fmtDollars(s.monthlyPI)}/mo
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -351,15 +385,29 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                       <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Seller Contribution</div>
                       <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(page.seller_contribution)}</div>
                     </div>
-                    {scenarios.length > 1 && (
-                      <div>
-                        <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Savings vs Market</div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>
-                          {fmtDollars(Math.max(0, scenarios[0].monthlyTotal - scenarios[1].monthlyTotal))}/mo
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    {scenarios.length > 1 && (() => {
+                      const monthlySavings = Math.max(0, scenarios[0].monthlyTotal - scenarios[1].monthlyTotal)
+                      const breakeven = breakevenMonths(scenarios[0], scenarios[1], inputs.downPct)
+                      const annualSavings = monthlySavings * 12
+                      return (
+                        <>
+                          <div>
+                            <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Savings</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(monthlySavings)}/mo</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Annual Savings</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(annualSavings)}/yr</div>
+                          </div>
+                          {breakeven && (
+                            <div>
+                              <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Breakeven</div>
+                              <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{(breakeven / 12).toFixed(1)} yrs</div>
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                 </div>
 
                 {/* Monthly comparison */}

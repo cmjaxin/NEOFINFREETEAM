@@ -95,6 +95,26 @@ export function cumulativeCost(scenario: LoanScenario, months: number): number {
   return scenario.monthlyTotal * months
 }
 
+// True out-of-pocket: includes down payment + all monthly costs over the period
+export function totalOutOfPocket(scenario: LoanScenario, months: number, downPct: number): number {
+  const downPayment = scenario.purchasePrice * downPct
+  return downPayment + scenario.monthlyTotal * months
+}
+
+// Monthly savings vs the first (market rate) scenario
+export function monthlySavingsVsMarket(scenarios: LoanScenario[], idx: number): number {
+  if (idx === 0 || scenarios.length < 2) return 0
+  return scenarios[0].monthlyTotal - scenarios[idx].monthlyTotal
+}
+
+// Breakeven month: when SA cumulative savings exceed the extra down payment
+export function breakevenMonths(market: LoanScenario, sa: LoanScenario, downPct: number): number | null {
+  const extraDown = (sa.purchasePrice - market.purchasePrice) * downPct
+  const monthlySavings = market.monthlyTotal - sa.monthlyTotal
+  if (monthlySavings <= 0) return null
+  return Math.ceil(extraDown / monthlySavings)
+}
+
 export function fmtDollars(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
   if (n >= 1_000) return `$${Math.round(n).toLocaleString()}`
