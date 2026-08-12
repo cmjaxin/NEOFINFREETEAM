@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '@/lib/appContext'
 import { slugify, buildScenarios, fmtDollars, fmtRate, TCAInputs } from '@/lib/openHouseMath'
+import { Employee } from '@/lib/types'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -20,6 +21,8 @@ interface OHPage {
   sa_arm_years: number; lot_size: string; year_built: number; description: string
   advisor_title: string; advisor_email: string; advisor_phone: string
   advisor_photo: string; advisor_nmls: string
+  partner_name: string; partner_title: string; partner_email: string
+  partner_phone: string; partner_photo: string; partner_nmls: string
 }
 
 // ─── Stable form primitives (defined OUTSIDE modal to prevent focus loss) ────
@@ -40,7 +43,9 @@ function Field({ label, name, type = 'text', placeholder = '', half = false, not
     <div style={{ flex: half ? '0 0 calc(50% - 6px)' : '1 1 100%', minWidth: 0 }}>
       <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</label>
       <input
-        type={type} placeholder={placeholder} value={value}
+        type="text"
+        inputMode={type === 'number' ? 'decimal' : 'text'}
+        placeholder={placeholder} value={value}
         onChange={e => onChange(name, e.target.value)}
         style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
       />
@@ -57,39 +62,69 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
 
+  const { employees } = useApp()
   const init = editing ?? {} as Partial<OHPage>
   const [form, setForm] = useState({
     address: init.address ?? '',
     city: init.city ?? '',
     state: init.state ?? 'UT',
     zip: init.zip ?? '',
-    beds: init.beds ?? '',
-    baths: init.baths ?? '',
-    sqft: init.sqft ?? '',
+    beds: String(init.beds ?? ''),
+    baths: String(init.baths ?? ''),
+    sqft: String(init.sqft ?? ''),
     lot_size: init.lot_size ?? '',
-    year_built: init.year_built ?? '',
+    year_built: String(init.year_built ?? ''),
     description: init.description ?? '',
     photos: init.photos ?? [] as string[],
-    list_price: init.list_price ?? '',
-    seller_contribution: init.seller_contribution ?? '',
-    down_pct: init.down_pct ? String(Math.round(init.down_pct * 100)) : '3.5',
+    list_price: String(init.list_price ?? ''),
+    seller_contribution: String(init.seller_contribution ?? ''),
+    down_pct: init.down_pct ? String((init.down_pct * 100).toFixed(1)) : '3.5',
     market_rate: init.market_rate ? String((init.market_rate * 100).toFixed(3)) : '',
     sa_30yr_rate: init.sa_30yr_rate ? String((init.sa_30yr_rate * 100).toFixed(3)) : '',
     sa_arm_rate: init.sa_arm_rate ? String((init.sa_arm_rate * 100).toFixed(3)) : '',
-    sa_arm_years: init.sa_arm_years ?? 5,
+    sa_arm_years: String(init.sa_arm_years ?? '5'),
     sa_arm_adjusted_rate: (init as OHPage).sa_arm_adjusted_rate ? String(((init as OHPage).sa_arm_adjusted_rate! * 100).toFixed(3)) : '',
-    hoa_monthly: init.hoa_monthly ?? '',
-    annual_taxes: init.annual_taxes ?? '',
-    annual_insurance: init.annual_insurance ?? '',
-    advisor_name: init.advisor_name ?? profile?.full_name ?? '',
-    advisor_title: init.advisor_title ?? profile?.title ?? '',
-    advisor_email: init.advisor_email ?? profile?.email ?? '',
-    advisor_phone: init.advisor_phone ?? profile?.phone ?? '',
-    advisor_nmls: init.advisor_nmls ?? profile?.nmls ?? '',
-    advisor_photo: init.advisor_photo ?? profile?.headshot_url ?? '',
+    hoa_monthly: String(init.hoa_monthly ?? ''),
+    annual_taxes: String(init.annual_taxes ?? ''),
+    annual_insurance: String(init.annual_insurance ?? ''),
+    // Advisor auto-filled from logged-in profile
+    advisor_name: init.advisor_name || profile?.full_name || '',
+    advisor_title: init.advisor_title || profile?.title || '',
+    advisor_email: init.advisor_email || profile?.email || '',
+    advisor_phone: init.advisor_phone || profile?.phone || '',
+    advisor_nmls: init.advisor_nmls || profile?.nmls || '',
+    advisor_photo: init.advisor_photo || profile?.headshot_url || '',
+    // Partner (realtor or co-advisor)
+    partner_name: (init as OHPage).partner_name ?? '',
+    partner_title: (init as OHPage).partner_title ?? '',
+    partner_email: (init as OHPage).partner_email ?? '',
+    partner_phone: (init as OHPage).partner_phone ?? '',
+    partner_nmls: (init as OHPage).partner_nmls ?? '',
+    partner_photo: (init as OHPage).partner_photo ?? '',
   })
+  const [showPartner, setShowPartner] = useState(!!(init as OHPage).partner_name)
+  const [partnerSearch, setPartnerSearch] = useState('')
+  const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
 
   function set(k: string, v: unknown) { setForm(f => ({ ...f, [k]: v })) }
+
+  function applyPartnerFromEmployee(emp: Employee) {
+    setForm(f => ({
+      ...f,
+      partner_name: emp.name,
+      partner_title: emp.title || 'Listing Agent',
+      partner_email: emp.work_email || '',
+      partner_phone: emp.phone || '',
+      partner_nmls: emp.nmls_number || '',
+      partner_photo: emp.headshot_url || '',
+    }))
+    setPartnerSearch(emp.name)
+    setShowPartnerDropdown(false)
+  }
+
+  const filteredEmployees = partnerSearch.length > 1
+    ? employees.filter(e => e.name.toLowerCase().includes(partnerSearch.toLowerCase())).slice(0, 6)
+    : []
 
   async function uploadPhotos(files: File[]) {
     setPhotoUploading(true)
@@ -143,6 +178,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       advisor_phone: form.advisor_phone,
       advisor_nmls: form.advisor_nmls,
       advisor_photo: form.advisor_photo,
+      partner_name: showPartner ? form.partner_name : '',
+      partner_title: showPartner ? form.partner_title : '',
+      partner_email: showPartner ? form.partner_email : '',
+      partner_phone: showPartner ? form.partner_phone : '',
+      partner_nmls: showPartner ? form.partner_nmls : '',
+      partner_photo: showPartner ? form.partner_photo : '',
       updated_at: new Date().toISOString(),
     }
 
@@ -280,16 +321,116 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
             )}
           </section>
 
-          {/* Advisor */}
+          {/* Advisor — auto-filled from profile */}
           <section>
-            <SectionHead title="Advisor Contact" sub="Shows on the contact tab of the landing page" />
+            <SectionHead title="Your Contact Info" sub="Auto-filled from your profile — edit here to override for this listing" />
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
+              {/* Headshot preview */}
+              <div style={{ flexShrink: 0 }}>
+                {form.advisor_photo ? (
+                  <img src={form.advisor_photo} alt="Headshot" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${C.accent}` }} />
+                ) : (
+                  <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', border: `2px dashed ${C.accent}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: C.accent }}>
+                    {form.advisor_name?.[0] ?? '?'}
+                  </div>
+                )}
+                {!form.advisor_photo && (
+                  <div style={{ fontSize: 10, color: C.muted, marginTop: 4, textAlign: 'center', width: 72 }}>No headshot in profile</div>
+                )}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.navy }}>{form.advisor_name || 'Your Name'}</div>
+                <div style={{ fontSize: 13, color: C.dim }}>{form.advisor_title || 'Your Title'}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{form.advisor_email}</div>
+                {form.advisor_nmls && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>NMLS# {form.advisor_nmls}</div>}
+                <div style={{ fontSize: 11, color: C.accent, marginTop: 4, fontWeight: 600 }}>✓ Auto-filled from your profile</div>
+              </div>
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="Name" name="advisor_name" placeholder="Josh Mettle" half value={form.advisor_name} onChange={set} />
+              <Field label="Name" name="advisor_name" placeholder="Your Name" half value={form.advisor_name} onChange={set} />
               <Field label="Title" name="advisor_title" placeholder="Mortgage Advisor" half value={form.advisor_title} onChange={set} />
-              <Field label="Email" name="advisor_email" placeholder="advisor@neohomeloans.com" half value={form.advisor_email} onChange={set} />
+              <Field label="Email" name="advisor_email" placeholder="you@neohomeloans.com" half value={form.advisor_email} onChange={set} />
               <Field label="Phone" name="advisor_phone" placeholder="(801) 555-0100" half value={form.advisor_phone} onChange={set} />
               <Field label="NMLS#" name="advisor_nmls" placeholder="123456" half value={form.advisor_nmls} onChange={set} />
+              <Field label="Headshot URL" name="advisor_photo" placeholder="https://…" half note="Update your profile headshot to change this" value={form.advisor_photo} onChange={set} />
             </div>
+          </section>
+
+          {/* Partner / Realtor */}
+          <section>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showPartner ? 14 : 0, paddingBottom: showPartner ? 8 : 0, borderBottom: showPartner ? `1px solid ${C.border}` : 'none' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>Listing Agent / Partner</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Optionally add a realtor or co-advisor to the contact page</div>
+              </div>
+              <button
+                onClick={() => { setShowPartner(v => !v); if (showPartner) { setPartnerSearch('') } }}
+                style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: showPartner ? C.red : C.navy, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                {showPartner ? 'Remove Partner' : '+ Add Partner'}
+              </button>
+            </div>
+
+            {showPartner && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Search from team */}
+                <div style={{ position: 'relative' }}>
+                  <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Search Team Members</label>
+                  <input
+                    placeholder="Type name to search…"
+                    value={partnerSearch}
+                    onChange={e => { setPartnerSearch(e.target.value); setShowPartnerDropdown(true) }}
+                    onFocus={() => setShowPartnerDropdown(true)}
+                    style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
+                  />
+                  {showPartnerDropdown && filteredEmployees.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, zIndex: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.12)', overflow: 'hidden', marginTop: 4 }}>
+                      {filteredEmployees.map(emp => (
+                        <button key={emp.id} onMouseDown={() => applyPartnerFromEmployee(emp)}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
+                          {emp.headshot_url ? (
+                            <img src={emp.headshot_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />
+                          ) : (
+                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
+                              {emp.name[0]}
+                            </div>
+                          )}
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{emp.name}</div>
+                            <div style={{ fontSize: 11, color: C.muted }}>{emp.title}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Partner preview + fields */}
+                {form.partner_name && (
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 14px', background: C.bg, borderRadius: 8 }}>
+                    {form.partner_photo ? (
+                      <img src={form.partner_photo} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />
+                    ) : (
+                      <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
+                        {form.partner_name[0]}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.navy }}>{form.partner_name}</div>
+                      <div style={{ fontSize: 12, color: C.muted }}>{form.partner_title}</div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                  <Field label="Partner Name" name="partner_name" placeholder="Jane Smith" half value={form.partner_name} onChange={set} />
+                  <Field label="Partner Title" name="partner_title" placeholder="Listing Agent" half value={form.partner_title} onChange={set} />
+                  <Field label="Partner Email" name="partner_email" placeholder="jane@realty.com" half value={form.partner_email} onChange={set} />
+                  <Field label="Partner Phone" name="partner_phone" placeholder="(801) 555-0200" half value={form.partner_phone} onChange={set} />
+                  <Field label="Partner NMLS# (if applicable)" name="partner_nmls" placeholder="Optional" half value={form.partner_nmls} onChange={set} />
+                  <Field label="Partner Headshot URL" name="partner_photo" placeholder="https://…" half value={form.partner_photo} onChange={set} />
+                </div>
+              </div>
+            )}
           </section>
         </div>
 
@@ -386,7 +527,10 @@ export default function OpenHouseView() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Open House Pages</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Open House Pages</div>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', background: '#FEF3C7', color: '#92400E', borderRadius: 20, border: '1px solid #FCD34D', letterSpacing: '0.04em' }}>🚧 UNDER CONSTRUCTION</span>
+          </div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Create public landing pages with Seller Advantage TCA comparison</div>
         </div>
         <button onClick={() => setShowCreate(true)}

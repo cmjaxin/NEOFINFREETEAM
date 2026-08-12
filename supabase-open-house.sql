@@ -69,3 +69,11 @@ create policy "Admins can manage all"
 
 -- Run this to add the ARM adjusted rate column (if table already exists):
 alter table open_house_pages add column if not exists sa_arm_adjusted_rate numeric;
+
+-- Partner / realtor columns:
+alter table open_house_pages add column if not exists partner_name text default '';
+alter table open_house_pages add column if not exists partner_title text default '';
+alter table open_house_pages add column if not exists partner_email text default '';
+alter table open_house_pages add column if not exists partner_phone text default '';
+alter table open_house_pages add column if not exists partner_photo text default '';
+alter table open_house_pages add column if not exists partner_nmls text default '';

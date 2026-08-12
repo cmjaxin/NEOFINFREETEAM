@@ -221,6 +221,8 @@ interface PageData {
   market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_years: number; sa_arm_adjusted_rate: number | null
   advisor_name: string; advisor_title: string; advisor_email: string
   advisor_phone: string; advisor_photo: string; advisor_nmls: string
+  partner_name: string; partner_title: string; partner_email: string
+  partner_phone: string; partner_photo: string; partner_nmls: string
 }
 
 export default function OpenHousePage({ params }: { params: { slug: string } }) {
@@ -373,7 +375,7 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
         {activeTab === 'tca' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {hasSA ? (
-              <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {/* SA explanation */}
                 <div style={{ background: 'linear-gradient(135deg, #0A2540 0%, #1a4a7c 100%)', borderRadius: 14, padding: 24, color: '#fff' }}>
                   <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>What is Seller Advantage?</div>
@@ -496,7 +498,7 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                   Rates shown are for illustration purposes only and are subject to credit approval.
                   Taxes, insurance, and HOA estimates may vary. Consult your loan advisor for personalized numbers.
                 </div>
-              </>
+              </div>
             ) : (
               <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 32, textAlign: 'center', color: C.muted }}>
                 No Seller Advantage scenarios configured for this listing.
@@ -536,6 +538,39 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                 )}
               </div>
             </div>
+            {/* Partner / Realtor card */}
+            {page.partner_name && (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Listing Agent</div>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+                  {page.partner_photo ? (
+                    <img src={page.partner_photo} alt={page.partner_name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
+                      {page.partner_name[0]}
+                    </div>
+                  )}
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: C.navy }}>{page.partner_name}</div>
+                    <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{page.partner_title || 'Listing Agent'}</div>
+                    {page.partner_nmls && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>NMLS# {page.partner_nmls}</div>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {page.partner_phone && (
+                    <a href={`tel:${page.partner_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, color: C.navy, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+                      📞 {page.partner_phone}
+                    </a>
+                  )}
+                  {page.partner_email && (
+                    <a href={`mailto:${page.partner_email}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, color: C.navy, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
+                      ✉️ {page.partner_email}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
               <div style={{ fontWeight: 700, fontSize: 15, color: C.navy, marginBottom: 16 }}>Get Pre-Qualified</div>
               <div style={{ fontSize: 13, color: C.dim, lineHeight: 1.6, marginBottom: 16 }}>
