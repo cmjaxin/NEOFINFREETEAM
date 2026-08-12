@@ -28,6 +28,7 @@ interface OHPage {
   advisor_photo: string; advisor_nmls: string
   partner_name: string; partner_title: string; partner_email: string
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
+  tca_url: string
 }
 
 // ─── Stable form primitives (defined OUTSIDE modal to prevent focus loss) ────
@@ -136,6 +137,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     partner_nmls: (init as OHPage).partner_nmls ?? '',
     partner_photo: (init as OHPage).partner_photo ?? '',
     partner_logo: (init as OHPage).partner_logo ?? '',
+    tca_url: (init as OHPage).tca_url ?? '',
   })
   const [showPartner, setShowPartner] = useState(!!(init as OHPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
@@ -260,6 +262,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       partner_nmls: showPartner ? form.partner_nmls : '',
       partner_photo: showPartner ? form.partner_photo : '',
       partner_logo: showPartner ? form.partner_logo : '',
+      tca_url: form.tca_url || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -285,7 +288,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       <div style={{ background: C.bg, borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', background: C.navy, flexShrink: 0 }}>
-          <div style={{ color: '#fff', fontWeight: 800, fontSize: 17 }}>{editing ? 'Edit Listing' : 'New Open House Page'}</div>
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: 17 }}>{editing ? 'Edit Listing Presentation' : 'New Listing Presentation'}</div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#fff', cursor: 'pointer', fontSize: 14 }}>✕</button>
         </div>
 
@@ -461,6 +464,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
             )}
           </section>
 
+          {/* TCA Link */}
+          <section>
+            <SectionHead title="TCA Link" sub="Paste your MortgageCoach report URL — it will embed live on the Seller Advantage tab" />
+            <Field label="MortgageCoach URL" name="tca_url" placeholder="https://report.mortgagecoach.com/v2/classic/#…" value={form.tca_url} onChange={set} note="Each listing gets its own TCA link. The Seller Advantage PDF is shared across all listings." />
+          </section>
+
           {/* Advisor — auto-filled from profile */}
           <section>
             <SectionHead title="Your Contact Info" sub="Auto-filled from your profile — edit here to override for this listing" />
@@ -594,7 +603,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
 // ─── Page Card ────────────────────────────────────────────────────────────────
 function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
-  const url = `/open-house/${page.slug}`
+  const url = `/listing-presentation/${page.slug}`
   const fullAddress = [page.address, page.city, page.state].filter(Boolean).join(', ')
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -679,7 +688,7 @@ export default function OpenHouseView() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Open House Pages</div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Listing Presentations</div>
             <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', background: '#FEF3C7', color: '#92400E', borderRadius: 20, border: '1px solid #FCD34D', letterSpacing: '0.04em' }}>🚧 UNDER CONSTRUCTION</span>
           </div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Create public landing pages with Seller Advantage TCA comparison</div>
