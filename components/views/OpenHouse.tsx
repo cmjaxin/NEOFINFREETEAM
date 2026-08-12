@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '@/lib/appContext'
-import { slugify, buildScenarios, fmtDollars, fmtRate, TCAInputs } from '@/lib/openHouseMath'
+import { slugify } from '@/lib/openHouseMath'
+
 interface MarketingPartner {
   id: string; name: string; title: string; company: string
   phone: string; email: string; headshot_url: string; logo_url: string
@@ -17,13 +18,9 @@ function fmtPrice(n: number) { return '$' + Math.round(n).toLocaleString() }
 
 interface OHPage {
   id: string; slug: string; address: string; city: string; state: string; zip: string
-  beds: number; baths: number; sqft: number; list_price: number; seller_contribution: number
-  market_rate: number; market_apr: number | null
-  sa_30yr_rate: number | null; sa_30yr_apr: number | null
-  sa_arm_rate: number | null; sa_arm_apr: number | null; sa_arm_adjusted_rate: number | null
-  down_pct: number; status: string; created_at: string; advisor_name: string
-  photos: string[]; hoa_monthly: number; annual_taxes: number; annual_insurance: number
-  sa_arm_years: number; lot_size: string; year_built: number; description: string
+  beds: number; baths: number; sqft: number; list_price: number
+  status: string; created_at: string; advisor_name: string
+  photos: string[]; lot_size: string; year_built: number; description: string
   advisor_title: string; advisor_email: string; advisor_phone: string
   advisor_photo: string; advisor_nmls: string
   partner_name: string; partner_title: string; partner_email: string
@@ -31,7 +28,6 @@ interface OHPage {
   tca_url: string
 }
 
-// ─── Stable form primitives (defined OUTSIDE modal to prevent focus loss) ────
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
@@ -75,12 +71,10 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       .then(({ data }) => {
         const partners = data ?? []
         setMarketingPartners(partners)
-        // Auto-backfill partner logo for existing listings saved before partner_logo column existed
         setForm(f => {
           if (f.partner_name && !f.partner_logo) {
             const match = partners.find(p => p.name === f.partner_name)
             if (match?.logo_url) {
-              // Also patch the DB row immediately so the public page gets the logo without a full re-save
               if ((init as OHPage).id) {
                 supabase.from('open_house_pages')
                   .update({ partner_logo: match.logo_url })
@@ -109,27 +103,13 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     description: init.description ?? '',
     photos: init.photos ?? [] as string[],
     list_price: String(init.list_price ?? ''),
-    seller_contribution: String(init.seller_contribution ?? ''),
-    down_pct: init.down_pct ? String((init.down_pct * 100).toFixed(1)) : '3.5',
-    market_rate: init.market_rate ? String((init.market_rate * 100).toFixed(3)) : '',
-    market_apr: (init as OHPage).market_apr ? String(((init as OHPage).market_apr! * 100).toFixed(3)) : '',
-    sa_30yr_rate: init.sa_30yr_rate ? String((init.sa_30yr_rate * 100).toFixed(3)) : '',
-    sa_30yr_apr: (init as OHPage).sa_30yr_apr ? String(((init as OHPage).sa_30yr_apr! * 100).toFixed(3)) : '',
-    sa_arm_rate: init.sa_arm_rate ? String((init.sa_arm_rate * 100).toFixed(3)) : '',
-    sa_arm_apr: (init as OHPage).sa_arm_apr ? String(((init as OHPage).sa_arm_apr! * 100).toFixed(3)) : '',
-    sa_arm_years: String(init.sa_arm_years ?? '5'),
-    sa_arm_adjusted_rate: (init as OHPage).sa_arm_adjusted_rate ? String(((init as OHPage).sa_arm_adjusted_rate! * 100).toFixed(3)) : '',
-    hoa_monthly: String(init.hoa_monthly ?? ''),
-    annual_taxes: String(init.annual_taxes ?? ''),
-    annual_insurance: String(init.annual_insurance ?? ''),
-    // Advisor auto-filled from logged-in profile
+    tca_url: (init as OHPage).tca_url ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
     advisor_title: init.advisor_title || profile?.title || '',
     advisor_email: init.advisor_email || profile?.email || '',
     advisor_phone: init.advisor_phone || profile?.phone || '',
     advisor_nmls: init.advisor_nmls || profile?.nmls || '',
     advisor_photo: init.advisor_photo || profile?.headshot_url || '',
-    // Partner (realtor or co-advisor)
     partner_name: (init as OHPage).partner_name ?? '',
     partner_title: (init as OHPage).partner_title ?? '',
     partner_email: (init as OHPage).partner_email ?? '',
@@ -137,7 +117,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     partner_nmls: (init as OHPage).partner_nmls ?? '',
     partner_photo: (init as OHPage).partner_photo ?? '',
     partner_logo: (init as OHPage).partner_logo ?? '',
-    tca_url: (init as OHPage).tca_url ?? '',
   })
   const [showPartner, setShowPartner] = useState(!!(init as OHPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
@@ -217,8 +196,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   }
 
   async function save() {
-    if (!form.address || !form.list_price || !form.market_rate) {
-      setMsg('Address, list price, and market rate are required.')
+    if (!form.address || !form.list_price) {
+      setMsg('Address and list price are required.')
       return
     }
     setSaving(true)
@@ -236,19 +215,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       description: form.description,
       photos: form.photos,
       list_price: Number(form.list_price),
-      seller_contribution: form.seller_contribution ? Number(form.seller_contribution) : 0,
-      down_pct: Number(form.down_pct) / 100,
-      market_rate: Number(form.market_rate) / 100,
-      market_apr: form.market_apr ? Number(form.market_apr) / 100 : null,
-      sa_30yr_rate: form.sa_30yr_rate ? Number(form.sa_30yr_rate) / 100 : null,
-      sa_30yr_apr: form.sa_30yr_apr ? Number(form.sa_30yr_apr) / 100 : null,
-      sa_arm_rate: form.sa_arm_rate ? Number(form.sa_arm_rate) / 100 : null,
-      sa_arm_apr: form.sa_arm_apr ? Number(form.sa_arm_apr) / 100 : null,
-      sa_arm_years: Number(form.sa_arm_years),
-      sa_arm_adjusted_rate: form.sa_arm_adjusted_rate ? Number(form.sa_arm_adjusted_rate) / 100 : null,
-      hoa_monthly: form.hoa_monthly ? Number(form.hoa_monthly) : 0,
-      annual_taxes: form.annual_taxes ? Number(form.annual_taxes) : 0,
-      annual_insurance: form.annual_insurance ? Number(form.annual_insurance) : 0,
+      tca_url: form.tca_url || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
       advisor_email: form.advisor_email,
@@ -262,7 +229,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       partner_nmls: showPartner ? form.partner_nmls : '',
       partner_photo: showPartner ? form.partner_photo : '',
       partner_logo: showPartner ? form.partner_logo : '',
-      tca_url: form.tca_url || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -303,6 +269,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="City" name="city" placeholder="Salt Lake City" half value={form.city} onChange={set} />
               <Field label="State" name="state" placeholder="UT" half value={form.state} onChange={set} />
               <Field label="Zip" name="zip" placeholder="84101" half value={form.zip} onChange={set} />
+              <Field label="List Price *" name="list_price" type="number" placeholder="500000" half value={String(form.list_price ?? '')} onChange={set} />
               <Field label="Beds" name="beds" type="number" placeholder="4" half value={String(form.beds ?? '')} onChange={set} />
               <Field label="Baths" name="baths" type="number" placeholder="2.5" half value={String(form.baths ?? '')} onChange={set} />
               <Field label="Sq Ft" name="sqft" type="number" placeholder="2400" half value={String(form.sqft ?? '')} onChange={set} />
@@ -310,30 +277,20 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="Year Built" name="year_built" type="number" placeholder="2005" half value={String(form.year_built ?? '')} onChange={set} />
             </div>
             <div style={{ marginTop: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                <label style={{ fontSize: 11.5, fontWeight: 700, color: C.dim, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
-                <span style={{ fontSize: 11, color: (form.description as string).length > 700 ? '#DC2626' : C.muted }}>
-                  {(form.description as string).length}/700 flyer chars
-                </span>
-              </div>
+              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
               <textarea
                 placeholder="Describe the property…"
                 value={form.description}
                 onChange={e => set('description', e.target.value)}
                 rows={3}
-                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${(form.description as string).length > 700 ? '#FCA5A5' : C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
               />
-              {(form.description as string).length > 700 && (
-                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 3 }}>First 700 characters will appear on the flyer.</div>
-              )}
             </div>
           </section>
 
           {/* Photos */}
           <section>
-            <SectionHead title="Photos" sub="Photos 1–4 are used on the flyer. Add more below for the online gallery slideshow." />
-
-            {/* Flyer slots 1–4 */}
+            <SectionHead title="Photos" sub="Photos 1–4 are used on the flyer. Add more below for the online gallery." />
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Flyer Photos</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {[0, 1, 2, 3].map(i => {
@@ -353,8 +310,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, fontWeight: 600, color: i === 0 ? C.navy : C.muted, marginBottom: 4 }}>{labels[i]}</div>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => triggerSlotUpload(i)}
-                          disabled={photoUploading}
+                        <button onClick={() => triggerSlotUpload(i)} disabled={photoUploading}
                           style={{ padding: '5px 12px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.dim, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
                           {photoUploading ? '…' : url ? 'Replace' : 'Upload'}
                         </button>
@@ -365,8 +321,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                 )
               })}
             </div>
-
-            {/* Additional gallery photos */}
             <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Additional Gallery Photos</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {(form.photos as string[]).slice(4).map((url, i) => (
@@ -376,105 +330,24 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, background: C.red, border: 'none', borderRadius: '50%', color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                 </div>
               ))}
-              <button onClick={() => { slotUploadIndex.current = -1; photoRef.current?.click() }}
-                disabled={photoUploading}
+              <button onClick={() => { slotUploadIndex.current = -1; photoRef.current?.click() }} disabled={photoUploading}
                 style={{ width: 72, height: 52, border: `2px dashed ${C.border}`, borderRadius: 7, background: C.white, color: C.muted, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1 }}>
                 {photoUploading ? '…' : <><span style={{ fontSize: 16 }}>+</span><span>Photo</span></>}
               </button>
             </div>
-
             <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
-          </section>
-
-          {/* Pricing */}
-          <section>
-            <SectionHead title="Pricing & Costs" />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="List Price *" name="list_price" type="number" placeholder="500000" half value={String(form.list_price ?? '')} onChange={set} />
-              <Field label="Seller Contribution ($)" name="seller_contribution" type="number" placeholder="15000" half note="Amount seller pays to buy down the rate. Adds to SA purchase price." value={String(form.seller_contribution ?? '')} onChange={set} />
-              <Field label="HOA (monthly)" name="hoa_monthly" type="number" placeholder="0" half value={String(form.hoa_monthly ?? '')} onChange={set} />
-              <Field label="Annual Taxes" name="annual_taxes" type="number" placeholder="3600" half value={String(form.annual_taxes ?? '')} onChange={set} />
-              <Field label="Annual Insurance" name="annual_insurance" type="number" placeholder="1200" half value={String(form.annual_insurance ?? '')} onChange={set} />
-            </div>
-          </section>
-
-          {/* Loan Scenarios */}
-          <section>
-            <SectionHead title="Loan Scenarios" sub="Enter rates as percentages (e.g. 7.125 for 7.125%). Leave Seller Advantage fields blank to exclude from comparison." />
-
-            {/* Down payment + market rate */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="Down Payment %" name="down_pct" type="number" placeholder="3.5" half note="e.g. 3.5 for FHA, 5 for conventional" value={String(form.down_pct ?? '')} onChange={set} />
-              <Field label="Market Rate %" name="market_rate" type="number" placeholder="7.125" half value={String(form.market_rate ?? '')} onChange={set} />
-              <Field label="Market APR %" name="market_apr" type="number" placeholder="7.441" half value={String(form.market_apr ?? '')} onChange={set} />
-            </div>
-
-            {/* Seller Advantage rates */}
-            <div style={{ marginTop: 14, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ height: 1, flex: 1, background: '#5BCBF5' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#0A2540', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Seller Advantage Rates</span>
-              <div style={{ height: 1, flex: 1, background: '#5BCBF5' }} />
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="30yr Fixed Rate %" name="sa_30yr_rate" type="number" placeholder="5.875" half value={String(form.sa_30yr_rate ?? '')} onChange={set} />
-              <Field label="30yr Fixed APR %" name="sa_30yr_apr" type="number" placeholder="6.125" half value={String(form.sa_30yr_apr ?? '')} onChange={set} />
-              <Field label="ARM Rate %" name="sa_arm_rate" type="number" placeholder="5.500" half value={String(form.sa_arm_rate ?? '')} onChange={set} />
-              <Field label="ARM APR %" name="sa_arm_apr" type="number" placeholder="5.750" half value={String(form.sa_arm_apr ?? '')} onChange={set} />
-              <Field label="ARM Fixed Period (years)" name="sa_arm_years" type="number" placeholder="5" half value={String(form.sa_arm_years ?? '')} onChange={set} />
-              <Field label="ARM Adjusted Rate % (after fixed period)" name="sa_arm_adjusted_rate" type="number" placeholder="leave blank to use market rate" half note="Rate the ARM adjusts to when the fixed period ends. Defaults to Market Rate if blank." value={String(form.sa_arm_adjusted_rate ?? '')} onChange={set} />
-            </div>
-
-            {/* Live preview */}
-            {form.list_price && form.market_rate && (
-              <div style={{ marginTop: 16, padding: 14, background: C.white, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.dim, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Live Preview</div>
-                {(() => {
-                  const inputs: TCAInputs = {
-                    listPrice: Number(form.list_price),
-                    sellerContribution: Number(form.seller_contribution) || 0,
-                    downPct: Number(form.down_pct) / 100 || 0.035,
-                    marketRate: Number(form.market_rate) / 100,
-                    marketApr: form.market_apr ? Number(form.market_apr) / 100 : null,
-                    sa30yrRate: form.sa_30yr_rate ? Number(form.sa_30yr_rate) / 100 : null,
-                    sa30yrApr: form.sa_30yr_apr ? Number(form.sa_30yr_apr) / 100 : null,
-                    saArmRate: form.sa_arm_rate ? Number(form.sa_arm_rate) / 100 : null,
-                    saArmApr: form.sa_arm_apr ? Number(form.sa_arm_apr) / 100 : null,
-                    saArmYears: Number(form.sa_arm_years) || 5,
-                    saArmAdjustedRate: form.sa_arm_adjusted_rate ? Number(form.sa_arm_adjusted_rate) / 100 : null,
-                    hoaMonthly: Number(form.hoa_monthly) || 0,
-                    annualTaxes: Number(form.annual_taxes) || 0,
-                    annualInsurance: Number(form.annual_insurance) || 0,
-                    ufmipPct: 0.0175,
-                    annualMipPct: 0.0055,
-                  }
-                  const scenarios = buildScenarios(inputs)
-                  return (
-                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                      {scenarios.map(s => (
-                        <div key={s.label} style={{ flex: 1, minWidth: 140, padding: '10px 14px', background: C.bg, borderRadius: 8, borderLeft: `3px solid ${s.color}` }}>
-                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{s.label}</div>
-                          <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{fmtPrice(Math.round(s.monthlyTotal))}<span style={{ fontSize: 11, fontWeight: 400, color: C.muted }}>/mo</span></div>
-                          <div style={{ fontSize: 11, color: C.muted }}>Rate: {fmtRate(s.rate)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-            )}
           </section>
 
           {/* TCA Link */}
           <section>
-            <SectionHead title="TCA Link" sub="Paste your MortgageCoach report URL — it will embed live on the Seller Advantage tab" />
+            <SectionHead title="TCA Link" sub="Paste your MortgageCoach report URL — it embeds live on the Seller Advantage tab" />
             <Field label="MortgageCoach URL" name="tca_url" placeholder="https://report.mortgagecoach.com/v2/classic/#…" value={form.tca_url} onChange={set} note="Each listing gets its own TCA link. The Seller Advantage PDF is shared across all listings." />
           </section>
 
-          {/* Advisor — auto-filled from profile */}
+          {/* Advisor */}
           <section>
             <SectionHead title="Your Contact Info" sub="Auto-filled from your profile — edit here to override for this listing" />
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
-              {/* Headshot preview */}
               <div style={{ flexShrink: 0 }}>
                 {form.advisor_photo ? (
                   <img src={form.advisor_photo} alt="Headshot" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${C.accent}` }} />
@@ -482,9 +355,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                   <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', border: `2px dashed ${C.accent}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: C.accent }}>
                     {form.advisor_name?.[0] ?? '?'}
                   </div>
-                )}
-                {!form.advisor_photo && (
-                  <div style={{ fontSize: 10, color: C.muted, marginTop: 4, textAlign: 'center', width: 72 }}>No headshot in profile</div>
                 )}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -501,7 +371,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="Email" name="advisor_email" placeholder="you@neohomeloans.com" half value={form.advisor_email} onChange={set} />
               <Field label="Phone" name="advisor_phone" placeholder="(801) 555-0100" half value={form.advisor_phone} onChange={set} />
               <Field label="NMLS#" name="advisor_nmls" placeholder="123456" half value={form.advisor_nmls} onChange={set} />
-              <Field label="Headshot URL" name="advisor_photo" placeholder="https://…" half note="Update your profile headshot to change this" value={form.advisor_photo} onChange={set} />
+              <Field label="Headshot URL" name="advisor_photo" placeholder="https://…" half value={form.advisor_photo} onChange={set} />
             </div>
           </section>
 
@@ -512,21 +382,17 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                 <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>Listing Agent / Partner</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Optionally add a realtor or co-advisor to the contact page</div>
               </div>
-              <button
-                onClick={() => { setShowPartner(v => !v); if (showPartner) { setPartnerSearch('') } }}
+              <button onClick={() => { setShowPartner(v => !v); if (showPartner) setPartnerSearch('') }}
                 style={{ padding: '7px 14px', borderRadius: 8, border: `1px solid ${C.border}`, background: showPartner ? C.red : C.navy, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
                 {showPartner ? 'Remove Partner' : '+ Add Partner'}
               </button>
             </div>
-
             {showPartner && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Search from team */}
                 <div style={{ position: 'relative' }}>
                   <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Select from your Marketing Partners</label>
                   <input
-                    placeholder={marketingPartners.length === 0 ? 'No partners saved yet — add them in Marketing tab' : 'Search partners…'}
-                    disabled={marketingPartners.length === 0}
+                    placeholder={marketingPartners.length === 0 ? 'No partners saved yet' : 'Search partners…'}
                     value={partnerSearch}
                     onChange={e => { setPartnerSearch(e.target.value); setShowPartnerDropdown(true) }}
                     onFocus={() => setShowPartnerDropdown(true)}
@@ -553,8 +419,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     </div>
                   )}
                 </div>
-
-                {/* Partner preview + fields */}
                 {form.partner_name && (
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '10px 14px', background: C.bg, borderRadius: 8 }}>
                     {form.partner_photo ? (
@@ -570,7 +434,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     </div>
                   </div>
                 )}
-
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                   <Field label="Partner Name" name="partner_name" placeholder="Jane Smith" half value={form.partner_name} onChange={set} />
                   <Field label="Partner Title" name="partner_title" placeholder="Listing Agent" half value={form.partner_title} onChange={set} />
@@ -604,10 +467,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 // ─── Page Card ────────────────────────────────────────────────────────────────
 function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
   const url = `/listing-presentation/${page.slug}`
-  const fullAddress = [page.address, page.city, page.state].filter(Boolean).join(', ')
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      {/* Photo or placeholder */}
       {page.photos && page.photos.length > 0 ? (
         <img src={page.photos[0]} alt={page.address} style={{ width: '100%', height: 160, objectFit: 'cover' }} />
       ) : (
@@ -622,10 +483,9 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
           {page.baths ? <span>{page.baths} ba</span> : null}
           {page.sqft ? <span>{page.sqft.toLocaleString()} sqft</span> : null}
         </div>
-        {page.sa_30yr_rate && (
+        {page.tca_url && (
           <div style={{ marginTop: 8, fontSize: 11, background: 'rgba(91,203,245,0.1)', borderRadius: 6, padding: '4px 8px', color: C.navy, display: 'inline-flex', gap: 6, alignSelf: 'flex-start' }}>
-            <span style={{ fontWeight: 700 }}>SA Rate:</span>
-            <span>{fmtRate(page.sa_30yr_rate)}</span>
+            ✓ TCA linked
           </div>
         )}
         <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -670,7 +530,6 @@ export default function OpenHouseView() {
 
   async function deletePage(page: OHPage) {
     if (!confirm(`Delete "${page.address}"? This will permanently remove the page and all photos.`)) return
-    // Delete photos from storage
     const photos: string[] = (page.photos ?? []).filter(Boolean)
     if (photos.length > 0) {
       const paths = photos.map(url => {
@@ -684,14 +543,10 @@ export default function OpenHouseView() {
 
   return (
     <div style={{ padding: '28px 36px', background: C.bg, minHeight: '100vh' }}>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Listing Presentations</div>
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', background: '#FEF3C7', color: '#92400E', borderRadius: 20, border: '1px solid #FCD34D', letterSpacing: '0.04em' }}>🚧 UNDER CONSTRUCTION</span>
-          </div>
-          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Create public landing pages with Seller Advantage TCA comparison</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Listing Presentations</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Share the Seller Advantage PDF + TCA with listing agents</div>
         </div>
         <button onClick={() => setShowCreate(true)}
           style={{ padding: '10px 20px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -699,14 +554,13 @@ export default function OpenHouseView() {
         </button>
       </div>
 
-      {/* Grid */}
       {loading ? (
         <div style={{ color: C.muted, padding: 32, textAlign: 'center' }}>Loading…</div>
       ) : pages.length === 0 ? (
         <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
           <div style={{ fontSize: 52, marginBottom: 16 }}>🏡</div>
           <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No listing pages yet</div>
-          <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>Create your first open house page with a built-in Seller Advantage TCA comparison.</div>
+          <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>Create a listing presentation page to share with agents.</div>
           <button onClick={() => setShowCreate(true)}
             style={{ padding: '12px 28px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
             Create Your First Page
@@ -715,15 +569,11 @@ export default function OpenHouseView() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
           {pages.map(p => (
-            <PageCard key={p.id} page={p}
-              onEdit={() => setEditingPage(p)}
-              onDelete={() => deletePage(p)}
-            />
+            <PageCard key={p.id} page={p} onEdit={() => setEditingPage(p)} onDelete={() => deletePage(p)} />
           ))}
         </div>
       )}
 
-      {/* Modals */}
       {(showCreate || editingPage) && (
         <CreateModal
           editing={editingPage}
