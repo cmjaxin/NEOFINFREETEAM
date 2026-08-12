@@ -29,7 +29,7 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
   }
   return (
     <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden' }}>
-      <img src={photos[idx]} alt={address} style={{ width: '100%', height: 340, objectFit: 'cover', display: 'block' }} />
+      <img src={photos[idx]} alt={address} className="lp-gallery-img" style={{ width: '100%', objectFit: 'cover', display: 'block' }} />
       {photos.length > 1 && (
         <div>
           <button onClick={() => setIdx(i => (i - 1 + photos.length) % photos.length)}
@@ -142,7 +142,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
 
         {/* Price + Address */}
         <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <div style={{ fontSize: 30, fontWeight: 800, color: C.navy, lineHeight: 1 }}>{fmtPrice(page.list_price)}</div>
+          <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{fmtPrice(page.list_price)}</div>
           <div style={{ fontSize: 16, color: C.dim, marginTop: 6, fontWeight: 600 }}>{page.address}</div>
           <div style={{ fontSize: 14, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state} {page.zip}</div>
 
@@ -168,8 +168,9 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
         <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${C.border}`, marginBottom: 28 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
-              style={{ padding: '10px 22px', border: 'none', background: 'transparent', cursor: 'pointer',
-                fontSize: 14, fontWeight: activeTab === t.id ? 700 : 500,
+              className="lp-tab-btn"
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer',
+                fontWeight: activeTab === t.id ? 700 : 500,
                 color: activeTab === t.id ? C.navy : C.muted,
                 borderBottom: `2px solid ${activeTab === t.id ? C.navy : 'transparent'}`, marginBottom: -2 }}>
               {t.label}
@@ -205,7 +206,8 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
                 </div>
                 <iframe
                   src={SELLER_ADVANTAGE_PDF_URL + '#toolbar=0&navpanes=0&scrollbar=1'}
-                  style={{ width: '100%', height: 700, border: 'none', display: 'block' }}
+                  className="lp-iframe-pdf"
+                  style={{ width: '100%', border: 'none', display: 'block' }}
                   title="Seller Advantage Presentation"
                 />
               </div>
@@ -223,7 +225,8 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
                 </div>
                 <iframe
                   src={page.tca_url}
-                  style={{ width: '100%', height: 820, border: 'none', display: 'block' }}
+                  className="lp-iframe-tca"
+                  style={{ width: '100%', border: 'none', display: 'block' }}
                   title="Total Cost Analysis"
                   allow="fullscreen"
                 />
@@ -239,7 +242,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
 
         {/* Contact Tab */}
         {activeTab === 'contact' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
+          <div className="lp-contact-grid" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 20 }}>
                 {page.advisor_photo ? (
@@ -307,6 +310,20 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Montserrat', system-ui, sans-serif; }
         a { color: inherit; }
+        .lp-gallery-img { width: 100%; height: 340px; object-fit: cover; display: block; }
+        .lp-price { font-size: 30px; }
+        .lp-tab-btn { padding: 10px 22px; font-size: 14px; }
+        .lp-contact-grid { max-width: 480px; }
+        .lp-iframe-pdf { height: 700px; }
+        .lp-iframe-tca { height: 820px; }
+        @media (max-width: 600px) {
+          .lp-gallery-img { height: 220px; }
+          .lp-price { font-size: 22px; }
+          .lp-tab-btn { padding: 8px 12px; font-size: 12px; }
+          .lp-contact-grid { max-width: 100%; }
+          .lp-iframe-pdf { height: 420px; }
+          .lp-iframe-tca { height: 500px; }
+        }
       `}</style>
     </div>
   )

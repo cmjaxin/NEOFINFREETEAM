@@ -232,20 +232,21 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       updated_at: new Date().toISOString(),
     }
 
-    console.log('Saving payload:', JSON.stringify(payload, null, 2))
-    if (editing) {
-      const { error } = await supabase.from('open_house_pages').update(payload).eq('id', editing.id)
-      if (error) { console.error('UPDATE error:', error); setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
-    } else {
-      const slug = slugify(form.address + ' ' + form.city)
-      const { error } = await supabase.from('open_house_pages').insert({
-        ...payload,
-        slug,
-        status: 'active',
-        created_by: profile!.id,
-      })
-      if (error) { console.error('INSERT error:', error); setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
+    async function attempt(p: typeof payload) {
+      if (editing) {
+        return supabase.from('open_house_pages').update(p).eq('id', editing.id)
+      } else {
+        const slug = slugify(form.address + ' ' + form.city)
+        return supabase.from('open_house_pages').insert({ ...p, slug, status: 'active', created_by: profile!.id })
+      }
     }
+    let { error } = await attempt(payload)
+    // If tca_url column doesn't exist yet, retry without it
+    if (error?.code === '42703' && error.message.includes('tca_url')) {
+      const { tca_url: _omit, ...payloadWithout } = payload
+      ;({ error } = await attempt(payloadWithout as typeof payload))
+    }
+    if (error) { setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
     setSaving(false)
     onSaved()
   }
