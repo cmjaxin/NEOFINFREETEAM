@@ -411,6 +411,7 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                         </div>
                       )
                     })()}
+                  </div>
                 </div>
 
                 {/* Monthly comparison */}
