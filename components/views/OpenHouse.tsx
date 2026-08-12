@@ -14,12 +14,39 @@ function fmtPrice(n: number) { return '$' + Math.round(n).toLocaleString() }
 interface OHPage {
   id: string; slug: string; address: string; city: string; state: string; zip: string
   beds: number; baths: number; sqft: number; list_price: number; seller_contribution: number
-  market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null
+  market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_adjusted_rate: number | null
   down_pct: number; status: string; created_at: string; advisor_name: string
   photos: string[]; hoa_monthly: number; annual_taxes: number; annual_insurance: number
   sa_arm_years: number; lot_size: string; year_built: number; description: string
   advisor_title: string; advisor_email: string; advisor_phone: string
   advisor_photo: string; advisor_nmls: string
+}
+
+// ─── Stable form primitives (defined OUTSIDE modal to prevent focus loss) ────
+function SectionHead({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div style={{ marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>{title}</div>
+      {sub && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>}
+    </div>
+  )
+}
+
+function Field({ label, name, type = 'text', placeholder = '', half = false, note = '', value, onChange }: {
+  label: string; name: string; type?: string; placeholder?: string; half?: boolean; note?: string
+  value: string; onChange: (name: string, value: string) => void
+}) {
+  return (
+    <div style={{ flex: half ? '0 0 calc(50% - 6px)' : '1 1 100%', minWidth: 0 }}>
+      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</label>
+      <input
+        type={type} placeholder={placeholder} value={value}
+        onChange={e => onChange(name, e.target.value)}
+        style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
+      />
+      {note && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{note}</div>}
+    </div>
+  )
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
@@ -50,6 +77,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     sa_30yr_rate: init.sa_30yr_rate ? String((init.sa_30yr_rate * 100).toFixed(3)) : '',
     sa_arm_rate: init.sa_arm_rate ? String((init.sa_arm_rate * 100).toFixed(3)) : '',
     sa_arm_years: init.sa_arm_years ?? 5,
+    sa_arm_adjusted_rate: (init as OHPage).sa_arm_adjusted_rate ? String(((init as OHPage).sa_arm_adjusted_rate! * 100).toFixed(3)) : '',
     hoa_monthly: init.hoa_monthly ?? '',
     annual_taxes: init.annual_taxes ?? '',
     annual_insurance: init.annual_insurance ?? '',
@@ -105,6 +133,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       sa_30yr_rate: form.sa_30yr_rate ? Number(form.sa_30yr_rate) / 100 : null,
       sa_arm_rate: form.sa_arm_rate ? Number(form.sa_arm_rate) / 100 : null,
       sa_arm_years: Number(form.sa_arm_years),
+      sa_arm_adjusted_rate: form.sa_arm_adjusted_rate ? Number(form.sa_arm_adjusted_rate) / 100 : null,
       hoa_monthly: form.hoa_monthly ? Number(form.hoa_monthly) : 0,
       annual_taxes: form.annual_taxes ? Number(form.annual_taxes) : 0,
       annual_insurance: form.annual_insurance ? Number(form.annual_insurance) : 0,
@@ -134,28 +163,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     onSaved()
   }
 
-  const Field = ({ label, name, type = 'text', placeholder = '', half = false, note = '' }: {
-    label: string; name: string; type?: string; placeholder?: string; half?: boolean; note?: string
-  }) => (
-    <div style={{ flex: half ? '0 0 calc(50% - 6px)' : '1 1 100%', minWidth: 0 }}>
-      <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{label}</label>
-      <input
-        type={type} placeholder={placeholder}
-        value={String((form as Record<string, unknown>)[name] ?? '')}
-        onChange={e => set(name, e.target.value)}
-        style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
-      />
-      {note && <div style={{ fontSize: 11, color: C.muted, marginTop: 3 }}>{note}</div>}
-    </div>
-  )
-
-  const SectionHead = ({ title, sub }: { title: string; sub?: string }) => (
-    <div style={{ marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
-      <div style={{ fontWeight: 700, fontSize: 14, color: C.navy }}>{title}</div>
-      {sub && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{sub}</div>}
-    </div>
-  )
-
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: C.bg, borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -172,15 +179,15 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
           <section>
             <SectionHead title="Property" />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="Street Address *" name="address" placeholder="123 Main St" />
-              <Field label="City" name="city" placeholder="Salt Lake City" half />
-              <Field label="State" name="state" placeholder="UT" half />
-              <Field label="Zip" name="zip" placeholder="84101" half />
-              <Field label="Beds" name="beds" type="number" placeholder="4" half />
-              <Field label="Baths" name="baths" type="number" placeholder="2.5" half />
-              <Field label="Sq Ft" name="sqft" type="number" placeholder="2400" half />
-              <Field label="Lot Size" name="lot_size" placeholder="0.25 acres" half />
-              <Field label="Year Built" name="year_built" type="number" placeholder="2005" half />
+              <Field label="Street Address *" name="address" placeholder="123 Main St" value={form.address} onChange={set} />
+              <Field label="City" name="city" placeholder="Salt Lake City" half value={form.city} onChange={set} />
+              <Field label="State" name="state" placeholder="UT" half value={form.state} onChange={set} />
+              <Field label="Zip" name="zip" placeholder="84101" half value={form.zip} onChange={set} />
+              <Field label="Beds" name="beds" type="number" placeholder="4" half value={String(form.beds ?? '')} onChange={set} />
+              <Field label="Baths" name="baths" type="number" placeholder="2.5" half value={String(form.baths ?? '')} onChange={set} />
+              <Field label="Sq Ft" name="sqft" type="number" placeholder="2400" half value={String(form.sqft ?? '')} onChange={set} />
+              <Field label="Lot Size" name="lot_size" placeholder="0.25 acres" half value={form.lot_size} onChange={set} />
+              <Field label="Year Built" name="year_built" type="number" placeholder="2005" half value={String(form.year_built ?? '')} onChange={set} />
             </div>
             <div style={{ marginTop: 12 }}>
               <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
@@ -218,11 +225,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
           <section>
             <SectionHead title="Pricing & Costs" />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="List Price *" name="list_price" type="number" placeholder="500000" half />
-              <Field label="Seller Contribution ($)" name="seller_contribution" type="number" placeholder="15000" half note="Amount seller pays to buy down the rate. Adds to SA purchase price." />
-              <Field label="HOA (monthly)" name="hoa_monthly" type="number" placeholder="0" half />
-              <Field label="Annual Taxes" name="annual_taxes" type="number" placeholder="3600" half />
-              <Field label="Annual Insurance" name="annual_insurance" type="number" placeholder="1200" half />
+              <Field label="List Price *" name="list_price" type="number" placeholder="500000" half value={String(form.list_price ?? '')} onChange={set} />
+              <Field label="Seller Contribution ($)" name="seller_contribution" type="number" placeholder="15000" half note="Amount seller pays to buy down the rate. Adds to SA purchase price." value={String(form.seller_contribution ?? '')} onChange={set} />
+              <Field label="HOA (monthly)" name="hoa_monthly" type="number" placeholder="0" half value={String(form.hoa_monthly ?? '')} onChange={set} />
+              <Field label="Annual Taxes" name="annual_taxes" type="number" placeholder="3600" half value={String(form.annual_taxes ?? '')} onChange={set} />
+              <Field label="Annual Insurance" name="annual_insurance" type="number" placeholder="1200" half value={String(form.annual_insurance ?? '')} onChange={set} />
             </div>
           </section>
 
@@ -230,11 +237,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
           <section>
             <SectionHead title="Loan Scenarios" sub="Enter rates as percentages (e.g. 7.125 for 7.125%). Leave SA fields blank to exclude from comparison." />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="Down Payment %" name="down_pct" type="number" placeholder="3.5" half note="e.g. 3.5 for FHA, 5 for conventional" />
-              <Field label="Market Rate %" name="market_rate" type="number" placeholder="7.125" half />
-              <Field label="SA 30yr Fixed Rate %" name="sa_30yr_rate" type="number" placeholder="5.875" half />
-              <Field label="SA ARM Rate %" name="sa_arm_rate" type="number" placeholder="5.500" half />
-              <Field label="ARM Fixed Period (years)" name="sa_arm_years" type="number" placeholder="5" half />
+              <Field label="Down Payment %" name="down_pct" type="number" placeholder="3.5" half note="e.g. 3.5 for FHA, 5 for conventional" value={String(form.down_pct ?? '')} onChange={set} />
+              <Field label="Market Rate %" name="market_rate" type="number" placeholder="7.125" half value={String(form.market_rate ?? '')} onChange={set} />
+              <Field label="SA 30yr Fixed Rate %" name="sa_30yr_rate" type="number" placeholder="5.875" half value={String(form.sa_30yr_rate ?? '')} onChange={set} />
+              <Field label="SA ARM Rate %" name="sa_arm_rate" type="number" placeholder="5.500" half value={String(form.sa_arm_rate ?? '')} onChange={set} />
+              <Field label="ARM Fixed Period (years)" name="sa_arm_years" type="number" placeholder="5" half value={String(form.sa_arm_years ?? '')} onChange={set} />
+              <Field label="ARM Adjusted Rate % (after fixed period)" name="sa_arm_adjusted_rate" type="number" placeholder="leave blank to use market rate" half note="Rate the ARM adjusts to when the fixed period ends. Defaults to Market Rate if blank." value={String(form.sa_arm_adjusted_rate ?? '')} onChange={set} />
             </div>
 
             {/* Live preview */}
@@ -250,6 +258,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     sa30yrRate: form.sa_30yr_rate ? Number(form.sa_30yr_rate) / 100 : null,
                     saArmRate: form.sa_arm_rate ? Number(form.sa_arm_rate) / 100 : null,
                     saArmYears: Number(form.sa_arm_years) || 5,
+                    saArmAdjustedRate: form.sa_arm_adjusted_rate ? Number(form.sa_arm_adjusted_rate) / 100 : null,
                     hoaMonthly: Number(form.hoa_monthly) || 0,
                     annualTaxes: Number(form.annual_taxes) || 0,
                     annualInsurance: Number(form.annual_insurance) || 0,
@@ -275,11 +284,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
           <section>
             <SectionHead title="Advisor Contact" sub="Shows on the contact tab of the landing page" />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <Field label="Name" name="advisor_name" placeholder="Josh Mettle" half />
-              <Field label="Title" name="advisor_title" placeholder="Mortgage Advisor" half />
-              <Field label="Email" name="advisor_email" placeholder="advisor@neohomeloans.com" half />
-              <Field label="Phone" name="advisor_phone" placeholder="(801) 555-0100" half />
-              <Field label="NMLS#" name="advisor_nmls" placeholder="123456" half />
+              <Field label="Name" name="advisor_name" placeholder="Josh Mettle" half value={form.advisor_name} onChange={set} />
+              <Field label="Title" name="advisor_title" placeholder="Mortgage Advisor" half value={form.advisor_title} onChange={set} />
+              <Field label="Email" name="advisor_email" placeholder="advisor@neohomeloans.com" half value={form.advisor_email} onChange={set} />
+              <Field label="Phone" name="advisor_phone" placeholder="(801) 555-0100" half value={form.advisor_phone} onChange={set} />
+              <Field label="NMLS#" name="advisor_nmls" placeholder="123456" half value={form.advisor_nmls} onChange={set} />
             </div>
           </section>
         </div>

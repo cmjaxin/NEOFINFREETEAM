@@ -218,7 +218,7 @@ interface PageData {
   description: string; photos: string[]
   list_price: number; hoa_monthly: number; annual_taxes: number; annual_insurance: number
   down_pct: number; seller_contribution: number
-  market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_years: number
+  market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_years: number; sa_arm_adjusted_rate: number | null
   advisor_name: string; advisor_title: string; advisor_email: string
   advisor_phone: string; advisor_photo: string; advisor_nmls: string
 }
@@ -269,6 +269,7 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
     hoaMonthly: page.hoa_monthly ?? 0,
     annualTaxes: page.annual_taxes ?? 0,
     annualInsurance: page.annual_insurance ?? 0,
+    saArmAdjustedRate: page.sa_arm_adjusted_rate ?? null,
   }
   const scenarios = buildScenarios(inputs)
   const fullAddress = [page.address, page.city, page.state, page.zip].filter(Boolean).join(', ')
@@ -416,6 +417,57 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                   <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Including taxes, insurance{page.hoa_monthly ? ', and HOA' : ''}</div>
                   <PaymentBars scenarios={scenarios} />
                 </div>
+
+                {/* ARM detail section */}
+                {(() => {
+                  const armS = scenarios.find(s => s.isArm)
+                  if (!armS) return null
+                  const fixedYrs = (armS.armFixedMonths ?? 0) / 12
+                  const adjustedRate = armS.armAdjustedRate ?? inputs.marketRate
+                  const adjustedPI = armS.armAdjustedMonthlyPI ?? 0
+                  const adjustedTotal = armS.armAdjustedMonthlyTotal ?? 0
+                  const balAtAdjust = armS.armBalanceAtAdjustment ?? 0
+                  const savingsVsMarket30 = cumulativeCost(scenarios[0], 360) - cumulativeCost(armS, 360)
+                  return (
+                    <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, background: '#F0F9FF' }}>
+                        <div style={{ fontWeight: 700, fontSize: 16, color: C.navy }}>ARM Breakdown: {armS.label}</div>
+                        <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>How the payment changes when the fixed period ends</div>
+                      </div>
+                      {/* Phase timeline */}
+                      <div style={{ padding: 24 }}>
+                        <div style={{ display: 'flex', gap: 0, marginBottom: 24 }}>
+                          <div style={{ flex: fixedYrs, background: C.accent, borderRadius: '8px 0 0 8px', padding: '14px 18px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Years 1–{fixedYrs} (Fixed)</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: C.navy }}>{fmtPrice(Math.round(armS.monthlyPI))}<span style={{ fontSize: 12, fontWeight: 400 }}>/mo P&I</span></div>
+                            <div style={{ fontSize: 12, color: C.navy, opacity: 0.7, marginTop: 2 }}>Rate: {fmtRate(armS.rate)}</div>
+                          </div>
+                          <div style={{ flex: 30 - fixedYrs, background: '#E9EDF2', borderRadius: '0 8px 8px 0', padding: '14px 18px' }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Years {fixedYrs + 1}–30 (Adjusted)</div>
+                            <div style={{ fontSize: 22, fontWeight: 800, color: C.dim }}>{fmtPrice(Math.round(adjustedPI))}<span style={{ fontSize: 12, fontWeight: 400 }}>/mo P&I</span></div>
+                            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Rate adjusts to: {fmtRate(adjustedRate)} (estimated)</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+                          {[
+                            { label: 'Balance at Rate Reset', val: fmtDollars(balAtAdjust), note: `After ${fixedYrs} yrs of payments` },
+                            { label: 'Payment Increase at Reset', val: fmtPrice(Math.round(adjustedTotal - armS.monthlyTotal)) + '/mo', note: 'vs fixed period payment' },
+                            { label: '30yr Savings vs Market', val: savingsVsMarket30 >= 0 ? fmtDollars(savingsVsMarket30) : `–${fmtDollars(Math.abs(savingsVsMarket30))}`, note: 'total cumulative difference', highlight: savingsVsMarket30 >= 0 },
+                          ].map(item => (
+                            <div key={item.label} style={{ padding: '12px 14px', background: C.bg, borderRadius: 8 }}>
+                              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{item.label}</div>
+                              <div style={{ fontSize: 18, fontWeight: 800, color: item.highlight ? C.green : C.dim }}>{item.val}</div>
+                              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{item.note}</div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(91,203,245,0.08)', borderRadius: 8, fontSize: 12, color: C.dim, lineHeight: 1.6 }}>
+                          <strong>Strategy tip:</strong> The ARM gives the lowest payment for the first {fixedYrs} years. If you plan to sell or refinance before year {fixedYrs}, you capture maximum savings with no rate adjustment risk. The fixed rate locks in security if you stay longer.
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })()}
 
                 {/* Cumulative cost chart */}
                 <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>

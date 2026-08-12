@@ -66,3 +66,6 @@ create policy "Admins can manage all"
       select 1 from profiles where id = auth.uid() and role = 'admin'
     )
   );
+
+-- Run this to add the ARM adjusted rate column (if table already exists):
+alter table open_house_pages add column if not exists sa_arm_adjusted_rate numeric;

@@ -7,6 +7,13 @@ export interface LoanScenario {
   monthlyPI: number
   monthlyTotal: number
   color: string
+  // ARM-specific fields (undefined for fixed-rate loans)
+  isArm?: boolean
+  armFixedMonths?: number
+  armBalanceAtAdjustment?: number   // remaining balance when rate resets
+  armAdjustedRate?: number          // rate after fixed period
+  armAdjustedMonthlyPI?: number     // new P&I after adjustment
+  armAdjustedMonthlyTotal?: number  // new total after adjustment
 }
 
 export interface TCAInputs {
@@ -17,6 +24,7 @@ export interface TCAInputs {
   sa30yrRate: number | null
   saArmRate: number | null
   saArmYears: number
+  saArmAdjustedRate: number | null  // rate ARM adjusts to; defaults to marketRate
   hoaMonthly: number
   annualTaxes: number
   annualInsurance: number
@@ -29,20 +37,31 @@ export function calcMonthlyPI(principal: number, annualRate: number, years: numb
   return principal * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1)
 }
 
+// Remaining balance after m payments at monthly rate r over n total months
+function remainingBalance(principal: number, annualRate: number, totalYears: number, elapsedMonths: number): number {
+  const r = annualRate / 12
+  const n = totalYears * 12
+  if (r === 0) return principal - (principal / n) * elapsedMonths
+  const payment = calcMonthlyPI(principal, annualRate, totalYears)
+  return principal * Math.pow(1 + r, elapsedMonths) - payment * ((Math.pow(1 + r, elapsedMonths) - 1) / r)
+}
+
 function monthlyExtras(hoa: number, taxes: number, insurance: number): number {
   return hoa + taxes / 12 + insurance / 12
 }
 
 export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
-  const { listPrice, sellerContribution, downPct, marketRate, sa30yrRate, saArmRate, saArmYears,
-    hoaMonthly, annualTaxes, annualInsurance } = inputs
+  const {
+    listPrice, sellerContribution, downPct, marketRate,
+    sa30yrRate, saArmRate, saArmYears, saArmAdjustedRate,
+    hoaMonthly, annualTaxes, annualInsurance,
+  } = inputs
 
   const extras = monthlyExtras(hoaMonthly, annualTaxes, annualInsurance)
   const saPurchasePrice = listPrice + sellerContribution
-
   const scenarios: LoanScenario[] = []
 
-  // Market rate scenario
+  // ── Market Rate (30yr fixed) ──────────────────────────────────────────────
   const marketLoan = listPrice * (1 - downPct)
   const marketPI = calcMonthlyPI(marketLoan, marketRate, 30)
   scenarios.push({
@@ -56,7 +75,7 @@ export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
     color: '#6B7280',
   })
 
-  // SA 30yr fixed
+  // ── SA 30yr Fixed ─────────────────────────────────────────────────────────
   if (sa30yrRate !== null && sa30yrRate > 0) {
     const saLoan = saPurchasePrice * (1 - downPct)
     const saPI = calcMonthlyPI(saLoan, sa30yrRate, 30)
@@ -72,47 +91,72 @@ export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
     })
   }
 
-  // SA ARM
+  // ── SA ARM ────────────────────────────────────────────────────────────────
   if (saArmRate !== null && saArmRate > 0) {
     const saLoan = saPurchasePrice * (1 - downPct)
-    const saPI = calcMonthlyPI(saLoan, saArmRate, 30)
+    const armFixedMonths = saArmYears * 12
+    const remainingYears = 30 - saArmYears
+
+    // Payment during fixed period (amortized over full 30yr so equity builds correctly)
+    const armPI = calcMonthlyPI(saLoan, saArmRate, 30)
+
+    // Balance remaining when rate adjusts
+    const balAtAdjust = remainingBalance(saLoan, saArmRate, 30, armFixedMonths)
+
+    // Rate it adjusts to (default to market rate if not specified)
+    const adjustedRate = saArmAdjustedRate ?? marketRate
+
+    // New payment on remaining balance for remaining years
+    const adjustedPI = calcMonthlyPI(balAtAdjust, adjustedRate, remainingYears)
+
     scenarios.push({
       label: `Seller Advantage ${saArmYears}yr ARM`,
       purchasePrice: saPurchasePrice,
       loanAmount: saLoan,
       rate: saArmRate,
       years: saArmYears,
-      monthlyPI: saPI,
-      monthlyTotal: saPI + extras,
+      monthlyPI: armPI,
+      monthlyTotal: armPI + extras,
       color: '#5BCBF5',
+      isArm: true,
+      armFixedMonths,
+      armBalanceAtAdjustment: balAtAdjust,
+      armAdjustedRate: adjustedRate,
+      armAdjustedMonthlyPI: adjustedPI,
+      armAdjustedMonthlyTotal: adjustedPI + extras,
     })
   }
 
   return scenarios
 }
 
+// Cumulative monthly costs over `months`, properly modeling ARM rate adjustment
 export function cumulativeCost(scenario: LoanScenario, months: number): number {
+  if (scenario.isArm && scenario.armFixedMonths && scenario.armAdjustedMonthlyTotal) {
+    const fixed = Math.min(months, scenario.armFixedMonths)
+    const adjusted = Math.max(0, months - scenario.armFixedMonths)
+    return scenario.monthlyTotal * fixed + scenario.armAdjustedMonthlyTotal * adjusted
+  }
   return scenario.monthlyTotal * months
 }
 
-// True out-of-pocket: includes down payment + all monthly costs over the period
+// True out-of-pocket: down payment + all monthly costs (ARM-aware)
 export function totalOutOfPocket(scenario: LoanScenario, months: number, downPct: number): number {
   const downPayment = scenario.purchasePrice * downPct
-  return downPayment + scenario.monthlyTotal * months
+  return downPayment + cumulativeCost(scenario, months)
 }
 
-// Monthly savings vs the first (market rate) scenario
-export function monthlySavingsVsMarket(scenarios: LoanScenario[], idx: number): number {
-  if (idx === 0 || scenarios.length < 2) return 0
-  return scenarios[0].monthlyTotal - scenarios[idx].monthlyTotal
-}
-
-// Breakeven month: when SA cumulative savings exceed the extra down payment
+// Breakeven month: when SA total out-of-pocket drops below market
 export function breakevenMonths(market: LoanScenario, sa: LoanScenario, downPct: number): number | null {
   const extraDown = (sa.purchasePrice - market.purchasePrice) * downPct
-  const monthlySavings = market.monthlyTotal - sa.monthlyTotal
-  if (monthlySavings <= 0) return null
-  return Math.ceil(extraDown / monthlySavings)
+  if (extraDown <= 0) return 0
+  // Walk month by month until SA cumulative savings exceed the extra down payment
+  // (needed because ARM makes this non-linear)
+  for (let m = 1; m <= 360; m++) {
+    const savings = cumulativeCost(market, m) - cumulativeCost(sa, m)
+    if (savings >= extraDown) return m
+  }
+  return null // never breaks even
 }
 
 export function fmtDollars(n: number): string {
