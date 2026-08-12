@@ -58,6 +58,12 @@ create policy "Auth users can insert"
   on open_house_pages for insert
   with check (auth.uid() = created_by);
 
+-- Owners can update their own pages
+create policy "Owners can update their pages"
+  on open_house_pages for update
+  using (auth.uid() = created_by)
+  with check (auth.uid() = created_by);
+
 -- Admins can do everything
 create policy "Admins can manage all"
   on open_house_pages for all

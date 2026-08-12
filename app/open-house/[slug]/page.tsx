@@ -237,14 +237,13 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
       .select('*')
       .eq('slug', params.slug)
       .eq('status', 'active')
-      .single()
+      .limit(1)
       .then(({ data, error }) => {
-        if (error || !data) { setNotFound(true); setLoading(false); return }
-        // Merge partner fields defensively in case columns don't exist yet
-        setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', ...data } as PageData)
+        if (error || !data || data.length === 0) { setNotFound(true); setLoading(false); return }
+        const row = data[0]
+        setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', ...row } as PageData)
         setLoading(false)
-      })
-      .catch(() => { setNotFound(true); setLoading(false) })
+      }, () => { setNotFound(true); setLoading(false) })
   }, [params.slug])
 
   if (loading) return (
