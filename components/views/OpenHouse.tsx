@@ -214,7 +214,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       year_built: form.year_built ? Number(form.year_built) : null,
       description: form.description,
       photos: form.photos,
-      list_price: form.list_price ? Number(form.list_price) : 0,
+      list_price: form.list_price ? Number(form.list_price) : null,
       tca_url: form.tca_url || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
