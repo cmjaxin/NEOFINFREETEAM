@@ -114,8 +114,9 @@ const SEED_MA: MARecord[] = [
 // Manually entered lead counts per LO (CRM export, "Added Date" basis, 2026 YTD)
 // To update: re-export from CRM filtered by LO, count by added date, update here
 const SEED_LEADS: Record<string, number> = {
-  'Scott DiGregorio': 2926,  // CSV export 2026-01-01 through 2026-08-12
-  // 'Edgardo Balentine': 0, // pending CSV
+  'Scott DiGregorio':    1169,  // CRM export ("My File"), Added Date 2026 YTD
+  'Edgardo Balentine':    589,  // CRM export, Added Date 2026 YTD
+  'Anthony Alfonso Soto': 273,  // CRM export ("Anthony Soto"), Added Date 2026 YTD
 }
 
 const SEED_WEEKLY: WeeklyRow[] = [
@@ -1361,13 +1362,14 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
   const rows = visible.map(ma => ({
     name:   ma.name,
     leads:  leadsForMA(ma),
-    apps:   ma.ytdInitialApps   ?? 0,
-    funded: ma.ytdFamilies      ?? 0,
+    apps:   ma.ytdInitialApps ?? 0,
+    respa:  ma.ytdRespaApps   ?? 0,
+    funded: ma.ytdFamilies    ?? 0,
   })).sort((a, b) => b.funded - a.funded)
 
   const totals = rows.reduce(
-    (acc, r) => ({ leads: acc.leads + r.leads, apps: acc.apps + r.apps, funded: acc.funded + r.funded }),
-    { leads: 0, apps: 0, funded: 0 },
+    (acc, r) => ({ leads: acc.leads + r.leads, apps: acc.apps + r.apps, respa: acc.respa + r.respa, funded: acc.funded + r.funded }),
+    { leads: 0, apps: 0, respa: 0, funded: 0 },
   )
 
   const th: React.CSSProperties = { padding: '9px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '.05em', borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' }
@@ -1380,14 +1382,16 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
       <div style={{ fontSize: 13, color: C.muted }}>Year-to-date {year} conversion rates (current MAs)</div>
 
       {/* Summary cards */}
-      <div className="prod-conv-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
+      <div className="prod-conv-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10 }}>
         {[
           { label: 'Total Leads',        val: (loading && !totals.leads) ? '—' : totals.leads.toString() },
           { label: 'Initial Apps (YTD)', val: totals.apps.toString() },
+          { label: 'RESPA Apps (YTD)',   val: totals.respa.toString() },
           { label: 'Funded (YTD)',       val: totals.funded.toString() },
           { label: 'Lead → App',         val: (loading && !totals.leads) ? '—' : pct(totals.apps,   totals.leads) },
           { label: 'Lead → Funded',      val: (loading && !totals.leads) ? '—' : pct(totals.funded, totals.leads) },
           { label: 'App → Funded',       val: pct(totals.funded, totals.apps) },
+          { label: 'RESPA → Funded',     val: pct(totals.funded, totals.respa) },
         ].map(c => (
           <div key={c.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
             <div style={{ fontSize: 20, fontWeight: 800, color: C.navy }}>{c.val}</div>
@@ -1404,11 +1408,13 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
             <tr style={{ background: C.white }}>
               <th style={th}>Name</th>
               <th style={th}>Leads</th>
-              <th style={th}>Initial Apps (YTD)</th>
-              <th style={th}>Funded (YTD)</th>
+              <th style={th}>Initial Apps</th>
+              <th style={th}>RESPA Apps</th>
+              <th style={th}>Funded</th>
               <th style={th}>L→A</th>
               <th style={th}>L→F</th>
               <th style={th}>A→F</th>
+              <th style={th}>R→F</th>
             </tr>
           </thead>
           <tbody>
@@ -1417,10 +1423,12 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
                 <td style={{ ...td, fontWeight: 600 }}>{row.name}</td>
                 <td style={td}>{row.leads || (loading ? '…' : '—')}</td>
                 <td style={td}>{row.apps || '—'}</td>
+                <td style={td}>{row.respa || '—'}</td>
                 <td style={td}>{row.funded || '—'}</td>
                 <td style={tp}>{loading ? '—' : pct(row.apps,   row.leads)}</td>
                 <td style={tp}>{loading ? '—' : pct(row.funded, row.leads)}</td>
                 <td style={tp}>{pct(row.funded, row.apps)}</td>
+                <td style={tp}>{pct(row.funded, row.respa)}</td>
               </tr>
             ))}
           </tbody>
@@ -1429,10 +1437,12 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
               <td style={{ ...td, fontWeight: 700 }}>Total</td>
               <td style={{ ...td, fontWeight: 700 }}>{loading ? '…' : totals.leads || '—'}</td>
               <td style={{ ...td, fontWeight: 700 }}>{totals.apps || '—'}</td>
+              <td style={{ ...td, fontWeight: 700 }}>{totals.respa || '—'}</td>
               <td style={{ ...td, fontWeight: 700 }}>{totals.funded || '—'}</td>
               <td style={{ ...tp, fontWeight: 700 }}>{loading ? '—' : pct(totals.apps,   totals.leads)}</td>
               <td style={{ ...tp, fontWeight: 700 }}>{loading ? '—' : pct(totals.funded, totals.leads)}</td>
               <td style={{ ...tp, fontWeight: 700 }}>{pct(totals.funded, totals.apps)}</td>
+              <td style={{ ...tp, fontWeight: 700 }}>{pct(totals.funded, totals.respa)}</td>
             </tr>
           </tfoot>
         </table>
