@@ -69,7 +69,18 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   useEffect(() => {
     if (!profile?.email) return
     supabase.from('marketing_partners').select('*').eq('owner_email', profile.email).order('name')
-      .then(({ data }) => setMarketingPartners(data ?? []))
+      .then(({ data }) => {
+        const partners = data ?? []
+        setMarketingPartners(partners)
+        // Auto-backfill partner logo for existing listings that were saved before partner_logo was added
+        setForm(f => {
+          if (f.partner_name && !f.partner_logo) {
+            const match = partners.find(p => p.name === f.partner_name)
+            if (match?.logo_url) return { ...f, partner_logo: match.logo_url }
+          }
+          return f
+        })
+      })
   }, [profile?.email])
 
   const init = editing ?? {} as Partial<OHPage>
