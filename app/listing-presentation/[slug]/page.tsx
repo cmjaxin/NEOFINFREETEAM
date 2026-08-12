@@ -2,7 +2,7 @@
 // ─── CONFIGURE ONCE ───────────────────────────────────────────────────────────
 // Upload the Seller Advantage PDF to Supabase Storage (or any CDN) and paste
 // the public URL here. This PDF is shown on every listing presentation.
-const SELLER_ADVANTAGE_PDF_URL = ''
+const SELLER_ADVANTAGE_PDF_URL = 'https://qrkwcdyqqozkvenwuoun.supabase.co/storage/v1/object/public/splice-clips/Stern%20Team%20Seller%20Advantage%20Program_081026.pdf'
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, use } from 'react'
