@@ -224,7 +224,7 @@ interface PageData {
   advisor_name: string; advisor_title: string; advisor_email: string
   advisor_phone: string; advisor_photo: string; advisor_nmls: string
   partner_name: string; partner_title: string; partner_email: string
-  partner_phone: string; partner_photo: string; partner_nmls: string
+  partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
 }
 
 export default function OpenHousePage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
@@ -245,7 +245,7 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
         if (!data || data.length === 0) { setDbError(`No row found for slug "${params.slug}"`); setLoading(false); return }
         if (data[0].status !== 'active') { setDbError(`Row found but status is "${data[0].status}" not "active"`); setLoading(false); return }
         const row = data[0]
-        setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', ...row } as PageData)
+        setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', partner_logo: '', ...row } as PageData)
         setLoading(false)
       }, (e: unknown) => { setDbError(`Fetch threw: ${e}`); setLoading(false) })
   }, [params.slug])
@@ -331,95 +331,168 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
       return bodyRows + savingsRow + ws120Row
     }
 
+    const NEO_NAVY = '#0A2540'
+    const NEO_CYAN = '#5BCBF5'
+    const priceStr = fmtDollars(page.list_price)
+    const saRateStr = page.sa_30yr_rate ? fmtRate(page.sa_30yr_rate) : page.sa_arm_rate ? fmtRate(page.sa_arm_rate) : ''
+    const partnerLogo = page.partner_logo || ''
+
     const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>Open House – ${page.address}</title>
+<title>Open House — ${page.address}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 @page { size: letter portrait; margin: 0; }
-body { width: 8.5in; height: 11in; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #fff; }
+body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial', Helvetica, sans-serif; background: #fff; color: #1F2937; }
 
-.hero { display: flex; height: 3.1in; }
-.hero-photo { width: 62%; overflow: hidden; }
+/* ── HERO ── */
+.hero { display: flex; height: 3.05in; }
+.hero-photo { flex: 0 0 62%; overflow: hidden; position: relative; }
 .hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.hero-no-photo { width: 100%; height: 100%; background: #CBD5E1; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 40px; }
-.partner-corner { width: 38%; background: #5BCBF5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 16px; }
-.partner-logo-area { text-align: center; }
-.partner-logo-area img { max-width: 140px; max-height: 70px; object-fit: contain; }
-.partner-logo-placeholder { font-size: 26px; font-weight: 900; color: #0A2540; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.1; text-align: center; }
-.address-box { text-align: right; color: #0A2540; }
-.address-box .addr-line1 { font-size: 15px; font-weight: 700; }
-.address-box .addr-line2 { font-size: 13px; font-weight: 500; margin-top: 2px; }
+.hero-no-photo { width: 100%; height: 100%; background: #CBD5E1; display: flex; align-items: center; justify-content: center; font-size: 48px; }
+.partner-corner {
+  flex: 0 0 38%;
+  background: ${NEO_CYAN};
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 22px 24px; gap: 18px;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.partner-logo-wrap { display: flex; align-items: center; justify-content: center; width: 100%; }
+.partner-logo-wrap img { max-width: 160px; max-height: 80px; object-fit: contain; display: block; }
+.partner-logo-placeholder {
+  font-size: 22px; font-weight: 900; color: ${NEO_NAVY};
+  text-transform: uppercase; letter-spacing: 0.08em;
+  text-align: center; line-height: 1.2;
+  border: 3px dashed rgba(10,37,64,0.3); padding: 12px 20px; border-radius: 6px;
+}
+.address-block { text-align: right; width: 100%; }
+.address-street { font-size: 14px; font-weight: 800; color: ${NEO_NAVY}; line-height: 1.2; }
+.address-city { font-size: 12px; font-weight: 500; color: ${NEO_NAVY}; opacity: 0.75; margin-top: 3px; }
 
-.price-banner { background: #0A2540; display: flex; align-items: center; gap: 14px; padding: 8px 20px; height: 0.48in; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.price-label { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 0.03em; }
-.price-sep { color: rgba(255,255,255,0.4); font-size: 18px; }
-.price-value { color: #F5A623; font-size: 30px; font-weight: 900; letter-spacing: -0.01em; }
+/* ── PRICE BANNER ── */
+.price-banner {
+  background: ${NEO_NAVY}; height: 0.52in;
+  display: flex; align-items: center; gap: 0; padding: 0;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.price-left {
+  width: 62%; display: flex; align-items: center; gap: 14px; padding: 0 22px;
+  border-right: 1px solid rgba(91,203,245,0.25);
+}
+.price-tag { font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.65); letter-spacing: 0.12em; text-transform: uppercase; }
+.price-value { font-size: 28px; font-weight: 900; color: ${NEO_CYAN}; letter-spacing: -0.01em; }
+.price-right {
+  width: 38%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 18px;
+}
+.sa-badge {
+  font-size: 11px; font-weight: 700; color: ${NEO_CYAN};
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.sa-rate { font-size: 20px; font-weight: 900; color: #fff; }
+.sa-label { font-size: 9px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.08em; }
 
-.main-content { display: flex; height: 5.42in; }
-.left-col { width: 62%; padding: 14px 16px 10px 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
-.right-col { width: 38%; padding: 10px 16px 10px 8px; display: flex; flex-direction: column; gap: 8px; }
-.right-col .small-photo { flex: 1; overflow: hidden; border-radius: 6px; }
-.right-col .small-photo img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 6px; }
-.right-col .small-photo-empty { width: 100%; height: 100%; background: #E2E8F0; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 24px; }
+/* ── MAIN CONTENT ── */
+.main-content { display: flex; height: 5.38in; }
+.left-col { flex: 0 0 62%; padding: 14px 16px 10px 22px; display: flex; flex-direction: column; gap: 11px; overflow: hidden; border-right: 2px solid #E4E8EC; }
+.right-col { flex: 0 0 38%; padding: 10px 16px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
+.small-photo { flex: 1; overflow: hidden; border-radius: 7px; }
+.small-photo img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 7px; }
+.small-photo-empty { width: 100%; height: 100%; background: #F1F5F9; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #CBD5E1; }
 
-.description { font-size: 10.5px; line-height: 1.65; color: #374151; flex-shrink: 0; }
-.table-wrap { overflow: hidden; flex: 1; }
-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-thead tr { background: #0A2540; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-thead th { padding: 6px 8px; color: #fff; font-weight: 700; font-size: 9.5px; text-align: right; }
-thead th:first-child { text-align: left; min-width: 90px; }
-tbody td { padding: 5px 8px; border-bottom: 1px solid #E4E8EC; }
-tbody td:not(:first-child) { text-align: right; }
+.description { font-size: 10px; line-height: 1.7; color: #374151; flex-shrink: 0; }
 
-.contact-bar { height: 1.3in; background: #0A2540; display: flex; align-items: center; padding: 0 18px; gap: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.contact-half { flex: 1; display: flex; align-items: center; gap: 12px; color: #fff; }
-.contact-photo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
-.contact-photo-init { width: 52px; height: 52px; border-radius: 50%; background: rgba(91,203,245,0.25); display: flex; align-items: center; justify-content: center; color: #5BCBF5; font-size: 22px; font-weight: 700; flex-shrink: 0; }
-.contact-info .name { font-size: 15px; font-weight: 800; line-height: 1.1; }
-.contact-info .role { font-size: 10.5px; color: #93C5FD; margin-top: 2px; }
-.contact-info .details { font-size: 9.5px; color: rgba(255,255,255,0.7); margin-top: 3px; line-height: 1.4; }
-.center-logos { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.center-logos img { max-height: 36px; max-width: 100px; object-fit: contain; }
-.divider { width: 1px; height: 70px; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+/* Table */
+.table-section { flex: 1; overflow: hidden; }
+.table-title { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: ${NEO_NAVY}; margin-bottom: 5px; }
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: ${NEO_NAVY}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+thead th { padding: 5px 7px; color: #fff; font-weight: 700; font-size: 8.5px; text-align: right; white-space: nowrap; }
+thead th:first-child { text-align: left; font-size: 8px; opacity: 0.7; }
+tbody tr:nth-child(even) { background: #F8FAFC; }
+tbody td { padding: 4.5px 7px; border-bottom: 1px solid #E4E8EC; font-size: 9px; color: #374151; }
+tbody td:not(:first-child) { text-align: right; font-weight: 600; }
+tbody td:first-child { color: #6B7280; font-size: 8.5px; }
+.savings-row td { background: #ECFDF5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.savings-row td:first-child { font-weight: 700; color: ${NEO_NAVY}; }
+.savings-row td:not(:first-child) { color: #15803D; font-weight: 800; font-size: 9.5px; }
 
-.footer { height: 0.2in; background: #E4E8EC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.footer-text { font-size: 7px; color: #6B7280; }
+/* ── CONTACT BAR ── */
+.contact-bar {
+  height: 1.25in;
+  background: ${NEO_NAVY};
+  display: flex; align-items: stretch;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.contact-cell { flex: 1; display: flex; align-items: center; gap: 13px; padding: 0 20px; }
+.contact-divider { width: 1px; background: rgba(91,203,245,0.2); margin: 16px 0; flex-shrink: 0; }
+.contact-center { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 0 16px; }
+.contact-center img { max-height: 34px; max-width: 110px; object-fit: contain; filter: brightness(0) invert(1); }
+.contact-photo { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${NEO_CYAN}; }
+.contact-init { width: 54px; height: 54px; border-radius: 50%; background: rgba(91,203,245,0.15); border: 2px solid rgba(91,203,245,0.4); display: flex; align-items: center; justify-content: center; color: ${NEO_CYAN}; font-size: 22px; font-weight: 800; flex-shrink: 0; }
+.contact-info { color: #fff; }
+.ci-role { font-size: 8.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: ${NEO_CYAN}; margin-bottom: 3px; }
+.ci-name { font-size: 14px; font-weight: 800; line-height: 1.1; }
+.ci-detail { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 4px; line-height: 1.5; }
+
+/* ── FOOTER ── */
+.footer {
+  height: 0.2in; background: #F1F5F9;
+  display: flex; align-items: center; justify-content: space-between; padding: 0 18px;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  border-top: 2px solid ${NEO_CYAN};
+}
+.footer span { font-size: 6.5px; color: #9CA3AF; }
+.ehl { font-size: 7px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.05em; }
 </style>
 </head>
 <body>
 
-<!-- HERO -->
+<!-- ═══ HERO ═══ -->
 <div class="hero">
   <div class="hero-photo">
-    ${heroPhoto ? `<img src="${heroPhoto}" alt="${page.address}" />` : '<div class="hero-no-photo">🏡</div>'}
+    ${heroPhoto
+      ? `<img src="${heroPhoto}" alt="${page.address}" />`
+      : `<div class="hero-no-photo">🏡</div>`}
   </div>
   <div class="partner-corner">
-    ${page.partner_photo
-      ? `<div class="partner-logo-area"><img src="${page.partner_photo}" alt="${page.partner_name}" /></div>`
-      : `<div class="partner-logo-placeholder">Partner<br>Logo</div>`}
-    <div class="address-box">
-      <div class="addr-line1">${page.address}</div>
-      <div class="addr-line2">${page.city}${page.city && page.state ? ', ' : ''}${page.state} ${page.zip}</div>
+    <div class="partner-logo-wrap">
+      ${partnerLogo
+        ? `<img src="${partnerLogo}" alt="${page.partner_name}" />`
+        : `<div class="partner-logo-placeholder">Partner<br>Logo</div>`}
+    </div>
+    <div class="address-block">
+      <div class="address-street">${page.address}</div>
+      <div class="address-city">${[page.city, page.state, page.zip].filter(Boolean).join(', ')}</div>
     </div>
   </div>
 </div>
 
-<!-- PRICE BANNER -->
+<!-- ═══ PRICE BANNER ═══ -->
 <div class="price-banner">
-  <span class="price-label">PRICE AT :</span>
-  <span class="price-sep">|</span>
-  <span class="price-value">${fmtDollars(page.list_price)}</span>
-  ${hasSA ? `<span style="color:rgba(255,255,255,0.5);font-size:13px;margin-left:auto">Seller Advantage Rate: ${fmtRate(page.sa_30yr_rate ?? page.sa_arm_rate ?? 0)}</span>` : ''}
+  <div class="price-left">
+    <span class="price-tag">Price</span>
+    <span class="price-value">${priceStr}</span>
+  </div>
+  <div class="price-right">
+    ${hasSA && saRateStr ? `
+    <div style="text-align:center">
+      <div class="sa-badge">Seller Advantage Rate</div>
+      <div class="sa-rate">${saRateStr}</div>
+      <div class="sa-label">Permanent Buydown</div>
+    </div>` : ''}
+  </div>
 </div>
 
-<!-- MAIN CONTENT -->
+<!-- ═══ MAIN CONTENT ═══ -->
 <div class="main-content">
   <div class="left-col">
     ${desc ? `<p class="description">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : ''}
-    ${hasSA ? `<div class="table-wrap">
+    ${hasSA ? `
+    <div class="table-section">
+      <div class="table-title">Financing Comparison</div>
       <table>
         <thead>
           <tr>
@@ -427,56 +500,55 @@ tbody td:not(:first-child) { text-align: right; }
             ${scenarios.map(s => `<th>${s.label.replace('Seller Advantage ', 'SA ')}</th>`).join('')}
           </tr>
         </thead>
-        <tbody>
-          ${summaryRows()}
-        </tbody>
+        <tbody>${summaryRows()}</tbody>
       </table>
     </div>` : ''}
   </div>
   <div class="right-col">
     ${smallPhotos.map((url, i) => `
-      <div class="small-photo">
-        ${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : '<div class="small-photo-empty">🏠</div>'}
-      </div>`).join('')}
+    <div class="small-photo">
+      ${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : `<div class="small-photo-empty">🏠</div>`}
+    </div>`).join('')}
   </div>
 </div>
 
-<!-- CONTACT BAR -->
+<!-- ═══ CONTACT BAR ═══ -->
 <div class="contact-bar">
   ${page.partner_name ? `
-  <div class="contact-half">
+  <div class="contact-cell">
     ${page.partner_photo
       ? `<img class="contact-photo" src="${page.partner_photo}" alt="${page.partner_name}" />`
-      : `<div class="contact-photo-init">${page.partner_name[0] ?? '?'}</div>`}
+      : `<div class="contact-init">${(page.partner_name[0] ?? '?').toUpperCase()}</div>`}
     <div class="contact-info">
-      <div class="name">${page.partner_name}</div>
-      <div class="role">${page.partner_title || 'Listing Agent'}</div>
-      <div class="details">${[page.partner_phone, page.partner_email, partnerNmls].filter(Boolean).join(' · ')}</div>
+      <div class="ci-role">${page.partner_title || 'Listing Agent'}</div>
+      <div class="ci-name">${page.partner_name}</div>
+      <div class="ci-detail">${[page.partner_phone, page.partner_email, partnerNmls].filter(Boolean).join('<br>')}</div>
     </div>
   </div>
-  <div class="divider"></div>` : ''}
+  <div class="contact-divider"></div>` : ''}
 
-  <div class="center-logos" style="margin: 0 auto;">
+  <div class="contact-center">
     <img src="/neo-logo.png" alt="NEO Home Loans" />
   </div>
 
   ${page.advisor_name ? `
-  <div class="divider"></div>
-  <div class="contact-half" style="justify-content:flex-end;text-align:right;flex-direction:row-reverse">
-    ${page.advisor_photo
-      ? `<img class="contact-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" style="margin-left:0;margin-right:0;" />`
-      : `<div class="contact-photo-init" style="margin-left:0">${page.advisor_name[0] ?? '?'}</div>`}
+  <div class="contact-divider"></div>
+  <div class="contact-cell" style="justify-content:flex-end">
     <div class="contact-info" style="text-align:right">
-      <div class="name">${page.advisor_name}</div>
-      <div class="role">${page.advisor_title || 'Mortgage Advisor'}</div>
-      <div class="details">${[page.advisor_phone, page.advisor_email, advisorNmls].filter(Boolean).join(' · ')}</div>
+      <div class="ci-role">${page.advisor_title || 'Mortgage Advisor'}</div>
+      <div class="ci-name">${page.advisor_name}</div>
+      <div class="ci-detail">${[page.advisor_phone, page.advisor_email, advisorNmls].filter(Boolean).join('<br>')}</div>
     </div>
+    ${page.advisor_photo
+      ? `<img class="contact-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" />`
+      : `<div class="contact-init">${(page.advisor_name[0] ?? '?').toUpperCase()}</div>`}
   </div>` : ''}
 </div>
 
-<!-- FOOTER -->
+<!-- ═══ FOOTER ═══ -->
 <div class="footer">
-  <span class="footer-text">Better Mortgage Corporation NMLS #330511. Equal Housing Lender. www.nmlsconsumeraccess.org · Rates shown are estimates only and subject to credit approval.</span>
+  <span>Better Mortgage Corporation NMLS #330511. Equal Housing Lender. www.nmlsconsumeraccess.org · Rates shown are estimates only and subject to credit approval.</span>
+  <span class="ehl">⊟ EQUAL HOUSING LENDER</span>
 </div>
 
 <script>window.onload = function() { window.print(); }</script>

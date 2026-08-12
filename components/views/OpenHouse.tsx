@@ -25,7 +25,7 @@ interface OHPage {
   advisor_title: string; advisor_email: string; advisor_phone: string
   advisor_photo: string; advisor_nmls: string
   partner_name: string; partner_title: string; partner_email: string
-  partner_phone: string; partner_photo: string; partner_nmls: string
+  partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
 }
 
 // ─── Stable form primitives (defined OUTSIDE modal to prevent focus loss) ────
@@ -110,6 +110,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     partner_phone: (init as OHPage).partner_phone ?? '',
     partner_nmls: (init as OHPage).partner_nmls ?? '',
     partner_photo: (init as OHPage).partner_photo ?? '',
+    partner_logo: (init as OHPage).partner_logo ?? '',
   })
   const [showPartner, setShowPartner] = useState(!!(init as OHPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
@@ -126,6 +127,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       partner_phone: p.phone || '',
       partner_nmls: '',
       partner_photo: p.headshot_url || '',
+      partner_logo: p.logo_url || '',
     }))
     setPartnerSearch(p.name)
     setShowPartnerDropdown(false)
@@ -211,6 +213,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       partner_phone: showPartner ? form.partner_phone : '',
       partner_nmls: showPartner ? form.partner_nmls : '',
       partner_photo: showPartner ? form.partner_photo : '',
+      partner_logo: showPartner ? form.partner_logo : '',
       updated_at: new Date().toISOString(),
     }
 
@@ -279,19 +282,27 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
           {/* Photos */}
           <section>
-            <SectionHead title="Photos" sub="Upload up to 4 photos. Photo 1 = hero (large left), Photos 2-4 = right column on flyer." />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <SectionHead title="Photos" sub="Photos 1–4 are used on the flyer. Add more below for the online gallery slideshow." />
+
+            {/* Flyer slots 1–4 */}
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Flyer Photos</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {[0, 1, 2, 3].map(i => {
                 const photos = form.photos as string[]
                 const url = photos[i] ?? ''
-                const labels = ['Photo 1 — Hero (large, flyer left)', 'Photo 2 — Right column top', 'Photo 3 — Right column middle', 'Photo 4 — Right column bottom']
+                const labels = [
+                  'Photo 1 — Exterior Hero (large flyer image)',
+                  'Photo 2 — Right column top',
+                  'Photo 3 — Right column middle',
+                  'Photo 4 — Right column bottom',
+                ]
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 80, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1px solid ${C.border}`, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 80, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `2px solid ${i === 0 ? C.accent : C.border}`, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {url ? <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <span style={{ fontSize: 20, opacity: 0.3 }}>🏠</span>}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }}>{labels[i]}</div>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: i === 0 ? C.navy : C.muted, marginBottom: 4 }}>{labels[i]}</div>
                       <div style={{ display: 'flex', gap: 6 }}>
                         <button onClick={() => triggerSlotUpload(i)}
                           disabled={photoUploading}
@@ -305,6 +316,24 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                 )
               })}
             </div>
+
+            {/* Additional gallery photos */}
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Additional Gallery Photos</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {(form.photos as string[]).slice(4).map((url, i) => (
+                <div key={i + 4} style={{ position: 'relative' }}>
+                  <img src={url} style={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 7, border: `1px solid ${C.border}` }} alt="" />
+                  <button onClick={() => { const p = [...(form.photos as string[])]; p.splice(4 + i, 1); set('photos', p) }}
+                    style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, background: C.red, border: 'none', borderRadius: '50%', color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                </div>
+              ))}
+              <button onClick={() => { slotUploadIndex.current = -1; photoRef.current?.click() }}
+                disabled={photoUploading}
+                style={{ width: 72, height: 52, border: `2px dashed ${C.border}`, borderRadius: 7, background: C.white, color: C.muted, fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 1 }}>
+                {photoUploading ? '…' : <><span style={{ fontSize: 16 }}>+</span><span>Photo</span></>}
+              </button>
+            </div>
+
             <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
           </section>
 
@@ -477,6 +506,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                   <Field label="Partner Phone" name="partner_phone" placeholder="(801) 555-0200" half value={form.partner_phone} onChange={set} />
                   <Field label="Partner NMLS# (if applicable)" name="partner_nmls" placeholder="Optional" half value={form.partner_nmls} onChange={set} />
                   <Field label="Partner Headshot URL" name="partner_photo" placeholder="https://…" half value={form.partner_photo} onChange={set} />
+                  <Field label="Partner Logo URL" name="partner_logo" placeholder="https://… (brokerage logo for flyer)" half value={form.partner_logo} onChange={set} />
                 </div>
               </div>
             )}

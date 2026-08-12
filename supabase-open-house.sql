@@ -83,3 +83,4 @@ alter table open_house_pages add column if not exists partner_email text default
 alter table open_house_pages add column if not exists partner_phone text default '';
 alter table open_house_pages add column if not exists partner_photo text default '';
 alter table open_house_pages add column if not exists partner_nmls text default '';
+alter table open_house_pages add column if not exists partner_logo text default '';
