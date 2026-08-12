@@ -196,8 +196,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   }
 
   async function save() {
-    if (!form.address || !form.list_price) {
-      setMsg('Address and list price are required.')
+    if (!form.address) {
+      setMsg('Address is required.')
       return
     }
     setSaving(true)
@@ -214,7 +214,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       year_built: form.year_built ? Number(form.year_built) : null,
       description: form.description,
       photos: form.photos,
-      list_price: Number(form.list_price),
+      list_price: form.list_price ? Number(form.list_price) : 0,
       tca_url: form.tca_url || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
