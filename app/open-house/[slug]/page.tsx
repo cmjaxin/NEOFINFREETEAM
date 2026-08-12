@@ -228,7 +228,7 @@ interface PageData {
 export default function OpenHousePage({ params }: { params: { slug: string } }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [notFound, setNotFound] = useState(false)
+  const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'tca' | 'contact'>('overview')
 
   useEffect(() => {
@@ -236,14 +236,15 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
     sb.from('open_house_pages')
       .select('*')
       .eq('slug', params.slug)
-      .eq('status', 'active')
       .limit(1)
       .then(({ data, error }) => {
-        if (error || !data || data.length === 0) { setNotFound(true); setLoading(false); return }
+        if (error) { setDbError(`DB error: ${error.message} (code: ${error.code})`); setLoading(false); return }
+        if (!data || data.length === 0) { setDbError(`No row found for slug "${params.slug}"`); setLoading(false); return }
+        if (data[0].status !== 'active') { setDbError(`Row found but status is "${data[0].status}" not "active"`); setLoading(false); return }
         const row = data[0]
         setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', ...row } as PageData)
         setLoading(false)
-      }, () => { setNotFound(true); setLoading(false) })
+      }, (e: unknown) => { setDbError(`Fetch threw: ${e}`); setLoading(false) })
   }, [params.slug])
 
   if (loading) return (
@@ -251,12 +252,13 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
       <div style={{ color: C.muted, fontSize: 16 }}>Loading property…</div>
     </div>
   )
-  if (notFound || !page) return (
+  if (dbError || !page) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-      <div style={{ textAlign: 'center' }}>
+      <div style={{ textAlign: 'center', maxWidth: 480, padding: 24 }}>
         <div style={{ fontSize: 48, marginBottom: 12 }}>🏡</div>
         <div style={{ fontSize: 20, fontWeight: 700, color: C.navy }}>Page not found</div>
         <div style={{ color: C.muted, marginTop: 8 }}>This listing may have been removed.</div>
+        {dbError && <div style={{ marginTop: 16, padding: 12, background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12, color: '#991B1B', textAlign: 'left', fontFamily: 'monospace', wordBreak: 'break-all' }}>{dbError}</div>}
       </div>
     </div>
   )
