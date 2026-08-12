@@ -111,6 +111,13 @@ const SEED_MA: MARecord[] = [
   { name:'Matthew McNally', ytdFamilies:1, ytdVolume:289060, ytdRespaApps:0, ytdInitialApps:4, ytdFamiliesSG:0, ytdVolumeSG:0, ytdFamiliesD2C:0, ytdVolumeD2C:0, ytdRespaAppsSG: 0, ytdRespaAppsD2C: 0, ytdInitialAppsSG: 0, ytdInitialAppsD2C: 0, monthlyFamilies:[1,0,0,0,0,0,0,0,0,0,0,0], monthlyVolume:[289060,0,0,0,0,0,0,0,0,0,0,0], monthlyFamiliesSG:Array(12).fill(0) as number[], monthlyVolumeSG:Array(12).fill(0) as number[], monthlyFamiliesD2C:Array(12).fill(0) as number[], monthlyVolumeD2C:Array(12).fill(0) as number[], monthlyRespaApps:[0,0,0,0,0,0,0,0,0,0,0,0], monthlyInitialApps:[1,1,2,0,0,0,0,0,0,0,0,0], monthlyRespaAppsSG: Array(12).fill(0) as number[], monthlyRespaAppsD2C: Array(12).fill(0) as number[], monthlyInitialAppsSG: Array(12).fill(0) as number[], monthlyInitialAppsD2C: Array(12).fill(0) as number[], },
 ]
 
+// Manually entered lead counts per LO (CRM export, "Added Date" basis, 2026 YTD)
+// To update: re-export from CRM filtered by LO, count by added date, update here
+const SEED_LEADS: Record<string, number> = {
+  'Scott DiGregorio': 2926,  // CSV export 2026-01-01 through 2026-08-12
+  // 'Edgardo Balentine': 0, // pending CSV
+}
+
 const SEED_WEEKLY: WeeklyRow[] = [
   { weekLabel: 'May 5',  families: 12, volume: 5200000, respaApps: 18, initialApps: 22 },
   { weekLabel: 'May 12', families: 15, volume: 7100000, respaApps: 21, initialApps: 19 },
@@ -1342,9 +1349,18 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
     return (num / denom * 100).toFixed(1) + '%'
   }
 
+  function leadsForMA(ma: MARecord): number {
+    if (leads[ma.name]) return leads[ma.name]
+    // Fall back to manually-entered seed leads (matched by normalized name)
+    for (const [seedName, count] of Object.entries(SEED_LEADS)) {
+      if (nameSimilar(seedName, ma.name)) return count
+    }
+    return 0
+  }
+
   const rows = visible.map(ma => ({
     name:   ma.name,
-    leads:  leads[ma.name]      ?? 0,
+    leads:  leadsForMA(ma),
     apps:   ma.ytdInitialApps   ?? 0,
     funded: ma.ytdFamilies      ?? 0,
   })).sort((a, b) => b.funded - a.funded)
@@ -1366,11 +1382,11 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
       {/* Summary cards */}
       <div className="prod-conv-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
         {[
-          { label: 'Total Leads',        val: loading ? '—' : totals.leads.toString() },
+          { label: 'Total Leads',        val: (loading && !totals.leads) ? '—' : totals.leads.toString() },
           { label: 'Initial Apps (YTD)', val: totals.apps.toString() },
           { label: 'Funded (YTD)',       val: totals.funded.toString() },
-          { label: 'Lead → App',         val: loading ? '—' : pct(totals.apps,   totals.leads) },
-          { label: 'Lead → Funded',      val: loading ? '—' : pct(totals.funded, totals.leads) },
+          { label: 'Lead → App',         val: (loading && !totals.leads) ? '—' : pct(totals.apps,   totals.leads) },
+          { label: 'Lead → Funded',      val: (loading && !totals.leads) ? '—' : pct(totals.funded, totals.leads) },
           { label: 'App → Funded',       val: pct(totals.funded, totals.apps) },
         ].map(c => (
           <div key={c.label} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
@@ -1399,7 +1415,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
             {rows.map(row => (
               <tr key={row.name}>
                 <td style={{ ...td, fontWeight: 600 }}>{row.name}</td>
-                <td style={td}>{loading ? '…' : row.leads || '—'}</td>
+                <td style={td}>{row.leads || (loading ? '…' : '—')}</td>
                 <td style={td}>{row.apps || '—'}</td>
                 <td style={td}>{row.funded || '—'}</td>
                 <td style={tp}>{loading ? '—' : pct(row.apps,   row.leads)}</td>
