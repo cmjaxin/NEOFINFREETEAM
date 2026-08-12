@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { buildScenarios, cumulativeCost, totalOutOfPocket, breakevenMonths, fmtDollars, fmtRate, TCAInputs, LoanScenario } from '@/lib/openHouseMath'
 
@@ -225,7 +225,8 @@ interface PageData {
   partner_phone: string; partner_photo: string; partner_nmls: string
 }
 
-export default function OpenHousePage({ params }: { params: { slug: string } }) {
+export default function OpenHousePage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+  const params = use(paramsPromise)
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
