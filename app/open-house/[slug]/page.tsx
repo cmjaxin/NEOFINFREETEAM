@@ -239,10 +239,12 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
       .eq('status', 'active')
       .single()
       .then(({ data, error }) => {
-        if (error || !data) setNotFound(true)
-        else setPage(data as PageData)
+        if (error || !data) { setNotFound(true); setLoading(false); return }
+        // Merge partner fields defensively in case columns don't exist yet
+        setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', ...data } as PageData)
         setLoading(false)
       })
+      .catch(() => { setNotFound(true); setLoading(false) })
   }, [params.slug])
 
   if (loading) return (

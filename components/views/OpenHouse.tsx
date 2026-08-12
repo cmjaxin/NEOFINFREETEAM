@@ -2,7 +2,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '@/lib/appContext'
 import { slugify, buildScenarios, fmtDollars, fmtRate, TCAInputs } from '@/lib/openHouseMath'
-import { Employee } from '@/lib/types'
+interface MarketingPartner {
+  id: string; name: string; title: string; company: string
+  phone: string; email: string; headshot_url: string; logo_url: string
+}
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -61,8 +64,14 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   const [msg, setMsg] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
+  const [marketingPartners, setMarketingPartners] = useState<MarketingPartner[]>([])
 
-  const { employees } = useApp()
+  useEffect(() => {
+    if (!profile?.email) return
+    supabase.from('marketing_partners').select('*').eq('owner_email', profile.email).order('name')
+      .then(({ data }) => setMarketingPartners(data ?? []))
+  }, [profile?.email])
+
   const init = editing ?? {} as Partial<OHPage>
   const [form, setForm] = useState({
     address: init.address ?? '',
@@ -108,23 +117,23 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
   function set(k: string, v: unknown) { setForm(f => ({ ...f, [k]: v })) }
 
-  function applyPartnerFromEmployee(emp: Employee) {
+  function applyPartner(p: MarketingPartner) {
     setForm(f => ({
       ...f,
-      partner_name: emp.name,
-      partner_title: emp.title || 'Listing Agent',
-      partner_email: emp.work_email || '',
-      partner_phone: emp.phone || '',
-      partner_nmls: emp.nmls_number || '',
-      partner_photo: emp.headshot_url || '',
+      partner_name: p.name,
+      partner_title: p.title || 'Listing Agent',
+      partner_email: p.email || '',
+      partner_phone: p.phone || '',
+      partner_nmls: '',
+      partner_photo: p.headshot_url || '',
     }))
-    setPartnerSearch(emp.name)
+    setPartnerSearch(p.name)
     setShowPartnerDropdown(false)
   }
 
-  const filteredEmployees = partnerSearch.length > 1
-    ? employees.filter(e => e.name.toLowerCase().includes(partnerSearch.toLowerCase())).slice(0, 6)
-    : []
+  const filteredPartners = partnerSearch.length > 0
+    ? marketingPartners.filter(p => p.name.toLowerCase().includes(partnerSearch.toLowerCase())).slice(0, 6)
+    : marketingPartners.slice(0, 6)
 
   async function uploadPhotos(files: File[]) {
     setPhotoUploading(true)
@@ -374,29 +383,30 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {/* Search from team */}
                 <div style={{ position: 'relative' }}>
-                  <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Search Team Members</label>
+                  <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Select from your Marketing Partners</label>
                   <input
-                    placeholder="Type name to search…"
+                    placeholder={marketingPartners.length === 0 ? 'No partners saved yet — add them in Marketing tab' : 'Search partners…'}
+                    disabled={marketingPartners.length === 0}
                     value={partnerSearch}
                     onChange={e => { setPartnerSearch(e.target.value); setShowPartnerDropdown(true) }}
                     onFocus={() => setShowPartnerDropdown(true)}
                     style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
                   />
-                  {showPartnerDropdown && filteredEmployees.length > 0 && (
+                  {showPartnerDropdown && filteredPartners.length > 0 && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, zIndex: 200, boxShadow: '0 4px 20px rgba(0,0,0,0.12)', overflow: 'hidden', marginTop: 4 }}>
-                      {filteredEmployees.map(emp => (
-                        <button key={emp.id} onMouseDown={() => applyPartnerFromEmployee(emp)}
+                      {filteredPartners.map(p => (
+                        <button key={p.id} onMouseDown={() => applyPartner(p)}
                           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left' }}>
-                          {emp.headshot_url ? (
-                            <img src={emp.headshot_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />
+                          {p.headshot_url ? (
+                            <img src={p.headshot_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} alt="" />
                           ) : (
                             <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
-                              {emp.name[0]}
+                              {p.name[0]}
                             </div>
                           )}
                           <div>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{emp.name}</div>
-                            <div style={{ fontSize: 11, color: C.muted }}>{emp.title}</div>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{p.name}</div>
+                            <div style={{ fontSize: 11, color: C.muted }}>{p.title}{p.company ? ` · ${p.company}` : ''}</div>
                           </div>
                         </button>
                       ))}
