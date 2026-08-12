@@ -135,6 +135,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     ? marketingPartners.filter(p => p.name.toLowerCase().includes(partnerSearch.toLowerCase())).slice(0, 6)
     : marketingPartners.slice(0, 6)
 
+  const slotUploadIndex = useRef<number>(-1)
+
   async function uploadPhotos(files: File[]) {
     setPhotoUploading(true)
     const urls: string[] = []
@@ -147,8 +149,24 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
         urls.push(data.publicUrl)
       }
     }
-    set('photos', [...(form.photos as string[]), ...urls])
+    const slot = slotUploadIndex.current
+    if (slot >= 0 && urls.length > 0) {
+      setForm(f => {
+        const p = [...(f.photos as string[])]
+        while (p.length <= slot) p.push('')
+        p[slot] = urls[0]
+        return { ...f, photos: p }
+      })
+    } else {
+      set('photos', [...(form.photos as string[]), ...urls])
+    }
+    slotUploadIndex.current = -1
     setPhotoUploading(false)
+  }
+
+  function triggerSlotUpload(i: number) {
+    slotUploadIndex.current = i
+    photoRef.current?.click()
   }
 
   async function save() {
@@ -240,35 +258,54 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="Year Built" name="year_built" type="number" placeholder="2005" half value={String(form.year_built ?? '')} onChange={set} />
             </div>
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 700, color: C.dim, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
+                <span style={{ fontSize: 11, color: (form.description as string).length > 700 ? '#DC2626' : C.muted }}>
+                  {(form.description as string).length}/700 flyer chars
+                </span>
+              </div>
               <textarea
                 placeholder="Describe the property…"
                 value={form.description}
                 onChange={e => set('description', e.target.value)}
                 rows={3}
-                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${(form.description as string).length > 700 ? '#FCA5A5' : C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
               />
+              {(form.description as string).length > 700 && (
+                <div style={{ fontSize: 11, color: '#DC2626', marginTop: 3 }}>First 700 characters will appear on the flyer.</div>
+              )}
             </div>
           </section>
 
           {/* Photos */}
           <section>
-            <SectionHead title="Photos" sub="Upload property photos (shown in gallery on the landing page)" />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {(form.photos as string[]).map((url, i) => (
-                <div key={i} style={{ position: 'relative' }}>
-                  <img src={url} style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 8, border: `1px solid ${C.border}` }} alt="" />
-                  <button onClick={() => set('photos', (form.photos as string[]).filter((_, j) => j !== i))}
-                    style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18, background: C.red, border: 'none', borderRadius: '50%', color: '#fff', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
-                </div>
-              ))}
-              <button onClick={() => photoRef.current?.click()}
-                disabled={photoUploading}
-                style={{ width: 80, height: 60, border: `2px dashed ${C.border}`, borderRadius: 8, background: C.white, color: C.muted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 2 }}>
-                {photoUploading ? '…' : <><span style={{ fontSize: 18 }}>+</span><span>Photo</span></>}
-              </button>
-              <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
+            <SectionHead title="Photos" sub="Upload up to 4 photos. Photo 1 = hero (large left), Photos 2-4 = right column on flyer." />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[0, 1, 2, 3].map(i => {
+                const photos = form.photos as string[]
+                const url = photos[i] ?? ''
+                const labels = ['Photo 1 — Hero (large, flyer left)', 'Photo 2 — Right column top', 'Photo 3 — Right column middle', 'Photo 4 — Right column bottom']
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 80, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `1px solid ${C.border}`, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {url ? <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <span style={{ fontSize: 20, opacity: 0.3 }}>🏠</span>}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, marginBottom: 4 }}>{labels[i]}</div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button onClick={() => triggerSlotUpload(i)}
+                          disabled={photoUploading}
+                          style={{ padding: '5px 12px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.dim, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
+                          {photoUploading ? '…' : url ? 'Replace' : 'Upload'}
+                        </button>
+                        {url && <button onClick={() => { const p = [...(form.photos as string[])]; p[i] = ''; set('photos', p) }} style={{ padding: '5px 10px', border: 'none', borderRadius: 6, background: '#FEF2F2', color: '#DC2626', fontSize: 12, cursor: 'pointer' }}>Remove</button>}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
+            <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
           </section>
 
           {/* Pricing */}
@@ -312,6 +349,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     hoaMonthly: Number(form.hoa_monthly) || 0,
                     annualTaxes: Number(form.annual_taxes) || 0,
                     annualInsurance: Number(form.annual_insurance) || 0,
+                    ufmipPct: 0.0175,
+                    annualMipPct: 0.0055,
                   }
                   const scenarios = buildScenarios(inputs)
                   return (

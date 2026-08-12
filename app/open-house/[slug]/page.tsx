@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, use } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { buildScenarios, cumulativeCost, totalOutOfPocket, breakevenMonths, fmtDollars, fmtRate, TCAInputs, LoanScenario } from '@/lib/openHouseMath'
+import { buildScenarios, cumulativeCost, totalOutOfPocket, breakevenMonths, wealthSavings, totalInterestAndMI, fmtDollars, fmtRate, TCAInputs, LoanScenario } from '@/lib/openHouseMath'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -219,6 +219,8 @@ interface PageData {
   list_price: number; hoa_monthly: number; annual_taxes: number; annual_insurance: number
   down_pct: number; seller_contribution: number
   market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_years: number; sa_arm_adjusted_rate: number | null
+  ufmip_pct: number | null
+  annual_mip_pct: number | null
   advisor_name: string; advisor_title: string; advisor_email: string
   advisor_phone: string; advisor_photo: string; advisor_nmls: string
   partner_name: string; partner_title: string; partner_email: string
@@ -230,7 +232,7 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'tca' | 'contact'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tca' | 'contact'>('tca')
 
   useEffect(() => {
     const sb = createClient()
@@ -276,6 +278,8 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
     annualTaxes: page.annual_taxes ?? 0,
     annualInsurance: page.annual_insurance ?? 0,
     saArmAdjustedRate: page.sa_arm_adjusted_rate ?? null,
+    ufmipPct: page.ufmip_pct ?? 0.0175,
+    annualMipPct: page.annual_mip_pct ?? 0.0055,
   }
   const scenarios = buildScenarios(inputs)
   const fullAddress = [page.address, page.city, page.state, page.zip].filter(Boolean).join(', ')
@@ -288,6 +292,201 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
     { id: 'contact', label: 'Contact Advisor' },
   ] as const
 
+  function openFlyer() {
+    if (!page) return
+    const photos = page.photos ?? []
+    const heroPhoto = photos[0] ?? ''
+    const smallPhotos = [photos[1] ?? '', photos[2] ?? '', photos[3] ?? '']
+    const market = scenarios[0]
+    const desc = (page.description ?? '').slice(0, 700)
+    const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
+    const partnerNmls = page.partner_nmls ? `NMLS# ${page.partner_nmls}` : ''
+
+    function summaryRows() {
+      const rows = [
+        { label: 'Purchase Price', vals: scenarios.map(s => fmtDollars(s.purchasePrice)) },
+        { label: 'Loan Amount', vals: scenarios.map(s => fmtDollars(s.loanAmount)) },
+        { label: 'Interest Rate', vals: scenarios.map(s => s.isArm ? `${fmtRate(s.rate)} (${inputs.saArmYears}yr ARM)` : fmtRate(s.rate)) },
+        { label: 'Term', vals: scenarios.map(() => '360 mos') },
+        { label: 'Payment', vals: scenarios.map(s => fmtDollars(s.monthlyTotal) + '/mo') },
+      ]
+      const savingsVals = scenarios.map((s, i) => i === 0 ? 0 : market.monthlyTotal - s.monthlyTotal)
+      const ws120Vals = scenarios.map((s, i) => i === 0 ? 0 : wealthSavings(market, s, 120))
+
+      const bodyRows = rows.map((r, ri) => `
+        <tr style="background:${ri % 2 === 0 ? '#fff' : '#F8FAFC'}">
+          <td style="padding:5px 8px;font-weight:600;color:#374151;font-size:10px">${r.label}</td>
+          ${r.vals.map(v => `<td style="padding:5px 8px;text-align:right;color:#1F2937;font-size:10px">${v}</td>`).join('')}
+        </tr>`).join('')
+
+      const savingsRow = `<tr style="background:#F0FDF4">
+        <td style="padding:5px 8px;font-weight:700;color:#0A2540;font-size:10px">Monthly Savings</td>
+        ${savingsVals.map((v, i) => `<td style="padding:5px 8px;text-align:right;font-weight:800;color:${v > 0 ? '#16a34a' : '#6B7280'};font-size:10px">${v > 0 ? `+${fmtDollars(v)}/mo` : '$0.00'}</td>`).join('')}
+      </tr>`
+      const ws120Row = `<tr style="background:#F0FDF4">
+        <td style="padding:5px 8px;font-weight:700;color:#0A2540;font-size:10px">Savings (120 mos)</td>
+        ${ws120Vals.map((v, i) => `<td style="padding:5px 8px;text-align:right;font-weight:800;color:${v > 0 ? '#16a34a' : '#6B7280'};font-size:10px">${v > 0 ? `+${fmtDollars(v)}` : '$0'}</td>`).join('')}
+      </tr>`
+
+      return bodyRows + savingsRow + ws120Row
+    }
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Open House – ${page.address}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@page { size: letter portrait; margin: 0; }
+body { width: 8.5in; height: 11in; overflow: hidden; font-family: Arial, Helvetica, sans-serif; background: #fff; }
+
+.hero { display: flex; height: 3.1in; }
+.hero-photo { width: 62%; overflow: hidden; }
+.hero-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-no-photo { width: 100%; height: 100%; background: #CBD5E1; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 40px; }
+.partner-corner { width: 38%; background: #5BCBF5; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; gap: 16px; }
+.partner-logo-area { text-align: center; }
+.partner-logo-area img { max-width: 140px; max-height: 70px; object-fit: contain; }
+.partner-logo-placeholder { font-size: 26px; font-weight: 900; color: #0A2540; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.1; text-align: center; }
+.address-box { text-align: right; color: #0A2540; }
+.address-box .addr-line1 { font-size: 15px; font-weight: 700; }
+.address-box .addr-line2 { font-size: 13px; font-weight: 500; margin-top: 2px; }
+
+.price-banner { background: #0A2540; display: flex; align-items: center; gap: 14px; padding: 8px 20px; height: 0.48in; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.price-label { color: #fff; font-size: 16px; font-weight: 700; letter-spacing: 0.03em; }
+.price-sep { color: rgba(255,255,255,0.4); font-size: 18px; }
+.price-value { color: #F5A623; font-size: 30px; font-weight: 900; letter-spacing: -0.01em; }
+
+.main-content { display: flex; height: 5.42in; }
+.left-col { width: 62%; padding: 14px 16px 10px 20px; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+.right-col { width: 38%; padding: 10px 16px 10px 8px; display: flex; flex-direction: column; gap: 8px; }
+.right-col .small-photo { flex: 1; overflow: hidden; border-radius: 6px; }
+.right-col .small-photo img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 6px; }
+.right-col .small-photo-empty { width: 100%; height: 100%; background: #E2E8F0; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #94A3B8; font-size: 24px; }
+
+.description { font-size: 10.5px; line-height: 1.65; color: #374151; flex-shrink: 0; }
+.table-wrap { overflow: hidden; flex: 1; }
+table { width: 100%; border-collapse: collapse; font-size: 10px; }
+thead tr { background: #0A2540; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+thead th { padding: 6px 8px; color: #fff; font-weight: 700; font-size: 9.5px; text-align: right; }
+thead th:first-child { text-align: left; min-width: 90px; }
+tbody td { padding: 5px 8px; border-bottom: 1px solid #E4E8EC; }
+tbody td:not(:first-child) { text-align: right; }
+
+.contact-bar { height: 1.3in; background: #0A2540; display: flex; align-items: center; padding: 0 18px; gap: 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.contact-half { flex: 1; display: flex; align-items: center; gap: 12px; color: #fff; }
+.contact-photo { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.contact-photo-init { width: 52px; height: 52px; border-radius: 50%; background: rgba(91,203,245,0.25); display: flex; align-items: center; justify-content: center; color: #5BCBF5; font-size: 22px; font-weight: 700; flex-shrink: 0; }
+.contact-info .name { font-size: 15px; font-weight: 800; line-height: 1.1; }
+.contact-info .role { font-size: 10.5px; color: #93C5FD; margin-top: 2px; }
+.contact-info .details { font-size: 9.5px; color: rgba(255,255,255,0.7); margin-top: 3px; line-height: 1.4; }
+.center-logos { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.center-logos img { max-height: 36px; max-width: 100px; object-fit: contain; }
+.divider { width: 1px; height: 70px; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+
+.footer { height: 0.2in; background: #E4E8EC; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.footer-text { font-size: 7px; color: #6B7280; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-photo">
+    ${heroPhoto ? `<img src="${heroPhoto}" alt="${page.address}" />` : '<div class="hero-no-photo">🏡</div>'}
+  </div>
+  <div class="partner-corner">
+    ${page.partner_photo
+      ? `<div class="partner-logo-area"><img src="${page.partner_photo}" alt="${page.partner_name}" /></div>`
+      : `<div class="partner-logo-placeholder">Partner<br>Logo</div>`}
+    <div class="address-box">
+      <div class="addr-line1">${page.address}</div>
+      <div class="addr-line2">${page.city}${page.city && page.state ? ', ' : ''}${page.state} ${page.zip}</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRICE BANNER -->
+<div class="price-banner">
+  <span class="price-label">PRICE AT :</span>
+  <span class="price-sep">|</span>
+  <span class="price-value">${fmtDollars(page.list_price)}</span>
+  ${hasSA ? `<span style="color:rgba(255,255,255,0.5);font-size:13px;margin-left:auto">Seller Advantage Rate: ${fmtRate(page.sa_30yr_rate ?? page.sa_arm_rate ?? 0)}</span>` : ''}
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+  <div class="left-col">
+    ${desc ? `<p class="description">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : ''}
+    ${hasSA ? `<div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Summary</th>
+            ${scenarios.map(s => `<th>${s.label.replace('Seller Advantage ', 'SA ')}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${summaryRows()}
+        </tbody>
+      </table>
+    </div>` : ''}
+  </div>
+  <div class="right-col">
+    ${smallPhotos.map((url, i) => `
+      <div class="small-photo">
+        ${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : '<div class="small-photo-empty">🏠</div>'}
+      </div>`).join('')}
+  </div>
+</div>
+
+<!-- CONTACT BAR -->
+<div class="contact-bar">
+  ${page.partner_name ? `
+  <div class="contact-half">
+    ${page.partner_photo
+      ? `<img class="contact-photo" src="${page.partner_photo}" alt="${page.partner_name}" />`
+      : `<div class="contact-photo-init">${page.partner_name[0] ?? '?'}</div>`}
+    <div class="contact-info">
+      <div class="name">${page.partner_name}</div>
+      <div class="role">${page.partner_title || 'Listing Agent'}</div>
+      <div class="details">${[page.partner_phone, page.partner_email, partnerNmls].filter(Boolean).join(' · ')}</div>
+    </div>
+  </div>
+  <div class="divider"></div>` : ''}
+
+  <div class="center-logos" style="margin: 0 auto;">
+    <img src="/neo-logo.png" alt="NEO Home Loans" />
+  </div>
+
+  ${page.advisor_name ? `
+  <div class="divider"></div>
+  <div class="contact-half" style="justify-content:flex-end;text-align:right;flex-direction:row-reverse">
+    ${page.advisor_photo
+      ? `<img class="contact-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" style="margin-left:0;margin-right:0;" />`
+      : `<div class="contact-photo-init" style="margin-left:0">${page.advisor_name[0] ?? '?'}</div>`}
+    <div class="contact-info" style="text-align:right">
+      <div class="name">${page.advisor_name}</div>
+      <div class="role">${page.advisor_title || 'Mortgage Advisor'}</div>
+      <div class="details">${[page.advisor_phone, page.advisor_email, advisorNmls].filter(Boolean).join(' · ')}</div>
+    </div>
+  </div>` : ''}
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span class="footer-text">Better Mortgage Corporation NMLS #330511. Equal Housing Lender. www.nmlsconsumeraccess.org · Rates shown are estimates only and subject to credit approval.</span>
+</div>
+
+<script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`
+
+    const w = window.open('', '_blank')
+    if (w) { w.document.write(html); w.document.close() }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Montserrat', system-ui, sans-serif" }}>
       {/* Header */}
@@ -295,9 +494,9 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => window.print()}
-              style={{ background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 8, padding: '7px 14px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              Print / Save PDF
+            <button onClick={openFlyer}
+              style={{ background: '#5BCBF5', border: 'none', borderRadius: 8, padding: '7px 16px', color: '#0A2540', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              Download Flyer
             </button>
           </div>
         </div>
@@ -380,123 +579,242 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {hasSA ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {/* SA explanation */}
-                <div style={{ background: 'linear-gradient(135deg, #0A2540 0%, #1a4a7c 100%)', borderRadius: 14, padding: 24, color: '#fff' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 8 }}>What is Seller Advantage?</div>
-                  <div style={{ fontSize: 14, lineHeight: 1.75, opacity: 0.85 }}>
-                    With the Seller Advantage program, the seller contributes <strong>{fmtDollars(page.seller_contribution)}</strong> to permanently buy down your interest rate.
-                    This rolls into the purchase price (<strong>{fmtPrice(saPurchasePrice)}</strong>) but dramatically lowers your monthly payment — saving you real money every month for the life of the loan.
-                  </div>
-                  <div style={{ display: 'flex', gap: 24, marginTop: 16, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Seller Contribution</div>
-                      <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(page.seller_contribution)}</div>
-                    </div>
-                    {scenarios.length > 1 && (() => {
-                      const monthlySavings = Math.max(0, scenarios[0].monthlyTotal - scenarios[1].monthlyTotal)
-                      const breakeven = breakevenMonths(scenarios[0], scenarios[1], inputs.downPct)
-                      const annualSavings = monthlySavings * 12
-                      return (
-                        <div style={{ display: 'contents' }}>
-                          <div>
-                            <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Savings</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(monthlySavings)}/mo</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Annual Savings</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(annualSavings)}/yr</div>
-                          </div>
-                          {breakeven && (
-                            <div>
-                              <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Breakeven</div>
-                              <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{(breakeven / 12).toFixed(1)} yrs</div>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
-                  </div>
-                </div>
 
-                {/* Monthly comparison */}
-                <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 4 }}>Monthly Payment Comparison</div>
-                  <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Including taxes, insurance{page.hoa_monthly ? ', and HOA' : ''}</div>
-                  <PaymentBars scenarios={scenarios} />
-                </div>
-
-                {/* ARM detail section */}
-                {(() => {
-                  const armS = scenarios.find(s => s.isArm)
-                  if (!armS) return null
-                  const fixedYrs = (armS.armFixedMonths ?? 0) / 12
-                  const adjustedRate = armS.armAdjustedRate ?? inputs.marketRate
-                  const adjustedPI = armS.armAdjustedMonthlyPI ?? 0
-                  const adjustedTotal = armS.armAdjustedMonthlyTotal ?? 0
-                  const balAtAdjust = armS.armBalanceAtAdjustment ?? 0
-                  const savingsVsMarket30 = cumulativeCost(scenarios[0], 360) - cumulativeCost(armS, 360)
-                  return (
-                    <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-                      <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, background: '#F0F9FF' }}>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: C.navy }}>ARM Breakdown: {armS.label}</div>
-                        <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>How the payment changes when the fixed period ends</div>
-                      </div>
-                      {/* Phase timeline */}
-                      <div style={{ padding: 24 }}>
-                        <div style={{ display: 'flex', gap: 0, marginBottom: 24 }}>
-                          <div style={{ flex: fixedYrs, background: C.accent, borderRadius: '8px 0 0 8px', padding: '14px 18px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Years 1–{fixedYrs} (Fixed)</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: C.navy }}>{fmtPrice(Math.round(armS.monthlyPI))}<span style={{ fontSize: 12, fontWeight: 400 }}>/mo P&I</span></div>
-                            <div style={{ fontSize: 12, color: C.navy, opacity: 0.7, marginTop: 2 }}>Rate: {fmtRate(armS.rate)}</div>
-                          </div>
-                          <div style={{ flex: 30 - fixedYrs, background: '#E9EDF2', borderRadius: '0 8px 8px 0', padding: '14px 18px' }}>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Years {fixedYrs + 1}–30 (Adjusted)</div>
-                            <div style={{ fontSize: 22, fontWeight: 800, color: C.dim }}>{fmtPrice(Math.round(adjustedPI))}<span style={{ fontSize: 12, fontWeight: 400 }}>/mo P&I</span></div>
-                            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Rate adjusts to: {fmtRate(adjustedRate)} (estimated)</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-                          {[
-                            { label: 'Balance at Rate Reset', val: fmtDollars(balAtAdjust), note: `After ${fixedYrs} yrs of payments` },
-                            { label: 'Payment Increase at Reset', val: fmtPrice(Math.round(adjustedTotal - armS.monthlyTotal)) + '/mo', note: 'vs fixed period payment' },
-                            { label: '30yr Savings vs Market', val: savingsVsMarket30 >= 0 ? fmtDollars(savingsVsMarket30) : `–${fmtDollars(Math.abs(savingsVsMarket30))}`, note: 'total cumulative difference', highlight: savingsVsMarket30 >= 0 },
-                          ].map(item => (
-                            <div key={item.label} style={{ padding: '12px 14px', background: C.bg, borderRadius: 8 }}>
-                              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>{item.label}</div>
-                              <div style={{ fontSize: 18, fontWeight: 800, color: item.highlight ? C.green : C.dim }}>{item.val}</div>
-                              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{item.note}</div>
-                            </div>
+                {/* ── Section 1: Summary Table ─────────────────────────────── */}
+                <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                  <div style={{ padding: '16px 24px', borderBottom: `1px solid ${C.border}`, background: '#F8FAFC' }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: C.navy }}>Loan Comparison</div>
+                    <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>Side-by-side breakdown of all scenarios</div>
+                  </div>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 480 }}>
+                      <thead>
+                        <tr style={{ background: '#F8FAFC' }}>
+                          <th style={{ textAlign: 'left', padding: '10px 20px', color: C.muted, fontWeight: 700, borderBottom: `2px solid ${C.border}` }}> </th>
+                          {scenarios.map(s => (
+                            <th key={s.label} style={{ textAlign: 'right', padding: '10px 20px', color: s.color, fontWeight: 700, borderBottom: `2px solid ${s.color}`, whiteSpace: 'nowrap' }}>{s.label}</th>
                           ))}
-                        </div>
-                        <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(91,203,245,0.08)', borderRadius: 8, fontSize: 12, color: C.dim, lineHeight: 1.6 }}>
-                          <strong>Strategy tip:</strong> The ARM gives the lowest payment for the first {fixedYrs} years. If you plan to sell or refinance before year {fixedYrs}, you capture maximum savings with no rate adjustment risk. The fixed rate locks in security if you stay longer.
-                        </div>
-                      </div>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          {
+                            label: 'Purchase Price',
+                            values: scenarios.map(s => fmtDollars(s.purchasePrice)),
+                          },
+                          {
+                            label: 'Down Payment',
+                            values: scenarios.map(s => fmtDollars(s.purchasePrice * inputs.downPct)),
+                          },
+                          {
+                            label: 'Loan Amount',
+                            values: scenarios.map(s => fmtDollars(s.loanAmount)),
+                          },
+                          {
+                            label: 'Interest Rate',
+                            values: scenarios.map(s => s.isArm ? `${fmtRate(s.rate)} (${inputs.saArmYears}yr ARM)` : fmtRate(s.rate)),
+                          },
+                          {
+                            label: 'Term',
+                            values: scenarios.map(s => '30 years'),
+                          },
+                          {
+                            label: 'Monthly Payment',
+                            values: scenarios.map(s => fmtDollars(s.monthlyTotal) + '/mo'),
+                          },
+                        ].map((row, i) => (
+                          <tr key={row.label} style={{ borderBottom: `1px solid ${C.border}`, background: i % 2 === 0 ? C.white : '#F8FAFC' }}>
+                            <td style={{ padding: '10px 20px', fontWeight: 600, color: C.dim }}>{row.label}</td>
+                            {row.values.map((v, j) => (
+                              <td key={j} style={{ padding: '10px 20px', textAlign: 'right', color: C.dim }}>{v}</td>
+                            ))}
+                          </tr>
+                        ))}
+                        {/* Monthly Savings — highlighted green */}
+                        <tr style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(22,163,74,0.06)' }}>
+                          <td style={{ padding: '10px 20px', fontWeight: 700, color: C.navy }}>Monthly Savings</td>
+                          {scenarios.map((s, i) => {
+                            const savings = i === 0 ? 0 : scenarios[0].monthlyTotal - s.monthlyTotal
+                            return (
+                              <td key={s.label} style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 800, color: savings > 0 ? C.green : C.muted }}>
+                                {savings > 0 ? `+${fmtDollars(savings)}/mo` : '$0.00'}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                        {/* Savings 120 months — highlighted */}
+                        <tr style={{ background: 'rgba(22,163,74,0.06)' }}>
+                          <td style={{ padding: '10px 20px', fontWeight: 700, color: C.navy }}>Savings (120 mos)</td>
+                          {scenarios.map((s, i) => {
+                            const ws = i === 0 ? 0 : wealthSavings(scenarios[0], s, 120)
+                            return (
+                              <td key={s.label} style={{ padding: '10px 20px', textAlign: 'right', fontWeight: 800, color: ws > 0 ? C.green : C.muted }}>
+                                {ws > 0 ? `+${fmtDollars(ws)}` : '$0'}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ── Section 2: Monthly Savings Bar Chart ─────────────────── */}
+                {(() => {
+                  const market = scenarios[0]
+                  const saScenarios = scenarios.slice(1)
+                  const maxSavings = Math.max(...saScenarios.map(s => market.monthlyTotal - s.monthlyTotal), 1)
+                  const W = 560, H = 200, PAD = { top: 30, right: 20, bottom: 40, left: 70 }
+                  const cW = W - PAD.left - PAD.right
+                  const cH = H - PAD.top - PAD.bottom
+                  const allScenarios = [market, ...saScenarios]
+                  const barW = Math.min(80, cW / allScenarios.length - 16)
+                  return (
+                    <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 4 }}>Monthly Savings</div>
+                      <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>vs Market Rate payment</div>
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+                        {/* Y grid lines */}
+                        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+                          const val = maxSavings * t
+                          const yy = PAD.top + cH - t * cH
+                          return (
+                            <g key={t}>
+                              <line x1={PAD.left} y1={yy} x2={W - PAD.right} y2={yy} stroke="#E4E8EC" strokeWidth="1" />
+                              <text x={PAD.left - 6} y={yy + 4} textAnchor="end" fontSize="10" fill={C.muted}>
+                                {val >= 1000 ? `$${(val / 1000).toFixed(1)}k` : `$${Math.round(val)}`}
+                              </text>
+                            </g>
+                          )
+                        })}
+                        {/* Bars */}
+                        {allScenarios.map((s, i) => {
+                          const savings = i === 0 ? 0 : market.monthlyTotal - s.monthlyTotal
+                          const barH = Math.max(2, (savings / maxSavings) * cH)
+                          const spacing = cW / allScenarios.length
+                          const cx = PAD.left + spacing * i + spacing / 2
+                          const barColor = i === 0 ? '#D1D5DB' : '#F87171'
+                          const barX = cx - barW / 2
+                          const barY = PAD.top + cH - barH
+                          return (
+                            <g key={s.label}>
+                              <rect x={barX} y={barY} width={barW} height={barH} fill={barColor} rx="4" />
+                              <text x={cx} y={barY - 6} textAnchor="middle" fontSize="11" fontWeight="700" fill={i === 0 ? C.muted : '#DC2626'}>
+                                {i === 0 ? '$0' : `+${fmtDollars(savings)}/mo`}
+                              </text>
+                              <text x={cx} y={H - 8} textAnchor="middle" fontSize="10" fill={C.dim} fontWeight="600">
+                                {i === 0 ? 'Market' : s.label.replace('Seller Advantage ', 'SA ')}
+                              </text>
+                            </g>
+                          )
+                        })}
+                      </svg>
                     </div>
                   )
                 })()}
 
-                {/* Cumulative cost chart */}
-                <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 4 }}>Total Cost Over Time</div>
-                  <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Cumulative payments including all monthly costs</div>
-                  {/* Legend */}
-                  <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                    {scenarios.map(s => (
-                      <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                        <div style={{ width: 24, height: 3, background: s.color, borderRadius: 99 }} />
-                        <span style={{ color: C.dim, fontWeight: 600 }}>{s.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <CumulativeChart scenarios={scenarios} />
-                </div>
+                {/* ── Section 3: Savings over 120 Months Bar Chart ─────────── */}
+                {(() => {
+                  const market = scenarios[0]
+                  const allScenarios = scenarios
+                  const wealthVals = allScenarios.map((s, i) => i === 0 ? 0 : wealthSavings(market, s, 120))
+                  const maxW = Math.max(...wealthVals, 1)
+                  const W = 560, H = 200, PAD = { top: 30, right: 20, bottom: 40, left: 80 }
+                  const cW = W - PAD.left - PAD.right
+                  const cH = H - PAD.top - PAD.bottom
+                  const barW = Math.min(80, cW / allScenarios.length - 16)
+                  return (
+                    <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 4 }}>Savings over 120 Months</div>
+                      <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Payment savings + equity advantage at 10 years</div>
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+                        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+                          const val = maxW * t
+                          const yy = PAD.top + cH - t * cH
+                          return (
+                            <g key={t}>
+                              <line x1={PAD.left} y1={yy} x2={W - PAD.right} y2={yy} stroke="#E4E8EC" strokeWidth="1" />
+                              <text x={PAD.left - 6} y={yy + 4} textAnchor="end" fontSize="10" fill={C.muted}>
+                                {val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${Math.round(val)}`}
+                              </text>
+                            </g>
+                          )
+                        })}
+                        {allScenarios.map((s, i) => {
+                          const val = wealthVals[i]
+                          const barH = Math.max(2, (val / maxW) * cH)
+                          const spacing = cW / allScenarios.length
+                          const cx = PAD.left + spacing * i + spacing / 2
+                          const barColor = i === 0 ? '#D1D5DB' : '#3B82F6'
+                          const barX = cx - barW / 2
+                          const barY = PAD.top + cH - barH
+                          return (
+                            <g key={s.label}>
+                              <rect x={barX} y={barY} width={barW} height={barH} fill={barColor} rx="4" />
+                              <text x={cx} y={barY - 6} textAnchor="middle" fontSize="11" fontWeight="700" fill={i === 0 ? C.muted : '#1D4ED8'}>
+                                {i === 0 ? '$0' : `+${fmtDollars(val)}`}
+                              </text>
+                              <text x={cx} y={H - 8} textAnchor="middle" fontSize="10" fill={C.dim} fontWeight="600">
+                                {i === 0 ? 'Market' : s.label.replace('Seller Advantage ', 'SA ')}
+                              </text>
+                            </g>
+                          )
+                        })}
+                      </svg>
+                    </div>
+                  )
+                })()}
 
-                {/* Comparison table */}
-                <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 16 }}>Scenario Comparison</div>
-                  <ComparisonTable scenarios={scenarios} inputs={inputs} />
-                </div>
+                {/* ── Section 4: Interest + MI in 30 Years Bar Chart ───────── */}
+                {(() => {
+                  const allScenarios = scenarios
+                  const totals = allScenarios.map(s => totalInterestAndMI(s))
+                  const maxT = Math.max(...totals, 1)
+                  const W = 560, H = 220, PAD = { top: 30, right: 20, bottom: 40, left: 80 }
+                  const cW = W - PAD.left - PAD.right
+                  const cH = H - PAD.top - PAD.bottom
+                  const barW = Math.min(80, cW / allScenarios.length - 16)
+                  return (
+                    <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
+                      <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 4 }}>Interest and MI Paid in 30 Years</div>
+                      <div style={{ fontSize: 13, color: C.muted, marginBottom: 12 }}>Total interest + mortgage insurance over full loan term</div>
+                      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
+                        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+                          const val = maxT * t
+                          const yy = PAD.top + cH - t * cH
+                          return (
+                            <g key={t}>
+                              <line x1={PAD.left} y1={yy} x2={W - PAD.right} y2={yy} stroke="#E4E8EC" strokeWidth="1" />
+                              <text x={PAD.left - 6} y={yy + 4} textAnchor="end" fontSize="10" fill={C.muted}>
+                                {val >= 1000000 ? `$${(val / 1000000).toFixed(2)}M` : val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${Math.round(val)}`}
+                              </text>
+                            </g>
+                          )
+                        })}
+                        {allScenarios.map((s, i) => {
+                          const val = totals[i]
+                          const barH = Math.max(2, (val / maxT) * cH)
+                          const spacing = cW / allScenarios.length
+                          const cx = PAD.left + spacing * i + spacing / 2
+                          const barColor = i === 0 ? '#D1D5DB' : '#8B5CF6'
+                          const barX = cx - barW / 2
+                          const barY = PAD.top + cH - barH
+                          return (
+                            <g key={s.label}>
+                              <rect x={barX} y={barY} width={barW} height={barH} fill={barColor} rx="4" />
+                              <text x={cx} y={barY - 6} textAnchor="middle" fontSize="11" fontWeight="700" fill={i === 0 ? C.muted : '#6D28D9'}>
+                                {fmtDollars(val)}
+                              </text>
+                              <text x={cx} y={H - 8} textAnchor="middle" fontSize="10" fill={C.dim} fontWeight="600">
+                                {i === 0 ? 'Market' : s.label.replace('Seller Advantage ', 'SA ')}
+                              </text>
+                            </g>
+                          )
+                        })}
+                      </svg>
+                    </div>
+                  )
+                })()}
 
                 <div style={{ fontSize: 11, color: C.muted, lineHeight: 1.6, padding: '0 4px' }}>
                   * Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan.
