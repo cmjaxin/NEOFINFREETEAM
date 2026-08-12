@@ -512,19 +512,20 @@ function PageCard({ page, onEdit, onArchive }: { page: OHPage; onEdit: () => voi
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function OpenHouseView() {
-  const { supabase } = useApp()
+  const { supabase, profile } = useApp()
   const [pages, setPages] = useState<OHPage[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editingPage, setEditingPage] = useState<OHPage | null>(null)
 
   async function load() {
-    const { data } = await supabase.from('open_house_pages').select('*').eq('status', 'active').order('created_at', { ascending: false })
+    if (!profile?.id) return
+    const { data } = await supabase.from('open_house_pages').select('*').eq('status', 'active').eq('created_by', profile.id).order('created_at', { ascending: false })
     setPages((data ?? []) as OHPage[])
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [profile?.id])
 
   async function archive(id: string) {
     if (!confirm('Archive this page? It will no longer be publicly accessible.')) return
