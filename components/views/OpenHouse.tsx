@@ -18,7 +18,9 @@ function fmtPrice(n: number) { return '$' + Math.round(n).toLocaleString() }
 interface OHPage {
   id: string; slug: string; address: string; city: string; state: string; zip: string
   beds: number; baths: number; sqft: number; list_price: number; seller_contribution: number
-  market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_adjusted_rate: number | null
+  market_rate: number; market_apr: number | null
+  sa_30yr_rate: number | null; sa_30yr_apr: number | null
+  sa_arm_rate: number | null; sa_arm_apr: number | null; sa_arm_adjusted_rate: number | null
   down_pct: number; status: string; created_at: string; advisor_name: string
   photos: string[]; hoa_monthly: number; annual_taxes: number; annual_insurance: number
   sa_arm_years: number; lot_size: string; year_built: number; description: string
@@ -72,11 +74,20 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       .then(({ data }) => {
         const partners = data ?? []
         setMarketingPartners(partners)
-        // Auto-backfill partner logo for existing listings that were saved before partner_logo was added
+        // Auto-backfill partner logo for existing listings saved before partner_logo column existed
         setForm(f => {
           if (f.partner_name && !f.partner_logo) {
             const match = partners.find(p => p.name === f.partner_name)
-            if (match?.logo_url) return { ...f, partner_logo: match.logo_url }
+            if (match?.logo_url) {
+              // Also patch the DB row immediately so the public page gets the logo without a full re-save
+              if ((init as OHPage).id) {
+                supabase.from('open_house_pages')
+                  .update({ partner_logo: match.logo_url })
+                  .eq('id', (init as OHPage).id)
+                  .then(() => {})
+              }
+              return { ...f, partner_logo: match.logo_url }
+            }
           }
           return f
         })
@@ -100,8 +111,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     seller_contribution: String(init.seller_contribution ?? ''),
     down_pct: init.down_pct ? String((init.down_pct * 100).toFixed(1)) : '3.5',
     market_rate: init.market_rate ? String((init.market_rate * 100).toFixed(3)) : '',
+    market_apr: (init as OHPage).market_apr ? String(((init as OHPage).market_apr! * 100).toFixed(3)) : '',
     sa_30yr_rate: init.sa_30yr_rate ? String((init.sa_30yr_rate * 100).toFixed(3)) : '',
+    sa_30yr_apr: (init as OHPage).sa_30yr_apr ? String(((init as OHPage).sa_30yr_apr! * 100).toFixed(3)) : '',
     sa_arm_rate: init.sa_arm_rate ? String((init.sa_arm_rate * 100).toFixed(3)) : '',
+    sa_arm_apr: (init as OHPage).sa_arm_apr ? String(((init as OHPage).sa_arm_apr! * 100).toFixed(3)) : '',
     sa_arm_years: String(init.sa_arm_years ?? '5'),
     sa_arm_adjusted_rate: (init as OHPage).sa_arm_adjusted_rate ? String(((init as OHPage).sa_arm_adjusted_rate! * 100).toFixed(3)) : '',
     hoa_monthly: String(init.hoa_monthly ?? ''),
@@ -223,8 +237,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       seller_contribution: form.seller_contribution ? Number(form.seller_contribution) : 0,
       down_pct: Number(form.down_pct) / 100,
       market_rate: Number(form.market_rate) / 100,
+      market_apr: form.market_apr ? Number(form.market_apr) / 100 : null,
       sa_30yr_rate: form.sa_30yr_rate ? Number(form.sa_30yr_rate) / 100 : null,
+      sa_30yr_apr: form.sa_30yr_apr ? Number(form.sa_30yr_apr) / 100 : null,
       sa_arm_rate: form.sa_arm_rate ? Number(form.sa_arm_rate) / 100 : null,
+      sa_arm_apr: form.sa_arm_apr ? Number(form.sa_arm_apr) / 100 : null,
       sa_arm_years: Number(form.sa_arm_years),
       sa_arm_adjusted_rate: form.sa_arm_adjusted_rate ? Number(form.sa_arm_adjusted_rate) / 100 : null,
       hoa_monthly: form.hoa_monthly ? Number(form.hoa_monthly) : 0,
@@ -384,8 +401,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <Field label="Down Payment %" name="down_pct" type="number" placeholder="3.5" half note="e.g. 3.5 for FHA, 5 for conventional" value={String(form.down_pct ?? '')} onChange={set} />
               <Field label="Market Rate %" name="market_rate" type="number" placeholder="7.125" half value={String(form.market_rate ?? '')} onChange={set} />
+              <Field label="Market APR %" name="market_apr" type="number" placeholder="7.441" half value={String(form.market_apr ?? '')} onChange={set} />
               <Field label="SA 30yr Fixed Rate %" name="sa_30yr_rate" type="number" placeholder="5.875" half value={String(form.sa_30yr_rate ?? '')} onChange={set} />
+              <Field label="SA 30yr Fixed APR %" name="sa_30yr_apr" type="number" placeholder="6.125" half value={String(form.sa_30yr_apr ?? '')} onChange={set} />
               <Field label="SA ARM Rate %" name="sa_arm_rate" type="number" placeholder="5.500" half value={String(form.sa_arm_rate ?? '')} onChange={set} />
+              <Field label="SA ARM APR %" name="sa_arm_apr" type="number" placeholder="5.750" half value={String(form.sa_arm_apr ?? '')} onChange={set} />
               <Field label="ARM Fixed Period (years)" name="sa_arm_years" type="number" placeholder="5" half value={String(form.sa_arm_years ?? '')} onChange={set} />
               <Field label="ARM Adjusted Rate % (after fixed period)" name="sa_arm_adjusted_rate" type="number" placeholder="leave blank to use market rate" half note="Rate the ARM adjusts to when the fixed period ends. Defaults to Market Rate if blank." value={String(form.sa_arm_adjusted_rate ?? '')} onChange={set} />
             </div>
@@ -400,8 +420,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
                     sellerContribution: Number(form.seller_contribution) || 0,
                     downPct: Number(form.down_pct) / 100 || 0.035,
                     marketRate: Number(form.market_rate) / 100,
+                    marketApr: form.market_apr ? Number(form.market_apr) / 100 : null,
                     sa30yrRate: form.sa_30yr_rate ? Number(form.sa_30yr_rate) / 100 : null,
+                    sa30yrApr: form.sa_30yr_apr ? Number(form.sa_30yr_apr) / 100 : null,
                     saArmRate: form.sa_arm_rate ? Number(form.sa_arm_rate) / 100 : null,
+                    saArmApr: form.sa_arm_apr ? Number(form.sa_arm_apr) / 100 : null,
                     saArmYears: Number(form.sa_arm_years) || 5,
                     saArmAdjustedRate: form.sa_arm_adjusted_rate ? Number(form.sa_arm_adjusted_rate) / 100 : null,
                     hoaMonthly: Number(form.hoa_monthly) || 0,

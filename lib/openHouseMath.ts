@@ -5,6 +5,7 @@ export interface LoanScenario {
   ufmip: number
   loanAmount: number         // final loan = baseLoan + ufmip
   rate: number
+  apr: number | null         // APR (entered by advisor, includes fees)
   years: number
   monthlyPI: number          // P&I only (on final loan amount)
   monthlyMip: number         // monthly MIP (0 for conventional)
@@ -14,10 +15,10 @@ export interface LoanScenario {
   // ARM-specific fields (undefined for fixed-rate loans)
   isArm?: boolean
   armFixedMonths?: number
-  armBalanceAtAdjustment?: number   // remaining balance when rate resets
-  armAdjustedRate?: number          // rate after fixed period
-  armAdjustedMonthlyPI?: number     // new P&I after adjustment
-  armAdjustedMonthlyTotal?: number  // new total after adjustment
+  armBalanceAtAdjustment?: number
+  armAdjustedRate?: number
+  armAdjustedMonthlyPI?: number
+  armAdjustedMonthlyTotal?: number
 }
 
 export interface TCAInputs {
@@ -25,15 +26,18 @@ export interface TCAInputs {
   sellerContribution: number
   downPct: number
   marketRate: number
+  marketApr: number | null
   sa30yrRate: number | null
+  sa30yrApr: number | null
   saArmRate: number | null
+  saArmApr: number | null
   saArmYears: number
-  saArmAdjustedRate: number | null  // rate ARM adjusts to; defaults to marketRate
+  saArmAdjustedRate: number | null
   hoaMonthly: number
   annualTaxes: number
   annualInsurance: number
-  ufmipPct: number        // 0.0175 for FHA, 0 for conventional
-  annualMipPct: number    // 0.0055 for FHA, 0 for conventional
+  ufmipPct: number
+  annualMipPct: number
 }
 
 export function calcMonthlyPI(principal: number, annualRate: number, years: number): number {
@@ -58,8 +62,9 @@ function monthlyExtras(hoa: number, taxes: number, insurance: number): number {
 
 export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
   const {
-    listPrice, sellerContribution, downPct, marketRate,
-    sa30yrRate, saArmRate, saArmYears, saArmAdjustedRate,
+    listPrice, sellerContribution, downPct,
+    marketRate, marketApr,
+    sa30yrRate, sa30yrApr, saArmRate, saArmApr, saArmYears, saArmAdjustedRate,
     hoaMonthly, annualTaxes, annualInsurance,
     ufmipPct, annualMipPct,
   } = inputs
@@ -87,6 +92,7 @@ export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
     ufmip: market.ufmip,
     loanAmount: market.final,
     rate: marketRate,
+    apr: marketApr ?? null,
     years: 30,
     monthlyPI: marketPI,
     monthlyMip: marketMip,
@@ -107,6 +113,7 @@ export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
       ufmip: sa.ufmip,
       loanAmount: sa.final,
       rate: sa30yrRate,
+      apr: sa30yrApr ?? null,
       years: 30,
       monthlyPI: saPI,
       monthlyMip: saMip,
@@ -143,6 +150,7 @@ export function buildScenarios(inputs: TCAInputs): LoanScenario[] {
       ufmip: sa.ufmip,
       loanAmount: sa.final,
       rate: saArmRate,
+      apr: saArmApr ?? null,
       years: saArmYears,
       monthlyPI: armPI,
       monthlyMip: armMip,

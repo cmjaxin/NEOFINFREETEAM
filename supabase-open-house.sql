@@ -84,3 +84,8 @@ alter table open_house_pages add column if not exists partner_phone text default
 alter table open_house_pages add column if not exists partner_photo text default '';
 alter table open_house_pages add column if not exists partner_nmls text default '';
 alter table open_house_pages add column if not exists partner_logo text default '';
+
+-- APR fields (entered by advisor, displayed next to rate)
+alter table open_house_pages add column if not exists market_apr numeric;
+alter table open_house_pages add column if not exists sa_30yr_apr numeric;
+alter table open_house_pages add column if not exists sa_arm_apr numeric;

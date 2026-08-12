@@ -218,7 +218,9 @@ interface PageData {
   description: string; photos: string[]
   list_price: number; hoa_monthly: number; annual_taxes: number; annual_insurance: number
   down_pct: number; seller_contribution: number
-  market_rate: number; sa_30yr_rate: number | null; sa_arm_rate: number | null; sa_arm_years: number; sa_arm_adjusted_rate: number | null
+  market_rate: number; market_apr: number | null
+  sa_30yr_rate: number | null; sa_30yr_apr: number | null
+  sa_arm_rate: number | null; sa_arm_apr: number | null; sa_arm_years: number; sa_arm_adjusted_rate: number | null
   ufmip_pct: number | null
   annual_mip_pct: number | null
   advisor_name: string; advisor_title: string; advisor_email: string
@@ -271,8 +273,11 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
     sellerContribution: page.seller_contribution ?? 0,
     downPct: page.down_pct ?? 0.035,
     marketRate: page.market_rate,
+    marketApr: page.market_apr ?? null,
     sa30yrRate: page.sa_30yr_rate,
+    sa30yrApr: page.sa_30yr_apr ?? null,
     saArmRate: page.sa_arm_rate,
+    saArmApr: page.sa_arm_apr ?? null,
     saArmYears: page.sa_arm_years ?? 5,
     hoaMonthly: page.hoa_monthly ?? 0,
     annualTaxes: page.annual_taxes ?? 0,
@@ -306,7 +311,10 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
       const rows = [
         { label: 'Purchase Price', vals: scenarios.map(s => fmtDollars(s.purchasePrice)) },
         { label: 'Loan Amount', vals: scenarios.map(s => fmtDollars(s.loanAmount)) },
-        { label: 'Interest Rate', vals: scenarios.map(s => s.isArm ? `${fmtRate(s.rate)} (${inputs.saArmYears}yr ARM)` : fmtRate(s.rate)) },
+        { label: 'Interest Rate', vals: scenarios.map(s => {
+          const rateStr = s.isArm ? `${fmtRate(s.rate)} (${inputs.saArmYears}yr ARM)` : fmtRate(s.rate)
+          return s.apr ? `${rateStr} (APR ${fmtRate(s.apr)})` : rateStr
+        }) },
         { label: 'Term', vals: scenarios.map(() => '360 mos') },
         { label: 'Payment', vals: scenarios.map(s => fmtDollars(s.monthlyTotal) + '/mo') },
       ]
@@ -684,7 +692,10 @@ tbody td:first-child { color: #6B7280; font-size: 8.5px; }
                           },
                           {
                             label: 'Interest Rate',
-                            values: scenarios.map(s => s.isArm ? `${fmtRate(s.rate)} (${inputs.saArmYears}yr ARM)` : fmtRate(s.rate)),
+                            values: scenarios.map(s => {
+                              const rateStr = s.isArm ? `${fmtRate(s.rate)} (${inputs.saArmYears}yr ARM)` : fmtRate(s.rate)
+                              return s.apr ? `${rateStr}  (APR ${fmtRate(s.apr)})` : rateStr
+                            }),
                           },
                           {
                             label: 'Term',
