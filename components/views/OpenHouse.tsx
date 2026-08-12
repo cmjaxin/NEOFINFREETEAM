@@ -234,7 +234,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
     if (editing) {
       const { error } = await supabase.from('open_house_pages').update(payload).eq('id', editing.id)
-      if (error) { setMsg(error.message); setSaving(false); return }
+      if (error) { console.error('UPDATE error:', error); setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
     } else {
       const slug = slugify(form.address + ' ' + form.city)
       const { error } = await supabase.from('open_house_pages').insert({
@@ -243,7 +243,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
         status: 'active',
         created_by: profile!.id,
       })
-      if (error) { setMsg(error.message); setSaving(false); return }
+      if (error) { console.error('INSERT error:', error); setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
     }
     setSaving(false)
     onSaved()

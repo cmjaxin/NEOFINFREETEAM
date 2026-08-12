@@ -27,9 +27,9 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isLoginPage   = pathname.startsWith('/login')
   const isWebhook     = pathname.startsWith('/api/webhooks/')
-  const isOpenHouse   = pathname.startsWith('/open-house/')
+  const isPublicPage  = pathname.startsWith('/open-house/') || pathname.startsWith('/listing-presentation/')
 
-  if (!user && !isLoginPage && !isWebhook && !isOpenHouse) {
+  if (!user && !isLoginPage && !isWebhook && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
