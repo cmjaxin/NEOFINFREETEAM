@@ -139,13 +139,31 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
   const slotUploadIndex = useRef<number>(-1)
 
+  async function resizeImage(file: File, maxPx = 1800, quality = 0.82): Promise<Blob> {
+    return new Promise(resolve => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale)
+        const h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        canvas.toBlob(b => resolve(b ?? file), 'image/jpeg', quality)
+      }
+      img.src = url
+    })
+  }
+
   async function uploadPhotos(files: File[]) {
     setPhotoUploading(true)
     const urls: string[] = []
     for (const file of files) {
-      const ext = file.name.split('.').pop()
-      const path = `open-house/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-      const { error } = await supabase.storage.from('splice-clips').upload(path, file, { upsert: true })
+      const resized = await resizeImage(file)
+      const path = `open-house/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+      const { error } = await supabase.storage.from('splice-clips').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
       if (!error) {
         const { data } = supabase.storage.from('splice-clips').getPublicUrl(path)
         urls.push(data.publicUrl)
@@ -530,7 +548,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 }
 
 // ─── Page Card ────────────────────────────────────────────────────────────────
-function PageCard({ page, onEdit, onArchive }: { page: OHPage; onEdit: () => void; onArchive: () => void }) {
+function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
   const url = `/open-house/${page.slug}`
   const fullAddress = [page.address, page.city, page.state].filter(Boolean).join(', ')
   return (
@@ -569,9 +587,9 @@ function PageCard({ page, onEdit, onArchive }: { page: OHPage; onEdit: () => voi
             style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
             Edit
           </button>
-          <button onClick={onArchive}
-            style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
-            Archive
+          <button onClick={onDelete}
+            style={{ padding: '8px 12px', background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
+            Delete
           </button>
         </div>
       </div>
@@ -596,9 +614,17 @@ export default function OpenHouseView() {
 
   useEffect(() => { load() }, [profile?.id])
 
-  async function archive(id: string) {
-    if (!confirm('Archive this page? It will no longer be publicly accessible.')) return
-    await supabase.from('open_house_pages').update({ status: 'archived' }).eq('id', id)
+  async function deletePage(page: OHPage) {
+    if (!confirm(`Delete "${page.address}"? This will permanently remove the page and all photos.`)) return
+    // Delete photos from storage
+    const photos: string[] = (page.photos ?? []).filter(Boolean)
+    if (photos.length > 0) {
+      const paths = photos.map(url => {
+        try { return decodeURIComponent(new URL(url).pathname.split('/object/public/splice-clips/')[1] ?? '') } catch { return '' }
+      }).filter(Boolean)
+      if (paths.length > 0) await supabase.storage.from('splice-clips').remove(paths)
+    }
+    await supabase.from('open_house_pages').delete().eq('id', page.id)
     load()
   }
 
@@ -637,7 +663,7 @@ export default function OpenHouseView() {
           {pages.map(p => (
             <PageCard key={p.id} page={p}
               onEdit={() => setEditingPage(p)}
-              onArchive={() => archive(p.id)}
+              onDelete={() => deletePage(p)}
             />
           ))}
         </div>
