@@ -191,7 +191,7 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
     <div style={{ position: 'relative', borderRadius: 16, overflow: 'hidden' }}>
       <img src={photos[idx]} alt={address} style={{ width: '100%', height: 380, objectFit: 'cover', display: 'block' }} />
       {photos.length > 1 && (
-        <>
+        <div>
           <button onClick={() => setIdx(i => (i - 1 + photos.length) % photos.length)}
             style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 36, height: 36, color: '#fff', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
           <button onClick={() => setIdx(i => (i + 1) % photos.length)}
@@ -205,7 +205,7 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
           <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 12, padding: '4px 10px', borderRadius: 99 }}>
             {idx + 1} / {photos.length}
           </div>
-        </>
+        </div>
       )}
     </div>
   )
@@ -393,7 +393,7 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                       const breakeven = breakevenMonths(scenarios[0], scenarios[1], inputs.downPct)
                       const annualSavings = monthlySavings * 12
                       return (
-                        <>
+                        <div style={{ display: 'contents' }}>
                           <div>
                             <div style={{ fontSize: 11, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Savings</div>
                             <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{fmtDollars(monthlySavings)}/mo</div>
@@ -408,7 +408,7 @@ export default function OpenHousePage({ params }: { params: { slug: string } }) 
                               <div style={{ fontSize: 22, fontWeight: 800, color: C.accent }}>{(breakeven / 12).toFixed(1)} yrs</div>
                             </div>
                           )}
-                        </>
+                        </div>
                       )
                     })()}
                 </div>
