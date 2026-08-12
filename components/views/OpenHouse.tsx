@@ -397,15 +397,26 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
           {/* Loan Scenarios */}
           <section>
-            <SectionHead title="Loan Scenarios" sub="Enter rates as percentages (e.g. 7.125 for 7.125%). Leave SA fields blank to exclude from comparison." />
+            <SectionHead title="Loan Scenarios" sub="Enter rates as percentages (e.g. 7.125 for 7.125%). Leave Seller Advantage fields blank to exclude from comparison." />
+
+            {/* Down payment + market rate */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <Field label="Down Payment %" name="down_pct" type="number" placeholder="3.5" half note="e.g. 3.5 for FHA, 5 for conventional" value={String(form.down_pct ?? '')} onChange={set} />
               <Field label="Market Rate %" name="market_rate" type="number" placeholder="7.125" half value={String(form.market_rate ?? '')} onChange={set} />
               <Field label="Market APR %" name="market_apr" type="number" placeholder="7.441" half value={String(form.market_apr ?? '')} onChange={set} />
-              <Field label="SA 30yr Fixed Rate %" name="sa_30yr_rate" type="number" placeholder="5.875" half value={String(form.sa_30yr_rate ?? '')} onChange={set} />
-              <Field label="SA 30yr Fixed APR %" name="sa_30yr_apr" type="number" placeholder="6.125" half value={String(form.sa_30yr_apr ?? '')} onChange={set} />
-              <Field label="SA ARM Rate %" name="sa_arm_rate" type="number" placeholder="5.500" half value={String(form.sa_arm_rate ?? '')} onChange={set} />
-              <Field label="SA ARM APR %" name="sa_arm_apr" type="number" placeholder="5.750" half value={String(form.sa_arm_apr ?? '')} onChange={set} />
+            </div>
+
+            {/* Seller Advantage rates */}
+            <div style={{ marginTop: 14, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ height: 1, flex: 1, background: '#5BCBF5' }} />
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#0A2540', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>Seller Advantage Rates</span>
+              <div style={{ height: 1, flex: 1, background: '#5BCBF5' }} />
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <Field label="30yr Fixed Rate %" name="sa_30yr_rate" type="number" placeholder="5.875" half value={String(form.sa_30yr_rate ?? '')} onChange={set} />
+              <Field label="30yr Fixed APR %" name="sa_30yr_apr" type="number" placeholder="6.125" half value={String(form.sa_30yr_apr ?? '')} onChange={set} />
+              <Field label="ARM Rate %" name="sa_arm_rate" type="number" placeholder="5.500" half value={String(form.sa_arm_rate ?? '')} onChange={set} />
+              <Field label="ARM APR %" name="sa_arm_apr" type="number" placeholder="5.750" half value={String(form.sa_arm_apr ?? '')} onChange={set} />
               <Field label="ARM Fixed Period (years)" name="sa_arm_years" type="number" placeholder="5" half value={String(form.sa_arm_years ?? '')} onChange={set} />
               <Field label="ARM Adjusted Rate % (after fixed period)" name="sa_arm_adjusted_rate" type="number" placeholder="leave blank to use market rate" half note="Rate the ARM adjusts to when the fixed period ends. Defaults to Market Rate if blank." value={String(form.sa_arm_adjusted_rate ?? '')} onChange={set} />
             </div>

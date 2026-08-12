@@ -247,7 +247,26 @@ export default function OpenHousePage({ params: paramsPromise }: { params: Promi
         if (!data || data.length === 0) { setDbError(`No row found for slug "${params.slug}"`); setLoading(false); return }
         if (data[0].status !== 'active') { setDbError(`Row found but status is "${data[0].status}" not "active"`); setLoading(false); return }
         const row = data[0]
-        setPage({ partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', partner_logo: '', ...row } as PageData)
+        const pageData: PageData = { partner_name: '', partner_title: '', partner_email: '', partner_phone: '', partner_photo: '', partner_nmls: '', partner_logo: '', ...row } as PageData
+        // If partner_logo is missing (column not yet in DB or old row), look it up from marketing_partners
+        if (!pageData.partner_logo && pageData.partner_name) {
+          sb.from('marketing_partners')
+            .select('logo_url, name')
+            .then(({ data: partners }) => {
+              if (partners) {
+                const match = partners.find((p: { name: string; logo_url: string }) =>
+                  p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
+                )
+                if (match?.logo_url) {
+                  setPage({ ...pageData, partner_logo: match.logo_url })
+                  return
+                }
+              }
+              setPage(pageData)
+            })
+        } else {
+          setPage(pageData)
+        }
         setLoading(false)
       }, (e: unknown) => { setDbError(`Fetch threw: ${e}`); setLoading(false) })
   }, [params.slug])
