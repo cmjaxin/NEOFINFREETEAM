@@ -35,11 +35,11 @@ export default function SettingsModal() {
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_production?: boolean; can_wins?: boolean; can_marketing?: boolean; can_open_houses?: boolean; can_listings?: boolean; can_sign_riders?: boolean }[]>([])
+  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_production?: boolean; can_wins?: boolean; can_marketing?: boolean; can_open_houses?: boolean; can_listings?: boolean; can_sign_riders?: boolean; can_splice?: boolean }[]>([])
 
   useEffect(() => {
     if (profile?.role !== 'admin') return
-    supabase.from('profiles').select('id, full_name, email, can_production, can_wins, can_marketing, can_open_houses, can_listings, can_sign_riders').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
+    supabase.from('profiles').select('id, full_name, email, can_production, can_wins, can_marketing, can_open_houses, can_listings, can_sign_riders, can_splice').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
       if (data) setApprovedProfiles(data)
     })
   }, [profile?.id])
@@ -206,6 +206,7 @@ export default function SettingsModal() {
                   { label: 'Open Houses',    field: 'can_open_houses', val: p.can_open_houses ?? true },
                   { label: 'Listing Pages',  field: 'can_listings',    val: p.can_listings    ?? false },
                   { label: 'Sign Riders',    field: 'can_sign_riders', val: p.can_sign_riders ?? false },
+                  { label: 'Splice',         field: 'can_splice',      val: p.can_splice      ?? false },
                 ]
                 return (
                   <div key={p.id} style={{ border: '1px solid #EEF1F4', borderRadius: 10, padding: '12px 14px' }}>

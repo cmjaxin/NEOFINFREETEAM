@@ -22,6 +22,7 @@ export interface Profile {
   can_open_houses?: boolean
   can_listings?: boolean
   can_sign_riders?: boolean
+  can_splice?: boolean
 }
 
 export interface Employee {
