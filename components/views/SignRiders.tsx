@@ -282,7 +282,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       }
     }
     let res = await attempt(payload as Record<string, unknown>)
-    if (res.error?.code === '42703') {
+    if (res.error?.code === '42703' || res.error?.code === 'PGRST204') {
       const { tca_url: _a, tca_screenshot: _b, loom_url: _c, callout_text: _d, ...corePayload } = payload
       res = await attempt(corePayload as Record<string, unknown>)
     }
