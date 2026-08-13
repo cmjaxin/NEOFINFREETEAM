@@ -790,27 +790,25 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
           <button
             onClick={async () => {
               const url = video.file_url!
-              // On iOS/mobile use Web Share API so the native share sheet appears with "Save Video"
-              if (typeof navigator.share === 'function' && navigator.canShare) {
-                try {
-                  setSaving(true)
-                  const res = await fetch(url)
-                  const blob = await res.blob()
-                  const file = new File([blob], 'splice-video.mp4', { type: 'video/mp4' })
-                  if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({ files: [file], title: 'My Splice Video' })
-                  } else {
-                    window.open(url, '_blank')
-                  }
-                } catch {
-                  window.open(url, '_blank')
-                } finally {
-                  setSaving(false)
+              setSaving(true)
+              try {
+                const res = await fetch(url)
+                const blob = await res.blob()
+                const file = new File([blob], 'splice-video.mp4', { type: 'video/mp4' })
+                // Mobile: use Web Share sheet ("Save Video")
+                if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+                  await navigator.share({ files: [file], title: 'My Splice Video' })
+                } else {
+                  // Desktop: blob URL respects the download attribute (cross-origin URLs don't)
+                  const blobUrl = URL.createObjectURL(blob)
+                  const a = document.createElement('a')
+                  a.href = blobUrl; a.download = 'splice-video.mp4'; a.click()
+                  setTimeout(() => URL.revokeObjectURL(blobUrl), 10000)
                 }
-              } else {
-                // Desktop: trigger download
-                const a = document.createElement('a')
-                a.href = url; a.download = 'splice-video.mp4'; a.click()
+              } catch {
+                window.open(url, '_blank')
+              } finally {
+                setSaving(false)
               }
             }}
             disabled={saving}
