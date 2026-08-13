@@ -15,6 +15,7 @@ export interface Profile {
   phone: string
   headshot_url: string
   schedule_url?: string
+  bntouch_user_id?: string
   can_listings?: boolean
 }
 

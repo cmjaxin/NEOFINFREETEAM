@@ -4,8 +4,9 @@
 const SELLER_ADVANTAGE_PDF_URL = 'https://qrkwcdyqqozkvenwuoun.supabase.co/storage/v1/object/public/splice-clips/Stern%20Team%20Seller%20Advantage%20Program_081026.pdf'
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import LeadCaptureModal from '@/components/LeadCaptureModal'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -190,6 +191,7 @@ interface PageData {
   tca_url: string | null
   tca_screenshot: string | null
   schedule_url: string | null
+  bntouch_user_id: string | null
 }
 
 export default function ListingPresentationPage({ slug }: { slug: string }) {
@@ -197,6 +199,14 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'tca' | 'contact'>('tca')
+  const [showLead, setShowLead] = useState(false)
+  const leadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    try { if (sessionStorage.getItem('lp_lead_captured')) return } catch {}
+    leadTimerRef.current = setTimeout(() => setShowLead(true), 15000)
+    return () => { if (leadTimerRef.current) clearTimeout(leadTimerRef.current) }
+  }, [])
 
   useEffect(() => {
     const sb = createClient()
@@ -211,7 +221,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
         const row = data[0]
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
-          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, tca_screenshot: null, schedule_url: null,
+          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, tca_screenshot: null, schedule_url: null, bntouch_user_id: null,
           ...row,
         } as PageData
 
@@ -219,14 +229,16 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
-              ? sb.from('profiles').select('schedule_url').eq('id', row.created_by).single()
+              ? sb.from('profiles').select('schedule_url, bntouch_user_id').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
           ])
-          const scheduleUrl = (profileRes.data as { schedule_url?: string } | null)?.schedule_url ?? null
-          let finalData = { ...pageData, schedule_url: scheduleUrl }
+          const profileData = profileRes.data as { schedule_url?: string; bntouch_user_id?: string } | null
+          const scheduleUrl = profileData?.schedule_url ?? null
+          const bntouchUserId = profileData?.bntouch_user_id ?? null
+          let finalData = { ...pageData, schedule_url: scheduleUrl, bntouch_user_id: bntouchUserId }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
@@ -264,6 +276,13 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Montserrat', system-ui, sans-serif" }}>
+      {showLead && (
+        <LeadCaptureModal
+          address={page.address + (page.city ? ', ' + page.city : '')}
+          bntouchUserId={page.bntouch_user_id}
+          onDismiss={() => setShowLead(false)}
+        />
+      )}
       {/* Header */}
       <header style={{ background: C.navy, padding: '14px 0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

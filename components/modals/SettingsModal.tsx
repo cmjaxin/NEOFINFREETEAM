@@ -27,6 +27,7 @@ export default function SettingsModal() {
     phone: profile?.phone ?? '',
     headshot_url: profile?.headshot_url ?? '',
     schedule_url: profile?.schedule_url ?? '',
+    bntouch_user_id: profile?.bntouch_user_id ?? '',
     password: '',
   })
   const [error, setError] = useState('')
@@ -68,6 +69,7 @@ export default function SettingsModal() {
         phone: form.phone.trim(),
         headshot_url: form.headshot_url,
         schedule_url: form.schedule_url.trim() || null,
+        bntouch_user_id: form.bntouch_user_id.trim() || null,
       }).eq('id', profile!.id)
       if (form.password) {
         const { error: pwErr } = await supabase.auth.updateUser({ password: form.password })
@@ -151,6 +153,11 @@ export default function SettingsModal() {
           <Label>Booking / Scheduling Link</Label>
           <Input value={form.schedule_url} onChange={set('schedule_url')} placeholder="https://youcanbook.me/…" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Schedule" button on your listing presentation pages.</div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Label>BNTouch User ID</Label>
+          <Input value={form.bntouch_user_id} onChange={set('bntouch_user_id')} placeholder="e.g. 10543" />
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Your BNTouch user ID — powers the lead capture form on your listing pages.</div>
         </div>
 
         {error && <div style={{ fontSize: 13, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>{error}</div>}
