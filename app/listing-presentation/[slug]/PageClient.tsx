@@ -88,7 +88,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero-address { color: #fff; }
 .hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
-.hero-logo { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.hero-logo { display: flex; flex-direction: column; align-items: flex-end; gap: 14px; }
 .hero-logo .neo-logo { max-height: 30px; max-width: 110px; object-fit: contain; }
 .hero-logo .hero-partner-logo { max-height: 56px; max-width: 180px; object-fit: contain; }
 .price-bar { height: 0.55in; background: ${NEO}; display: flex; align-items: center; padding: 0 24px; gap: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
