@@ -883,14 +883,8 @@ export default function OpenHouseView() {
   useEffect(() => { load() }, [profile?.id])
 
   async function deletePage(page: OHPage) {
-    const photos: string[] = (page.photos ?? []).filter(Boolean)
-    if (photos.length > 0) {
-      const paths = photos.map(url => {
-        try { return decodeURIComponent(new URL(url).pathname.split('/object/public/splice-clips/')[1] ?? '') } catch { return '' }
-      }).filter(Boolean)
-      if (paths.length > 0) await supabase.storage.from('splice-clips').remove(paths)
-    }
-    await supabase.from('open_house_pages').delete().eq('id', page.id)
+    // Use UPDATE instead of DELETE to work around missing DELETE RLS policy
+    await supabase.from('open_house_pages').update({ status: 'deleted' }).eq('id', page.id)
     load()
   }
 
