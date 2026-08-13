@@ -139,7 +139,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .stat-chip:last-child { border-right: none; }
 
 /* ── MAIN ── */
-.main { display: flex; height: 5.75in; }
+.main { display: flex; height: 5.57in; }
 
 /* LEFT COLUMN */
 .left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
@@ -196,14 +196,14 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 
 /* ── FOOTER ── */
 .footer {
-  height: 0.15in;
+  height: 0.28in;
   background: #F8FAFC;
   border-top: 2px solid ${CYAN};
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px;
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
-.footer-disc { font-size: 6px; color: #9CA3AF; }
+.footer-disc { font-size: 5px; color: #9CA3AF; line-height: 1.4; }
 .footer-ehl { font-size: 7px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.05em; }
 </style>
 </head>
@@ -303,8 +303,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 
 <!-- FOOTER -->
 <div class="footer">
-  <span class="footer-disc">NEO Home Loans NMLS #1770216. Equal Housing Lender. This is not a commitment to lend. Rates and terms subject to change without notice. NMLS Consumer Access: www.nmlsconsumeraccess.org</span>
-  <span class="footer-ehl">⊟ EQUAL HOUSING LENDER</span>
+  <span class="footer-disc">BETTER MORTGAGE RESERVES THE RIGHT TO MODIFY OR DISCONTINUE PRODUCTS, PROMOTIONS AND BENEFITS AT ANY TIME WITHOUT NOTICE. Rates and Terms are subject to change at any time without notice and are subject to state restrictions. The Better Home Logo is Registered in the U.S. Patent and Trademark Office. © 2025 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access.</span>
 </div>
 
 <script>window.onload = function() { window.print(); }</script>
