@@ -140,27 +140,102 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
         {/* Photos */}
         <PhotoGallery photos={page.photos ?? []} address={page.address} />
 
-        {/* Price + Address */}
-        <div style={{ marginTop: 20, marginBottom: 20 }}>
-          <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{fmtPrice(page.list_price)}</div>
-          <div style={{ fontSize: 16, color: C.dim, marginTop: 6, fontWeight: 600 }}>{page.address}</div>
-          <div style={{ fontSize: 14, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state} {page.zip}</div>
+        {/* Price + Address + Contact panel */}
+        <div style={{ marginTop: 20, marginBottom: 20, display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
-          {/* Stats bar */}
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 16, padding: '14px 0', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
-            {[
-              { label: 'Beds', val: page.beds },
-              { label: 'Baths', val: page.baths },
-              { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
-              { label: 'Lot', val: page.lot_size || null },
-              { label: 'Year Built', val: page.year_built || null },
-              { label: 'HOA', val: page.hoa_monthly ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
-            ].filter(r => r.val).map(r => (
-              <div key={r.label}>
-                <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{r.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.navy, marginTop: 2 }}>{r.val}</div>
+          {/* Left: price, address, stats */}
+          <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+            <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{fmtPrice(page.list_price)}</div>
+            <div style={{ fontSize: 16, color: C.dim, marginTop: 6, fontWeight: 600 }}>{page.address}</div>
+            <div style={{ fontSize: 14, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state} {page.zip}</div>
+
+            {/* Stats bar */}
+            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 16, padding: '14px 0', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+              {[
+                { label: 'Beds', val: page.beds },
+                { label: 'Baths', val: page.baths },
+                { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
+                { label: 'Lot', val: page.lot_size || null },
+                { label: 'Year Built', val: page.year_built || null },
+                { label: 'HOA', val: page.hoa_monthly ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
+              ].filter(r => r.val).map(r => (
+                <div key={r.label}>
+                  <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{r.label}</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: C.navy, marginTop: 2 }}>{r.val}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right: advisor + partner contact card */}
+          <div className="lp-agent-col" style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+
+            {/* Advisor */}
+            <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 16px 14px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Your Loan Advisor</div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                {page.advisor_photo ? (
+                  <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: `2px solid ${C.accent}` }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
+                    {page.advisor_name?.[0] ?? '?'}
+                  </div>
+                )}
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 13, color: C.navy, lineHeight: 1.2 }}>{page.advisor_name || 'Loan Advisor'}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{page.advisor_title || 'Mortgage Advisor'}</div>
+                  {page.advisor_nmls && <div style={{ fontSize: 10, color: C.muted }}>NMLS# {page.advisor_nmls}</div>}
+                </div>
               </div>
-            ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {page.advisor_phone && (
+                  <a href={`tel:${page.advisor_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.navy, borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 11, textDecoration: 'none' }}>
+                    📞 {page.advisor_phone}
+                  </a>
+                )}
+                {page.advisor_email && (
+                  <a href={`mailto:${page.advisor_email}?subject=Listing — ${page.address}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.navy, fontWeight: 600, fontSize: 11, textDecoration: 'none' }}>
+                    ✉️ {page.advisor_email}
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Partner */}
+            {page.partner_name && (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 16px 14px' }}>
+                {page.partner_logo && (
+                  <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 32, maxWidth: '100%', objectFit: 'contain', display: 'block', marginBottom: 10 }} />
+                )}
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Listing Agent</div>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
+                  {page.partner_photo ? (
+                    <img src={page.partner_photo} alt={page.partner_name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(91,203,245,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
+                      {page.partner_name[0]}
+                    </div>
+                  )}
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: C.navy, lineHeight: 1.2 }}>{page.partner_name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{page.partner_title || 'Listing Agent'}</div>
+                    {page.partner_nmls && <div style={{ fontSize: 10, color: C.muted }}>NMLS# {page.partner_nmls}</div>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {page.partner_phone && (
+                    <a href={`tel:${page.partner_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.navy, fontWeight: 600, fontSize: 11, textDecoration: 'none' }}>
+                      📞 {page.partner_phone}
+                    </a>
+                  )}
+                  {page.partner_email && (
+                    <a href={`mailto:${page.partner_email}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.navy, fontWeight: 600, fontSize: 11, textDecoration: 'none' }}>
+                      ✉️ {page.partner_email}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -316,6 +391,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
         .lp-contact-grid { max-width: 480px; }
         .lp-iframe-pdf { height: 700px; }
         .lp-iframe-tca { height: 820px; }
+        .lp-agent-col { width: 220px; }
         @media (max-width: 600px) {
           .lp-gallery-img { height: 220px; }
           .lp-price { font-size: 22px; }
@@ -323,6 +399,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
           .lp-contact-grid { max-width: 100%; }
           .lp-iframe-pdf { height: 420px; }
           .lp-iframe-tca { height: 500px; }
+          .lp-agent-col { width: 100%; }
         }
       `}</style>
     </div>

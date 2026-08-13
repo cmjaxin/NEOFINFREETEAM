@@ -521,21 +521,28 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       updated_at: new Date().toISOString(),
     }
 
-    async function attempt(p: typeof payload) {
+    async function attempt(p: Record<string, unknown>) {
       if (editing) {
-        return supabase.from('open_house_pages').update(p).eq('id', editing.id)
+        const res = await supabase.from('open_house_pages').update(p).eq('id', editing.id).select('id')
+        return res
       } else {
         const slug = slugify(form.address + ' ' + form.city)
         return supabase.from('open_house_pages').insert({ ...p, slug, status: 'active', created_by: profile!.id })
       }
     }
-    let { error } = await attempt(payload)
+    let res = await attempt(payload as Record<string, unknown>)
     // If any new optional columns don't exist yet in the DB, strip them and retry
-    if (error?.code === '42703') {
+    if (res.error?.code === '42703') {
       const { tca_url: _a, tca_screenshot: _b, ...corePayload } = payload
-      ;({ error } = await attempt(corePayload as typeof payload))
+      res = await attempt(corePayload as Record<string, unknown>)
     }
-    if (error) { setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
+    if (res.error) { setMsg(`Save failed: ${res.error.message} (${res.error.code})`); setSaving(false); return }
+    // UPDATE matched 0 rows — likely an RLS mismatch. This shouldn't happen but is a safety net.
+    if (editing && res.data && res.data.length === 0) {
+      setMsg('Save failed: no row updated. Check that you own this listing.')
+      setSaving(false)
+      return
+    }
     setSaving(false)
     onSaved()
   }
