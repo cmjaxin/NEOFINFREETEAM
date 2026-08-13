@@ -94,10 +94,9 @@ export async function POST(request: NextRequest) {
     })
     if (clips.length === 0) return NextResponse.json({ error: 'No clips found' }, { status: 400 })
 
-    const TRIM_START = 0.2
+    const TRIM_START = 0.3
+    const TRIM_END = 0.3
     let cursor = 0
-    let lastClipStart = 0
-    let lastClipDuration = 5
     const videoElements: any[] = []
     const captionElements: any[] = []
 
@@ -105,10 +104,8 @@ export async function POST(request: NextRequest) {
       const clip = clips[i]
       const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
 
-      if (i === clips.length - 1) {
-        lastClipStart = cursor
-        lastClipDuration = storedDuration - TRIM_START
-      }
+
+      const clippedDuration = Math.max(0.5, storedDuration - TRIM_START - TRIM_END)
 
       videoElements.push({
         type: 'video',
@@ -117,6 +114,7 @@ export async function POST(request: NextRequest) {
         fit: 'cover',
         volume: '100%',
         trim_start: TRIM_START,
+        trim_duration: clippedDuration,
       })
 
       if (openAiKey && clip.clip_url) {
@@ -128,7 +126,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      cursor += storedDuration - TRIM_START
+      cursor += clippedDuration
     }
 
     // Disclaimer image temporarily removed — needs to be hosted in Supabase storage
