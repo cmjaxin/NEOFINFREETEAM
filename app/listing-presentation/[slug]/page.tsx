@@ -139,8 +139,11 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Montserrat', system-ui, sans-serif" }}>
       {/* Header */}
       <header style={{ background: C.navy, padding: '14px 0' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
+          {page.partner_logo && (
+            <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+          )}
         </div>
       </header>
 
@@ -151,7 +154,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
 
         {/* Price + Address + Stats */}
         <div style={{ marginTop: 20 }}>
-          <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{page.list_price ? fmtPrice(page.list_price) : 'Price Upon Request'}</div>
+          <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{Number(page.list_price) > 0 ? fmtPrice(page.list_price) : 'Price Upon Request'}</div>
           <div style={{ fontSize: 16, color: C.dim, marginTop: 6, fontWeight: 600 }}>{page.address}</div>
           <div style={{ fontSize: 14, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state} {page.zip}</div>
           <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 16, padding: '14px 0', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
@@ -161,7 +164,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
               { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
               { label: 'Lot', val: page.lot_size || null },
               { label: 'Year Built', val: page.year_built || null },
-              { label: 'HOA', val: page.hoa_monthly ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
+              { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
             ].filter(r => r.val).map(r => (
               <div key={r.label}>
                 <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{r.label}</div>
@@ -171,34 +174,15 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
           </div>
         </div>
 
-        {/* Contact cards — always visible, below property details */}
+        {/* Contact cards — partner first, then advisor */}
         <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', margin: '20px 0' }}>
-          {/* Advisor card */}
-          <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Loan Advisor</div>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              {page.advisor_photo
-                ? <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                : <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.accent, fontWeight: 800, flexShrink: 0 }}>{page.advisor_name?.[0] ?? '?'}</div>
-              }
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 14, color: C.navy }}>{page.advisor_name || 'Loan Advisor'}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{page.advisor_title || 'Mortgage Advisor'}</div>
-                {page.advisor_nmls && <div style={{ fontSize: 11, color: C.muted }}>NMLS# {page.advisor_nmls}</div>}
-                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {page.advisor_phone && <a href={`tel:${page.advisor_phone}`} style={{ fontSize: 12, color: C.navy, fontWeight: 600, textDecoration: 'none' }}>{page.advisor_phone}</a>}
-                  {page.advisor_email && <a href={`mailto:${page.advisor_email}?subject=Listing — ${page.address}`} style={{ fontSize: 11, color: C.muted, textDecoration: 'none', wordBreak: 'break-all' }}>{page.advisor_email}</a>}
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Partner card */}
+          {/* Partner card (first) */}
           {page.partner_name && (
             <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Listing Agent</div>
-                {page.partner_logo && <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 22, maxWidth: 80, objectFit: 'contain' }} />}
+                {page.partner_logo && <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain' }} />}
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 {page.partner_photo
@@ -217,6 +201,30 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
               </div>
             </div>
           )}
+
+          {/* Advisor card (second) */}
+          <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Loan Advisor</div>
+              <img src="https://8blocks.s3-us-west-1.amazonaws.com/neo/images/logo-big.jpg" alt="NEO Home Loans" style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              {page.advisor_photo
+                ? <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.accent, fontWeight: 800, flexShrink: 0 }}>{page.advisor_name?.[0] ?? '?'}</div>
+              }
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 14, color: C.navy }}>{page.advisor_name || 'Loan Advisor'}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{page.advisor_title || 'Mortgage Advisor'}</div>
+                {page.advisor_nmls && <div style={{ fontSize: 11, color: C.muted }}>NMLS# {page.advisor_nmls}</div>}
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {page.advisor_phone && <a href={`tel:${page.advisor_phone}`} style={{ fontSize: 12, color: C.navy, fontWeight: 600, textDecoration: 'none' }}>{page.advisor_phone}</a>}
+                  {page.advisor_email && <a href={`mailto:${page.advisor_email}?subject=Listing — ${page.address}`} style={{ fontSize: 11, color: C.muted, textDecoration: 'none', wordBreak: 'break-all' }}>{page.advisor_email}</a>}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Tabs */}
