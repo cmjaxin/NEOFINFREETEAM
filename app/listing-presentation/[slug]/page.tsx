@@ -140,10 +140,10 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
       {/* Header */}
       <header style={{ background: C.navy, padding: '14px 0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
           {page.partner_logo && (
             <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain' }} />
           )}
+          <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
         </div>
       </header>
 
