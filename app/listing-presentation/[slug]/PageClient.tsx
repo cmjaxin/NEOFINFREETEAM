@@ -4,7 +4,8 @@
 const SELLER_ADVANTAGE_PDF_URL = 'https://qrkwcdyqqozkvenwuoun.supabase.co/storage/v1/object/public/splice-clips/Stern%20Team%20Seller%20Advantage%20Program_081026.pdf'
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import type React from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const C = {
@@ -198,6 +199,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'tca' | 'contact'>('tca')
+  const [showApply, setShowApply] = useState(false)
   useEffect(() => {
     const sb = createClient()
     sb.from('open_house_pages')
@@ -334,6 +336,12 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
                   </div>
                 </div>
               </div>
+              {page.partner_phone && (
+                <a href={`tel:${page.partner_phone}`}
+                  style={{ display: 'block', marginTop: 14, textAlign: 'center', background: C.navy, color: '#fff', fontWeight: 700, fontSize: 13, padding: '10px 0', borderRadius: 9, textDecoration: 'none' }}>
+                  📅 Schedule a Viewing →
+                </a>
+              )}
             </div>
           )}
 
@@ -448,6 +456,19 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
         {activeTab === 'contact' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+            {/* Apply to Purchase CTA */}
+            <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Ready to make an offer?</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, lineHeight: 1.3 }}>Apply to Purchase This Home</div>
+                <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Get pre-approved in minutes — no impact to your credit score.</div>
+              </div>
+              <button onClick={() => setShowApply(true)}
+                style={{ background: C.navy, color: '#fff', fontWeight: 800, fontSize: 14, padding: '13px 26px', borderRadius: 10, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                Apply to Purchase →
+              </button>
+            </div>
+
             {/* Schedule CTA */}
             <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
@@ -479,6 +500,9 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
             </div>
           </div>
         )}
+
+        {/* Apply to Purchase Modal */}
+        {showApply && <ApplyModal address={page.address} bntouchUserId={page.bntouch_user_id} onDismiss={() => setShowApply(false)} />}
       </div>
 
       <style>{`
@@ -502,6 +526,87 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
           .lp-agent-col { width: 100%; }
         }
       `}</style>
+    </div>
+  )
+}
+
+// ─── Apply to Purchase Modal ──────────────────────────────────────────────────
+function ApplyModal({ address, bntouchUserId, onDismiss }: { address: string; bntouchUserId: string | null; onDismiss: () => void }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  const formRef = useRef<HTMLFormElement | null>(null)
+  const userId = bntouchUserId || '10543'
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) { setError('Please enter your name.'); return }
+    if (!email.trim() || !email.includes('@')) { setError('Please enter a valid email.'); return }
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 10) { setError('Please enter a valid phone number.'); return }
+    setError(''); setSubmitting(true)
+    if (formRef.current) formRef.current.submit()
+    setTimeout(() => { setSubmitted(true); setSubmitting(false) }, 1200)
+  }
+
+  const C2 = { navy: '#0A2540', accent: '#5BCBF5', bg: '#F4F6F8', border: '#E4E8EC', muted: '#6B7280' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={onDismiss}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,0.7)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'relative', background: '#fff', borderRadius: 20, width: '100%', maxWidth: 420, padding: 32, boxShadow: '0 24px 60px rgba(0,0,0,0.3)' }}
+        onClick={e => e.stopPropagation()}>
+        <button onClick={onDismiss} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: C2.muted, lineHeight: 1 }}>×</button>
+        {submitted ? (
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: 44, marginBottom: 14 }}>🎉</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C2.navy, marginBottom: 10 }}>Application Received!</div>
+            <div style={{ fontSize: 14, color: C2.muted, lineHeight: 1.6, marginBottom: 24 }}>Our team will reach out within 1 business day to walk you through next steps.</div>
+            <button onClick={onDismiss} style={{ background: C2.navy, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, padding: '12px 28px', cursor: 'pointer' }}>Done</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C2.accent, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Purchase Application</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C2.navy, marginBottom: 4 }}>Apply to Purchase This Home</div>
+            <div style={{ fontSize: 13, color: C2.muted, marginBottom: 24, lineHeight: 1.5 }}>Fill out below and a NEO advisor will reach out to get you started.</div>
+            {error && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>}
+            <form ref={formRef} onSubmit={handleSubmit} action="https://www.bntouchmortgage.net/api/webform/" method="POST" target="bnt_apply_iframe">
+              <input type="hidden" name="user_id" value={userId} />
+              <input type="hidden" name="source" value={`Apply to Purchase — ${address}`} />
+              <input type="hidden" name="lead_source" value="Web — Listing Apply Form" />
+              <input type="hidden" name="first_name" value={name.split(' ')[0] || name} />
+              <input type="hidden" name="last_name" value={name.split(' ').slice(1).join(' ') || ''} />
+              <input type="hidden" name="email_address" value={email} />
+              <input type="hidden" name="phone" value={phone} />
+              <input type="hidden" name="comments" value={`Purchase inquiry for: ${address}`} />
+              {[
+                { label: 'Full Name', val: name, set: setName, ph: 'Jane Smith', type: 'text' },
+                { label: 'Email Address', val: email, set: setEmail, ph: 'you@email.com', type: 'email' },
+                { label: 'Phone Number', val: phone, set: setPhone, ph: '(555) 555-5555', type: 'tel' },
+              ].map(f => (
+                <div key={f.label} style={{ marginBottom: 14 }}>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C2.navy, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</label>
+                  <input type={f.type} value={f.val} placeholder={f.ph}
+                    onChange={e => f.set(e.target.value)}
+                    style={{ width: '100%', padding: '11px 14px', border: `1px solid ${C2.border}`, borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', color: '#111', boxSizing: 'border-box' }} />
+                </div>
+              ))}
+              <button type="submit" disabled={submitting}
+                style={{ width: '100%', padding: '14px 0', background: C2.navy, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 800, fontSize: 15, cursor: submitting ? 'not-allowed' : 'pointer', marginTop: 6, opacity: submitting ? 0.7 : 1 }}>
+                {submitting ? 'Submitting…' : 'Submit Application →'}
+              </button>
+            </form>
+            <iframe ref={iframeRef} name="bnt_apply_iframe" title="BNTouch Apply" style={{ display: 'none' }} />
+            <div style={{ fontSize: 10, color: C2.muted, textAlign: 'center', marginTop: 14, lineHeight: 1.5 }}>
+              By submitting, you agree to be contacted by a NEO Home Loans advisor. Message &amp; data rates may apply.
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

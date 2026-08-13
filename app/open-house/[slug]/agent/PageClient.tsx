@@ -39,7 +39,7 @@ function flyerStandard(p: PageData) {
   const NEO = C.navy; const CYAN = C.accent
   const photos = p.photos ?? []
   const hero = photos[0] ?? ''; const small = [photos[1] ?? '', photos[2] ?? '', photos[3] ?? '']
-  const desc = (p.description ?? '').slice(0, 900)
+  const desc = p.description ?? ''
   const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
   const location = [p.city, p.state, p.zip].filter(Boolean).join(', ')
   const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
@@ -130,148 +130,382 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 </body></html>`
 }
 
-// ─── FLYER 2: Showcase (photo-dominant, minimal text) ─────────────────────────
+// ─── FLYER 2: Split Panel (hero photo left, content + TCA right) ──────────────
 function flyerShowcase(p: PageData) {
   const NEO = C.navy; const CYAN = C.accent
   const photos = p.photos ?? []
   const hero = photos[0] ?? ''
   const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
-  const location = [p.city, p.state].filter(Boolean).join(', ')
+  const location = [p.city, p.state, p.zip].filter(Boolean).join(', ')
   const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
   const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
-  const stats = [p.beds ? `${p.beds} BD` : '', p.baths ? `${p.baths} BA` : '', p.sqft ? `${p.sqft.toLocaleString()} SF` : '', p.year_built ? `${p.year_built}` : ''].filter(Boolean)
+  const desc = p.description ?? ''
+  const stats = [p.beds?`${p.beds} Beds`:'',p.baths?`${p.baths} Baths`:'',p.sqft?`${p.sqft.toLocaleString()} Sq Ft`:'',p.lot_size?p.lot_size+' Lot`':'',p.year_built?`Built ${p.year_built}`:''].filter(Boolean)
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Flyer — ${p.address}</title><style>
 *{box-sizing:border-box;margin:0;padding:0}@page{size:letter portrait;margin:0}
 html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;background:#fff}
-.hero{position:relative;width:100%;height:5.5in;overflow:hidden;background:#1a1a2e}
-.hero img{width:100%;height:100%;object-fit:cover;display:block}
-.hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.15) 0%,rgba(10,37,64,0.95) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.hero-top{position:absolute;top:0;left:0;right:0;padding:20px 28px;display:flex;align-items:center;justify-content:space-between}
-.hero-bottom{position:absolute;bottom:0;left:0;right:0;padding:28px 32px 32px}
-.oh-badge{background:${CYAN};color:${NEO};font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:5px 14px;border-radius:99px;display:inline-block;margin-bottom:12px}
-.hero-street{color:#fff;font-size:28px;font-weight:900;line-height:1.1;text-shadow:0 2px 8px rgba(0,0,0,0.4);margin-bottom:4px}
-.hero-city{color:rgba(255,255,255,0.75);font-size:14px;font-weight:500;margin-bottom:16px}
-.stats-row{display:flex;gap:0;margin-bottom:20px}
-.stat-pill{color:#fff;font-size:13px;font-weight:700;padding-right:16px;margin-right:16px;border-right:1px solid rgba(255,255,255,0.2)}
+.wrap{display:flex;flex-direction:column;height:11in}
+.main{display:flex;flex:1;min-height:0}
+.photo-col{flex:0 0 4.2in;position:relative;overflow:hidden;background:#0A2540}
+.photo-col img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(10,37,64,0.55) 0%,transparent 35%,transparent 70%,rgba(10,37,64,0.7) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.photo-top{position:absolute;top:0;left:0;right:0;padding:18px 20px;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.oh-badge{background:${CYAN};color:${NEO};font-size:9px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:5px 12px;border-radius:99px}
+.photo-logos{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:4px}
+.photo-logos img{max-height:28px;max-width:120px;object-fit:contain}
+.photo-bottom{position:absolute;bottom:0;left:0;right:0;padding:16px 20px}
+.pb-price{color:${CYAN};font-size:28px;font-weight:900;letter-spacing:-0.01em;margin-bottom:3px}
+.pb-addr{color:#fff;font-size:14px;font-weight:800;line-height:1.2;margin-bottom:2px;text-shadow:0 1px 4px rgba(0,0,0,0.4)}
+.pb-city{color:rgba(255,255,255,0.7);font-size:11px}
+.right-col{flex:1;display:flex;flex-direction:column;background:#fff;border-left:3px solid ${CYAN}}
+.right-header{background:${NEO};padding:14px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rh-label{font-size:8px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${CYAN};margin-bottom:6px}
+.stats-row{display:flex;flex-wrap:wrap;gap:0}
+.stat-pill{font-size:9.5px;font-weight:700;color:rgba(255,255,255,0.85);padding:0 10px 0 0;margin-right:10px;border-right:1px solid rgba(91,203,245,0.2);white-space:nowrap}
 .stat-pill:last-child{border-right:none}
-.price-tag{color:${CYAN};font-size:36px;font-weight:900;letter-spacing:-0.02em}
-.lower{height:5.5in;padding:0;display:flex;flex-direction:column}
-.photo-strip{display:flex;height:2.1in;gap:0}
-.strip-photo{flex:1;overflow:hidden;background:#E4E8EC}
-.strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
-.strip-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#CBD5E1;font-size:24px}
-.contact-bar{flex:1;background:${NEO};display:flex;align-items:center;padding:0 32px;gap:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.c-block{flex:1;display:flex;align-items:center;gap:14px}
-.c-sep{width:1px;background:rgba(91,203,245,0.2);margin:12px 0;flex-shrink:0}
-.c-photo{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${CYAN}}
-.c-init{width:52px;height:52px;border-radius:50%;background:rgba(91,203,245,0.12);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:20px;font-weight:900;flex-shrink:0}
-.c-info{color:#fff}.c-role{font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${CYAN};margin-bottom:3px}
-.c-name{font-size:14px;font-weight:800}.c-detail{font-size:9px;color:rgba(255,255,255,0.55);margin-top:4px;line-height:1.6}
-.footer{height:0.43in;background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:center;justify-content:space-between;padding:0 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.right-body{flex:1;padding:14px 20px 10px;display:flex;flex-direction:column;gap:12px;overflow:hidden;min-height:0}
+.section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
+.desc-text{font-size:9.5px;line-height:1.75;color:#374151}
+.tca-card{flex:1;border:1px solid #E4E8EC;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.tca-header{background:${NEO};padding:6px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tca-dot{width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0}
+.tca-label{font-size:8.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em}
+.tca-img{flex:1;overflow:hidden;min-height:0}.tca-img img{width:100%;height:100%;object-fit:contain;object-position:top;display:block}
+.tca-empty{flex:1;display:flex;align-items:center;justify-content:center;background:#F8FAFC;color:#94A3B8;font-size:10px;text-align:center;padding:16px}
+.contact-bar{height:0.95in;background:${NEO};display:flex;align-items:stretch;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.contact-cell{flex:1;display:flex;align-items:center;gap:12px;padding:0 18px}
+.contact-sep{width:1px;background:rgba(91,203,245,0.18);margin:12px 0;flex-shrink:0}
+.c-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${CYAN}}
+.c-init{width:42px;height:42px;border-radius:50%;background:rgba(91,203,245,0.12);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:16px;font-weight:900;flex-shrink:0}
+.c-info{color:#fff}.c-role{font-size:7.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${CYAN};margin-bottom:2px}
+.c-name{font-size:13px;font-weight:800;line-height:1.15}.c-detail{font-size:8.5px;color:rgba(255,255,255,0.55);margin-top:4px;line-height:1.6}
+.footer{height:0.43in;background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .footer-disc{font-size:5px;color:#9CA3AF;line-height:1.4}
 </style></head><body>
-<div class="hero">
-  ${hero ? `<img src="${hero}" alt="${p.address}" />` : ''}
-  <div class="hero-overlay"></div>
-  <div class="hero-top">
-    ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" style="max-height:48px;max-width:160px;object-fit:contain;-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : '<div></div>'}
-    <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" style="max-height:28px;max-width:110px;object-fit:contain;" />
-  </div>
-  <div class="hero-bottom">
-    <div class="oh-badge">Open House</div>
-    <div class="hero-street">${p.address}</div>
-    ${location ? `<div class="hero-city">${location}</div>` : ''}
-    ${stats.length ? `<div class="stats-row">${stats.map(s=>`<div class="stat-pill">${s}</div>`).join('')}</div>` : ''}
-    ${price ? `<div class="price-tag">${price}</div>` : ''}
-  </div>
-</div>
-<div class="lower">
-  <div class="photo-strip">
-    ${[photos[1]||'', photos[2]||'', photos[3]||''].map((url,i) => `<div class="strip-photo">${url ? `<img src="${url}" alt="Photo ${i+2}" />` : `<div class="strip-empty">🏠</div>`}</div>`).join('')}
+<div class="wrap">
+  <div class="main">
+    <div class="photo-col">
+      ${hero ? `<img src="${hero}" alt="${p.address}" />` : ''}
+      <div class="photo-overlay"></div>
+      <div class="photo-top">
+        <div class="oh-badge">Open House</div>
+        <div class="photo-logos">
+          ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;filter:brightness(0) invert(1);" />` : ''}
+          <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" />
+        </div>
+      </div>
+      <div class="photo-bottom">
+        ${price ? `<div class="pb-price">${price}</div>` : ''}
+        <div class="pb-addr">${p.address}</div>
+        ${location ? `<div class="pb-city">${location}</div>` : ''}
+      </div>
+    </div>
+    <div class="right-col">
+      <div class="right-header">
+        <div class="rh-label">Property Details</div>
+        ${stats.length ? `<div class="stats-row">${stats.map(s=>`<span class="stat-pill">${s}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="right-body">
+        ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
+        <div class="tca-card">
+          <div class="tca-header"><div class="tca-dot"></div><span class="tca-label">Total Cost Analysis</span></div>
+          ${p.tca_screenshot ? `<div class="tca-img"><img src="${p.tca_screenshot}" alt="TCA" /></div>` : `<div class="tca-empty">Upload a TCA screenshot in the editor</div>`}
+        </div>
+      </div>
+    </div>
   </div>
   <div class="contact-bar">
-    ${p.partner_name ? `<div class="c-block">${p.partner_photo ? `<img class="c-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="c-init">${(p.partner_name[0]??'?').toUpperCase()}</div>`}<div class="c-info"><div class="c-role">${p.partner_title||'Listing Agent'}</div><div class="c-name">${p.partner_name}</div><div class="c-detail">${[p.partner_phone,p.partner_email,partnerNmls].filter(Boolean).join('<br>')}</div></div></div><div class="c-sep"></div>` : ''}
-    ${p.advisor_name ? `<div class="c-sep"></div><div class="c-block" style="justify-content:flex-end">${p.advisor_photo ? `<img class="c-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="c-init">${(p.advisor_name[0]??'?').toUpperCase()}</div>`}<div class="c-info" style="text-align:right"><div class="c-role">${p.advisor_title||'Mortgage Advisor'} · NEO</div><div class="c-name">${p.advisor_name}</div><div class="c-detail">${[p.advisor_phone,p.advisor_email,advisorNmls].filter(Boolean).join('<br>')}</div></div></div>` : ''}
+    ${p.partner_name ? `<div class="contact-cell">${p.partner_photo ? `<img class="c-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="c-init">${(p.partner_name[0]??'?').toUpperCase()}</div>`}<div class="c-info"><div class="c-role">${p.partner_title||'Listing Agent'}</div><div class="c-name">${p.partner_name}</div><div class="c-detail">${[p.partner_phone,p.partner_email,partnerNmls].filter(Boolean).join('<br>')}</div></div></div><div class="contact-sep"></div>` : ''}
+    ${p.advisor_name ? `<div class="contact-sep"></div><div class="contact-cell" style="justify-content:flex-end"><div class="c-info" style="text-align:right"><div class="c-role">${p.advisor_title||'Mortgage Advisor'} · NEO Home Loans</div><div class="c-name">${p.advisor_name}</div><div class="c-detail">${[p.advisor_phone,p.advisor_email,advisorNmls].filter(Boolean).join('<br>')}</div></div>${p.advisor_photo ? `<img class="c-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="c-init">${(p.advisor_name[0]??'?').toUpperCase()}</div>`}</div>` : ''}
   </div>
-</div>
-<div class="footer">
-  <span class="footer-disc">${DISCLAIMER}</span>
-  <img src="${EHL_LOGO}" alt="EHL" style="height:22px;width:auto;flex-shrink:0;margin-left:10px;" />
+  <div class="footer">
+    <span class="footer-disc">${DISCLAIMER}</span>
+    <img src="${EHL_LOGO}" alt="Equal Housing Lender" style="height:20px;width:auto;object-fit:contain;flex-shrink:0;margin-left:10px;" />
+  </div>
 </div>
 <script>window.onload=function(){window.print()}</script>
 </body></html>`
 }
 
-// ─── FLYER 3: Modern Split (content left, big photo right) ───────────────────
+// ─── FLYER 3: Photo Grid (4-photo mosaic top, content + TCA bottom) ───────────
 function flyerModern(p: PageData) {
   const NEO = C.navy; const CYAN = C.accent
-  const hero = (p.photos ?? [])[0] ?? ''
+  const photos = p.photos ?? []
   const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
   const location = [p.city, p.state, p.zip].filter(Boolean).join(', ')
   const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
   const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
-  const desc = (p.description ?? '').slice(0, 500)
-  const stats = [{l:'Bedrooms',v:p.beds},{l:'Bathrooms',v:p.baths},{l:'Sq Ft',v:p.sqft?p.sqft.toLocaleString():null},{l:'Year Built',v:p.year_built||null},{l:'Lot Size',v:p.lot_size||null}].filter(s=>s.v)
+  const desc = p.description ?? ''
+  const stats = [p.beds?`${p.beds} Beds`:'',p.baths?`${p.baths} Baths`:'',p.sqft?`${p.sqft.toLocaleString()} Sq Ft`:'',p.lot_size?`${p.lot_size} Lot`:'',p.year_built?`Built ${p.year_built}`:''].filter(Boolean)
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Flyer — ${p.address}</title><style>
 *{box-sizing:border-box;margin:0;padding:0}@page{size:letter portrait;margin:0}
 html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;background:#fff}
-.wrap{display:flex;height:11in}
-.left{flex:0 0 4.25in;background:#fff;display:flex;flex-direction:column;padding:0}
-.left-top{background:${NEO};padding:28px 28px 22px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.oh-label{font-size:9px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:${CYAN};margin-bottom:10px}
-.address{color:#fff;font-size:20px;font-weight:900;line-height:1.2;margin-bottom:4px}
-.city{color:rgba(255,255,255,0.65);font-size:12px;margin-bottom:16px}
-.price{color:${CYAN};font-size:32px;font-weight:900;letter-spacing:-0.01em}
-.logo-row{display:flex;align-items:center;justify-content:space-between;margin-top:18px;padding-top:16px;border-top:1px solid rgba(91,203,245,0.2)}
-.logo-row img{max-height:32px;max-width:110px;object-fit:contain}
-.left-body{flex:1;padding:22px 28px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
-.section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:8px}
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px}
-.stat-item{border-bottom:1px solid #E4E8EC;padding-bottom:6px}
-.stat-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#9CA3AF;margin-bottom:2px}
-.stat-value{font-size:14px;font-weight:800;color:${NEO}}
+.page{display:flex;flex-direction:column;height:11in}
+.header{background:${NEO};padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.header-left{flex:1;min-width:0}
+.oh-eyebrow{font-size:8.5px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:${CYAN};margin-bottom:5px}
+.header-address{color:#fff;font-size:18px;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header-city{color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;margin-left:20px}
+.header-price{color:${CYAN};font-size:26px;font-weight:900;letter-spacing:-0.01em}
+.header-logos{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.header-logos img{max-height:24px;max-width:100px;object-fit:contain}
+.photo-mosaic{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:3.4in;flex-shrink:0;gap:3px;background:#E4E8EC}
+.photo-cell{overflow:hidden;background:#CBD5E1;position:relative}
+.photo-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-cell-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#CBD5E1;font-size:24px;background:#F1F5F9}
+.photo-cell:first-child{grid-row:span 2}
+.stats-bar{background:#F8FAFC;border-top:2px solid ${CYAN};border-bottom:1px solid #E4E8EC;padding:8px 24px;display:flex;align-items:center;gap:0;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.stat-item{font-size:10px;font-weight:700;color:${NEO};padding-right:16px;margin-right:16px;border-right:1px solid #E4E8EC}
+.stat-item:last-child{border-right:none}
+.stat-lbl{font-size:7.5px;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.08em;display:block;margin-bottom:1px}
+.content-row{flex:1;display:flex;min-height:0}
+.desc-col{flex:0 0 55%;padding:14px 18px 12px 24px;display:flex;flex-direction:column;gap:12px;border-right:1px solid #E4E8EC;overflow:hidden}
+.section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.75;color:#374151}
-.contact-block{margin-top:auto;padding-top:16px;border-top:1px solid #E4E8EC;display:flex;flex-direction:column;gap:12px}
-.contact-person{display:flex;align-items:center;gap:12px}
+.tca-col{flex:1;padding:14px 20px 12px 14px;display:flex;flex-direction:column}
+.tca-card{flex:1;border:1px solid #E4E8EC;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
+.tca-header{background:${NEO};padding:6px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tca-dot{width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0}
+.tca-label{font-size:8.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em}
+.tca-img{flex:1;overflow:hidden;min-height:0}.tca-img img{width:100%;height:100%;object-fit:contain;object-position:top;display:block}
+.tca-empty{flex:1;display:flex;align-items:center;justify-content:center;background:#F8FAFC;color:#94A3B8;font-size:10px;text-align:center;padding:16px}
+.contact-bar{height:0.95in;background:${NEO};display:flex;align-items:stretch;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.contact-cell{flex:1;display:flex;align-items:center;gap:12px;padding:0 20px}
+.contact-sep{width:1px;background:rgba(91,203,245,0.18);margin:12px 0;flex-shrink:0}
 .c-photo{width:42px;height:42px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${CYAN}}
-.c-init{width:42px;height:42px;border-radius:50%;background:${NEO};display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:16px;font-weight:900;flex-shrink:0}
-.c-role{font-size:7.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${CYAN};margin-bottom:2px}
-.c-name{font-size:12px;font-weight:800;color:${NEO};line-height:1.2}
-.c-detail{font-size:8.5px;color:#6B7280;margin-top:3px;line-height:1.5}
-.right{flex:1;position:relative;background:#1a1a2e;overflow:hidden}
-.right img{width:100%;height:100%;object-fit:cover;display:block}
-.right-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:64px;background:linear-gradient(135deg,${NEO} 0%,#1a4a7c 100%)}
-.footer-strip{position:absolute;bottom:0;left:0;right:0;background:rgba(10,37,64,0.88);padding:8px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;display:flex;align-items:center;gap:8px}
-.footer-disc{font-size:5px;color:rgba(255,255,255,0.5);line-height:1.4;flex:1}
+.c-init{width:42px;height:42px;border-radius:50%;background:rgba(91,203,245,0.12);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:16px;font-weight:900;flex-shrink:0}
+.c-info{color:#fff}.c-role{font-size:7.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${CYAN};margin-bottom:2px}
+.c-name{font-size:13px;font-weight:800;line-height:1.15}.c-detail{font-size:8.5px;color:rgba(255,255,255,0.55);margin-top:4px;line-height:1.6}
+.footer{height:0.43in;background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.footer-disc{font-size:5px;color:#9CA3AF;line-height:1.4}
 </style></head><body>
-<div class="wrap">
-  <div class="left">
-    <div class="left-top">
-      <div class="oh-label">Open House</div>
-      <div class="address">${p.address}</div>
-      ${location ? `<div class="city">${location}</div>` : ''}
-      ${price ? `<div class="price">${price}</div>` : ''}
-      <div class="logo-row">
-        ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : '<div></div>'}
+<div class="page">
+  <div class="header">
+    <div class="header-left">
+      <div class="oh-eyebrow">Open House</div>
+      <div class="header-address">${p.address}</div>
+      ${location ? `<div class="header-city">${location}</div>` : ''}
+    </div>
+    <div class="header-right">
+      ${price ? `<div class="header-price">${price}</div>` : ''}
+      <div class="header-logos">
+        ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
         <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" />
       </div>
     </div>
-    <div class="left-body">
-      ${stats.length ? `<div><div class="section-label">Property Details</div><div class="stats-grid">${stats.map(s=>`<div class="stat-item"><div class="stat-label">${s.l}</div><div class="stat-value">${s.v}</div></div>`).join('')}</div></div>` : ''}
+  </div>
+  <div class="photo-mosaic">
+    ${[photos[0]||'',photos[1]||'',photos[2]||'',photos[3]||''].map((url,i) => `<div class="photo-cell">${url ? `<img src="${url}" alt="Photo ${i+1}" />` : `<div class="photo-cell-empty">🏡</div>`}</div>`).join('')}
+  </div>
+  ${stats.length ? `<div class="stats-bar">${stats.map(s=>`<div class="stat-item">${s}</div>`).join('')}</div>` : ''}
+  <div class="content-row">
+    <div class="desc-col">
       ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
-      <div class="contact-block">
-        ${p.partner_name ? `<div class="contact-person">${p.partner_photo ? `<img class="c-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="c-init">${(p.partner_name[0]??'?').toUpperCase()}</div>`}<div><div class="c-role">${p.partner_title||'Listing Agent'}</div><div class="c-name">${p.partner_name}</div><div class="c-detail">${[p.partner_phone,p.partner_email,partnerNmls].filter(Boolean).join(' · ')}</div></div></div>` : ''}
-        ${p.advisor_name ? `<div class="contact-person">${p.advisor_photo ? `<img class="c-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="c-init">${(p.advisor_name[0]??'?').toUpperCase()}</div>`}<div><div class="c-role">${p.advisor_title||'Mortgage Advisor'} · NEO Home Loans</div><div class="c-name">${p.advisor_name}</div><div class="c-detail">${[p.advisor_phone,p.advisor_email,advisorNmls].filter(Boolean).join(' · ')}</div></div></div>` : ''}
+    </div>
+    <div class="tca-col">
+      <div class="tca-card">
+        <div class="tca-header"><div class="tca-dot"></div><span class="tca-label">Total Cost Analysis</span></div>
+        ${p.tca_screenshot ? `<div class="tca-img"><img src="${p.tca_screenshot}" alt="TCA" /></div>` : `<div class="tca-empty">Upload a TCA screenshot in the editor</div>`}
       </div>
     </div>
   </div>
+  <div class="contact-bar">
+    ${p.partner_name ? `<div class="contact-cell">${p.partner_photo ? `<img class="c-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="c-init">${(p.partner_name[0]??'?').toUpperCase()}</div>`}<div class="c-info"><div class="c-role">${p.partner_title||'Listing Agent'}</div><div class="c-name">${p.partner_name}</div><div class="c-detail">${[p.partner_phone,p.partner_email,partnerNmls].filter(Boolean).join('<br>')}</div></div></div><div class="contact-sep"></div>` : ''}
+    ${p.advisor_name ? `<div class="contact-sep"></div><div class="contact-cell" style="justify-content:flex-end"><div class="c-info" style="text-align:right"><div class="c-role">${p.advisor_title||'Mortgage Advisor'} · NEO Home Loans</div><div class="c-name">${p.advisor_name}</div><div class="c-detail">${[p.advisor_phone,p.advisor_email,advisorNmls].filter(Boolean).join('<br>')}</div></div>${p.advisor_photo ? `<img class="c-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="c-init">${(p.advisor_name[0]??'?').toUpperCase()}</div>`}</div>` : ''}
+  </div>
+  <div class="footer">
+    <span class="footer-disc">${DISCLAIMER}</span>
+    <img src="${EHL_LOGO}" alt="Equal Housing Lender" style="height:20px;width:auto;object-fit:contain;flex-shrink:0;margin-left:10px;" />
+  </div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
+// ─── FLYER 4: Classic Open House (matches reference layout) ──────────────────
+function flyerBold(p: PageData) {
+  const NEO = C.navy; const CYAN = C.accent; const CHARCOAL = '#2A2A2A'
+  const photos = p.photos ?? []
+  const hero = photos[0] ?? ''
+  const strip = [photos[1]??'', photos[2]??'', photos[3]??'']
+  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
+  const location = [p.address, p.city, p.state, p.zip].filter(Boolean).join(', ')
+  const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
+  const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
+  const desc = (p.description ?? '')
+  const features = [
+    p.sqft ? `${p.sqft.toLocaleString()} Sq. Ft.` : null,
+    p.beds ? `${p.beds} Bedroom${p.beds !== 1 ? 's' : ''}` : null,
+    p.baths ? `${p.baths} Bathroom${p.baths !== 1 ? 's' : ''}` : null,
+    p.lot_size ? `${p.lot_size} Lot` : null,
+    p.year_built ? `Built ${p.year_built}` : null,
+    p.hoa_monthly ? `HOA $${p.hoa_monthly}/mo` : null,
+  ].filter(Boolean)
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Flyer — ${p.address}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}@page{size:letter portrait;margin:0}
+html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;background:#fff}
+.page{display:flex;flex-direction:column;height:11in}
+.top-header{background:${CHARCOAL};padding:12px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.th-oh{font-size:36px;font-weight:900;color:${CYAN};letter-spacing:-0.01em;line-height:1;text-transform:uppercase}
+.th-logo{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.th-logo img{max-height:52px;max-width:190px;object-fit:contain}
+.hero{height:2.3in;overflow:hidden;flex-shrink:0;background:#CBD5E1}
+.hero img{width:100%;height:100%;object-fit:cover;display:block}
+.addr-bar{background:${CHARCOAL};padding:10px 22px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.addr-text{color:#fff;font-size:14px;font-weight:700}
+.addr-price{color:${CYAN};font-size:28px;font-weight:900;letter-spacing:-0.02em}
+.photo-strip{display:flex;height:1.35in;gap:3px;flex-shrink:0;background:#E4E8EC}
+.strip-photo{flex:1;overflow:hidden;background:#CBD5E1}
+.strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.strip-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#CBD5E1;background:#F1F5F9}
+.content{flex:1;display:flex;min-height:0;padding:14px 22px 10px;gap:18px}
+.desc-col{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px}
+.desc-text{font-size:9.5px;line-height:1.78;color:#222}
+.features-col{flex:0 0 2.5in;display:flex;flex-direction:column;gap:0}
+.feat-title{font-size:13px;font-weight:900;color:#111;margin-bottom:10px}
+.feat-item{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid #F0F0F0}
+.feat-check{width:18px;height:18px;border-radius:50%;background:${CYAN};display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.feat-check svg{width:10px;height:10px}
+.feat-label{font-size:11px;font-weight:700;color:#222}
+.contact-bar{background:${CHARCOAL};padding:10px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cb-person{display:flex;align-items:center;gap:10px;flex:1}
+.cb-photo{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${CYAN}}
+.cb-init{width:52px;height:52px;border-radius:50%;background:rgba(91,203,245,0.15);border:2px solid rgba(91,203,245,0.4);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:20px;font-weight:900;flex-shrink:0}
+.cb-info{}
+.cb-name{color:${CYAN};font-size:13px;font-weight:900;line-height:1.2}
+.cb-role{color:#fff;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px}
+.cb-detail{color:rgba(255,255,255,0.6);font-size:8px;line-height:1.6}
+.cb-center{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;padding:0 12px}
+.cb-center img{max-height:36px;max-width:110px;object-fit:contain}
+.cb-sep{width:1px;background:rgba(91,203,245,0.2);height:44px;flex-shrink:0}
+.cb-person-right{display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end}
+.cb-info-right{text-align:right}
+.footer{background:#F8FAFC;border-top:1.5px solid ${CYAN};padding:5px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.footer-disc{font-size:4.5px;color:#9CA3AF;line-height:1.45;flex:1}
+</style></head><body>
+<div class="page">
+  <div class="top-header">
+    <div class="th-oh">Open House</div>
+    <div class="th-logo">
+      ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
+      <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" style="max-height:26px;max-width:100px;" />
+    </div>
+  </div>
+  <div class="hero">
+    ${hero ? `<img src="${hero}" alt="${p.address}" />` : ''}
+  </div>
+  <div class="addr-bar">
+    <div class="addr-text">${location}</div>
+    ${price ? `<div class="addr-price">${price}</div>` : ''}
+  </div>
+  <div class="photo-strip">
+    ${strip.map((url,i) => `<div class="strip-photo">${url ? `<img src="${url}" alt="Photo ${i+2}" />` : `<div class="strip-empty">🏠</div>`}</div>`).join('')}
+  </div>
+  <div class="content">
+    <div class="desc-col">
+      ${desc ? `<p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : ''}
+    </div>
+    ${features.length ? `<div class="features-col"><div class="feat-title">House Features:</div>${features.map(f=>`<div class="feat-item"><div class="feat-check"><svg viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#0A2540" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="feat-label">${f}</span></div>`).join('')}</div>` : ''}
+  </div>
+  <div class="contact-bar">
+    ${p.advisor_name ? `<div class="cb-person">${p.advisor_photo ? `<img class="cb-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="cb-init">${(p.advisor_name[0]??'?').toUpperCase()}</div>`}<div class="cb-info"><div class="cb-name">${p.advisor_name}</div><div class="cb-role">${p.advisor_title||'Mortgage Advisor'}</div><div class="cb-detail">${[advisorNmls, p.advisor_email, p.advisor_phone].filter(Boolean).join('<br>')}</div></div></div>` : ''}
+    <div class="cb-center">
+      ${p.advisor_name && p.partner_name ? '<div class="cb-sep"></div>' : ''}
+      <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" />
+      ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
+      ${p.advisor_name && p.partner_name ? '<div class="cb-sep"></div>' : ''}
+    </div>
+    ${p.partner_name ? `<div class="cb-person-right"><div class="cb-info-right"><div class="cb-name">${p.partner_name}</div><div class="cb-role">${p.partner_title||'Listing Agent'}</div><div class="cb-detail">${[partnerNmls, p.partner_email, p.partner_phone].filter(Boolean).join('<br>')}</div></div>${p.partner_photo ? `<img class="cb-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="cb-init">${(p.partner_name[0]??'?').toUpperCase()}</div>`}</div>` : ''}
+  </div>
+  <div class="footer">
+    <span class="footer-disc">${DISCLAIMER}</span>
+    <img src="${EHL_LOGO}" alt="Equal Housing Lender" style="height:20px;width:auto;object-fit:contain;flex-shrink:0;margin-left:10px;" />
+  </div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
+// Shared Google Fonts link for social templates (blob URLs load external resources freely)
+const SOCIAL_FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,900;1,400&family=Dancing+Script:wght@600;700&family=Montserrat:wght@400;600;700;800&display=swap">`
+
+// ─── SOCIAL: Instagram Square ─────────────────────────────────────────────────
+// Split collage left / warm editorial right — editable message + when/where
+function socialInstagram(p: PageData, edits: Record<string,string>) {
+  const NEO = C.navy; const CYAN = C.accent
+  const photos = p.photos ?? []
+  const ph1 = photos[0] ?? ''; const ph2 = photos[1] ?? ''; const ph3 = photos[2] ?? ''
+  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
+  const location = [p.city, p.state].filter(Boolean).join(', ')
+  const headline = edits.headline || 'Open House'
+  const message = edits.message || "I can't wait to give you a tour of this incredible home!"
+  const when = edits.when || ''
+  const where = edits.where || [p.address, p.city, p.state].filter(Boolean).join(', ')
+  const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${SOCIAL_FONTS}<title>Instagram — ${p.address}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}@page{size:1080px 1080px;margin:0}
+html,body{width:1080px;height:1080px;overflow:hidden;background:#FAF0E8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:1080px;height:1080px;display:flex}
+.left{flex:0 0 480px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:4px;background:#E8E0D8}
+.ph{flex:1;overflow:hidden;background:#D8D0C8}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-empty{width:100%;height:100%;background:linear-gradient(135deg,#D8D0C8,#BEB0A8)}
+.logo-circle{position:absolute;left:50%;bottom:300px;transform:translateX(-50%);width:190px;height:190px;border-radius:50%;background:#FAF0E8;display:flex;align-items:center;justify-content:center;padding:28px;box-shadow:0 8px 32px rgba(0,0,0,0.18)}
+.logo-circle img{max-width:130px;max-height:100px;object-fit:contain}
+.logo-circle-fallback{font-size:48px;font-weight:900;color:#999;font-family:'Playfair Display',serif;font-style:italic}
+.right{flex:1;background:#FAF0E8;display:flex;flex-direction:column;padding:52px 48px 36px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.r-top{flex:1}
+.r-eyebrow{font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:#999;margin-bottom:10px}
+.r-script{font-family:'Dancing Script',cursive;font-size:88px;font-weight:700;color:#2A2520;line-height:0.9;margin-bottom:2px}
+.r-serif{font-family:'Playfair Display',serif;font-size:76px;font-weight:900;color:#2A2520;letter-spacing:-0.02em;line-height:1;margin-bottom:36px}
+.agent-row{display:flex;align-items:flex-start;gap:20px;margin-bottom:28px}
+.agent-photo{width:140px;height:140px;object-fit:cover;flex-shrink:0;border-radius:4px;background:#D8D0C8}
+.agent-photo-empty{width:140px;height:140px;flex-shrink:0;border-radius:4px;background:#E8E0D8;display:flex;align-items:center;justify-content:center;font-size:40px;color:#BEB0A8}
+.agent-text{}
+.agent-hello{font-family:'Dancing Script',cursive;font-size:44px;font-weight:600;color:#2A2520;line-height:1.1;margin-bottom:8px}
+.agent-message{font-family:'Montserrat',sans-serif;font-size:16px;color:#5A504A;line-height:1.65;font-weight:500}
+.when-where{border-top:1px solid #E0D8D0;padding-top:22px;display:flex;flex-direction:column;gap:10px}
+.ww-row{display:flex;gap:16px;align-items:baseline}
+.ww-label{font-family:'Playfair Display',serif;font-size:16px;font-weight:900;color:#2A2520;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;width:80px}
+.ww-value{font-family:'Montserrat',sans-serif;font-size:15px;color:#5A504A;font-weight:500;line-height:1.5}
+.r-bottom{margin-top:20px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #E0D8D0;padding-top:16px}
+.rb-neo img{max-height:22px;max-width:90px;object-fit:contain;opacity:0.4}
+.rb-name{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:#9A9290;text-align:right}
+</style></head><body>
+<div class="page">
+  <div class="left">
+    <div class="ph">${ph1 ? `<img src="${ph1}" alt="" />` : `<div class="ph-empty"></div>`}</div>
+    <div class="ph">${ph2 ? `<img src="${ph2}" alt="" />` : (ph3 ? `<img src="${ph3}" alt="" />` : `<div class="ph-empty"></div>`)}</div>
+    <div class="logo-circle">
+      ${p.partner_logo ? `<img src="${p.partner_logo}" alt="${p.partner_name}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : `<div class="logo-circle-fallback">${(p.partner_name||'NEO')[0]}</div>`}
+    </div>
+  </div>
   <div class="right">
-    ${hero ? `<img src="${hero}" alt="${p.address}" />` : `<div class="right-empty">🏡</div>`}
-    <div class="footer-strip">
-      <span class="footer-disc">${DISCLAIMER}</span>
-      <img src="${EHL_LOGO}" alt="EHL" style="height:18px;width:auto;flex-shrink:0;" />
+    <div class="r-top">
+      <div class="r-eyebrow">You're Invited</div>
+      <div class="r-script">Open</div>
+      <div class="r-serif">HOUSE</div>
+      <div class="agent-row">
+        ${p.partner_photo ? `<img class="agent-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="agent-photo-empty">👤</div>`}
+        <div class="agent-text">
+          <div class="agent-hello">Hello!</div>
+          <div class="agent-message">${message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        </div>
+      </div>
+      <div class="when-where">
+        ${when ? `<div class="ww-row"><div class="ww-label">WHEN:</div><div class="ww-value">${when.replace(/&/g,'&amp;')}</div></div>` : ''}
+        ${where ? `<div class="ww-row"><div class="ww-label">WHERE:</div><div class="ww-value">${where.replace(/&/g,'&amp;')}</div></div>` : ''}
+        ${price ? `<div class="ww-row"><div class="ww-label">PRICE:</div><div class="ww-value" style="font-weight:800;color:#2A2520;font-size:18px">${price}</div></div>` : ''}
+      </div>
+    </div>
+    <div class="r-bottom">
+      <div class="rb-neo"><img src="${NEO_BIG_LOGO}" alt="NEO Home Loans" /></div>
+      <div class="rb-name">${p.partner_name||''}<br>${p.partner_phone||''}</div>
     </div>
   </div>
 </div>
@@ -279,261 +513,162 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 </body></html>`
 }
 
-// ─── FLYER 4: Bold Dark ───────────────────────────────────────────────────────
-function flyerBold(p: PageData) {
-  const CYAN = C.accent
+// ─── SOCIAL: Facebook / LinkedIn ──────────────────────────────────────────────
+// Hero photo top, wave divider, editorial headline, 3 rounded photo strip
+function socialFacebook(p: PageData, edits: Record<string,string>) {
+  const NEO = C.navy; const CYAN = C.accent
   const photos = p.photos ?? []
   const hero = photos[0] ?? ''
   const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
   const location = [p.city, p.state].filter(Boolean).join(', ')
-  const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
+  const headline = edits.headline || 'Open House'
+  const tagline = edits.tagline || (price ? `${price} · ${p.address}` : p.address)
   const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
-  const stats = [p.beds?`${p.beds} Beds`:'', p.baths?`${p.baths} Baths`:'', p.sqft?`${p.sqft.toLocaleString()} Sq Ft`:'', p.lot_size?`${p.lot_size} Lot`:'', p.year_built?`Built ${p.year_built}`:''].filter(Boolean)
-  const desc = (p.description??'').slice(0,400)
+  const ph2 = photos[1]??''; const ph3 = photos[2]??''; const ph4 = photos[3]??''
 
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Flyer — ${p.address}</title><style>
-*{box-sizing:border-box;margin:0;padding:0}@page{size:letter portrait;margin:0}
-html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;background:#080F1A}
-.page{width:8.5in;height:11in;background:#080F1A;display:flex;flex-direction:column;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top-bar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;flex-shrink:0}
-.top-logos{display:flex;align-items:center;gap:20px}
-.top-logos img{max-height:36px;max-width:130px;object-fit:contain}
-.oh-badge{background:${CYAN};color:#080F1A;font-size:9px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;padding:6px 16px;border-radius:99px}
-.photo-frame{margin:0 28px;border-radius:12px;overflow:hidden;flex:1;min-height:0;position:relative;border:1px solid rgba(91,203,245,0.15)}
-.photo-frame img{width:100%;height:100%;object-fit:cover;display:block}
-.photo-fallback{width:100%;height:100%;background:linear-gradient(135deg,#0A2540 0%,#1a4a7c 100%);display:flex;align-items:center;justify-content:center;font-size:64px}
-.photo-overlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(8,15,26,0.9) 0%,transparent 50%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.photo-info{position:absolute;bottom:0;left:0;right:0;padding:20px 24px}
-.price{color:${CYAN};font-size:34px;font-weight:900;letter-spacing:-0.02em;margin-bottom:4px}
-.address{color:#fff;font-size:20px;font-weight:800;margin-bottom:3px}
-.city{color:rgba(255,255,255,0.6);font-size:12px;margin-bottom:14px}
-.stats-row{display:flex;gap:0;flex-wrap:nowrap}
-.stat-chip{color:rgba(255,255,255,0.85);font-size:10px;font-weight:700;padding-right:12px;margin-right:12px;border-right:1px solid rgba(91,203,245,0.25)}
-.stat-chip:last-child{border-right:none}
-.bottom{flex-shrink:0;padding:18px 28px 0;display:flex;flex-direction:column;gap:14px}
-.desc-text{font-size:9px;line-height:1.7;color:rgba(255,255,255,0.55)}
-.contact-row{display:flex;align-items:center;gap:0;border-top:1px solid rgba(91,203,245,0.15);padding-top:14px}
-.contact-person{flex:1;display:flex;align-items:center;gap:12px}
-.contact-divider{width:1px;background:rgba(91,203,245,0.15);margin:0 20px;height:44px;flex-shrink:0}
-.c-photo{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid ${CYAN};flex-shrink:0}
-.c-init{width:44px;height:44px;border-radius:50%;background:rgba(91,203,245,0.1);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:16px;font-weight:900;flex-shrink:0}
-.c-role{font-size:7.5px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${CYAN};margin-bottom:2px}
-.c-name{font-size:12.5px;font-weight:800;color:#fff;line-height:1.2}
-.c-detail{font-size:8.5px;color:rgba(255,255,255,0.45);margin-top:3px;line-height:1.5}
-.footer{padding:10px 28px 14px;display:flex;align-items:center;gap:8px}
-.footer-disc{font-size:5px;color:rgba(255,255,255,0.25);line-height:1.4;flex:1}
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${SOCIAL_FONTS}<title>Facebook — ${p.address}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}@page{size:1200px 630px landscape;margin:0}
+html,body{width:1200px;height:630px;overflow:hidden;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:1200px;height:630px;display:flex;flex-direction:column;position:relative}
+.hero-band{height:310px;position:relative;overflow:hidden;flex-shrink:0;background:#D8D0C8}
+.hero-band img{width:100%;height:100%;object-fit:cover;display:block}
+.hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,transparent 50%,rgba(255,255,255,0.15) 100%)}
+.wave{position:absolute;bottom:-1px;left:0;right:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.content{flex:1;background:#fff;display:flex;align-items:stretch;padding:0 60px;gap:40px;min-height:0}
+.content-left{display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0;padding:18px 0}
+.cl-script{font-family:'Dancing Script',cursive;font-size:52px;font-weight:700;color:#2A2520;line-height:1;margin-bottom:-4px}
+.cl-serif{font-family:'Playfair Display',serif;font-size:48px;font-weight:900;color:#2A2520;letter-spacing:-0.02em;line-height:1;margin-bottom:12px}
+.cl-tagline{font-family:'Montserrat',sans-serif;font-size:15px;color:#6A6058;font-weight:500;line-height:1.5;margin-bottom:14px}
+.cl-logos{display:flex;align-items:center;gap:14px}
+.cl-logos img{max-height:28px;max-width:110px;object-fit:contain;opacity:0.6}
+.content-right{display:flex;align-items:center;gap:8px;padding:16px 0;flex-shrink:0}
+.strip-photo{width:184px;height:190px;border-radius:16px;overflow:hidden;background:#E8E0D8;flex-shrink:0}
+.strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.strip-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;color:#BEB0A8}
+.agent-strip{flex-shrink:0;display:flex;flex-direction:column;justify-content:center;gap:6px;padding-left:8px;border-left:2px solid #E8E0D8}
+.as-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:#2A2520}
+.as-title{font-family:'Montserrat',sans-serif;font-size:11px;color:#9A9290;margin-bottom:4px}
+.as-contact{font-family:'Montserrat',sans-serif;font-size:12px;color:#6A6058;line-height:1.6}
+.as-neo img{max-height:18px;max-width:80px;object-fit:contain;margin-top:6px;opacity:0.4}
+</style></head><body>
+<div class="page">
+  <div class="hero-band">
+    ${hero ? `<img src="${hero}" alt="${p.address}" />` : ''}
+    <div class="hero-overlay"></div>
+    <div class="wave">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 60" preserveAspectRatio="none" style="width:1200px;height:60px;display:block">
+        <path d="M0,60 C200,0 400,60 600,30 C800,0 1000,60 1200,20 L1200,60 Z" fill="#5BCBF5" opacity="0.5"/>
+        <path d="M0,60 C300,20 500,55 700,35 C900,15 1100,55 1200,40 L1200,60 Z" fill="#fff"/>
+      </svg>
+    </div>
+  </div>
+  <div class="content">
+    <div class="content-left">
+      <div class="cl-script">${headline.split(' ')[0]||'Open'}</div>
+      <div class="cl-serif">${(headline.split(' ').slice(1).join(' ')||'HOUSE').toUpperCase()}</div>
+      <div class="cl-tagline">${tagline.replace(/&/g,'&amp;')}</div>
+      <div class="cl-logos">
+        ${p.partner_logo ? `<img src="${p.partner_logo}" alt="${p.partner_name}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;opacity:1;" />` : ''}
+        <img src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+      </div>
+    </div>
+    <div class="content-right">
+      ${[ph2,ph3,ph4].map((url,i)=>`<div class="strip-photo">${url?`<img src="${url}" alt="Photo ${i+2}" />`:`<div class="strip-empty">🏡</div>`}</div>`).join('')}
+      <div class="agent-strip">
+        <div class="as-name">${p.partner_name||''}</div>
+        <div class="as-title">${p.partner_title||'Listing Agent'}</div>
+        <div class="as-contact">${[p.partner_phone,p.partner_email].filter(Boolean).join('<br>')}</div>
+        <div class="as-neo"><img src="${NEO_WHITE_LOGO}" alt="NEO" style="filter:invert(1) brightness(0.5);" /></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
+// ─── SOCIAL: Story / Reel Cover ───────────────────────────────────────────────
+// Tall editorial: photo collage left, warm right panel with editable content
+function socialStory(p: PageData, edits: Record<string,string>) {
+  const NEO = C.navy
+  const photos = p.photos ?? []
+  const ph1 = photos[0]??''; const ph2 = photos[1]??''; const ph3 = photos[2]??''
+  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
+  const headline = edits.headline || 'Open House'
+  const message = edits.message || "Join us for a private showing of this stunning home."
+  const when = edits.when || ''
+  const where = edits.where || [p.address, p.city, p.state].filter(Boolean).join(', ')
+  const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
+  const stats = [p.beds?`${p.beds} BD`:'',p.baths?`${p.baths} BA`:'',p.sqft?`${p.sqft.toLocaleString()} SF`:''].filter(Boolean)
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${SOCIAL_FONTS}<title>Story — ${p.address}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}@page{size:1080px 1920px portrait;margin:0}
+html,body{width:1080px;height:1920px;overflow:hidden;background:#FAF0E8;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:1080px;height:1920px;display:flex;flex-direction:column}
+.top-bar{background:#FAF0E8;padding:44px 50px 36px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tb-logos{display:flex;align-items:center;gap:20px}
+.tb-logos img{max-height:44px;max-width:160px;object-fit:contain}
+.tb-script{font-family:'Dancing Script',cursive;font-size:56px;font-weight:700;color:#2A2520;line-height:1}
+.middle{flex:1;display:flex;min-height:0}
+.photo-col{flex:0 0 500px;display:flex;flex-direction:column;gap:4px;overflow:hidden}
+.ph{flex:1;overflow:hidden;background:#D8D0C8}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-empty{width:100%;height:100%;background:linear-gradient(160deg,#D8D0C8,#C0B8B0)}
+.info-col{flex:1;background:#FAF0E8;display:flex;flex-direction:column;justify-content:center;padding:50px 48px 40px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ic-serif{font-family:'Playfair Display',serif;font-size:78px;font-weight:900;color:#2A2520;line-height:1;letter-spacing:-0.02em;margin-bottom:20px}
+.ic-message{font-family:'Montserrat',sans-serif;font-size:20px;color:#5A504A;line-height:1.7;font-weight:500;margin-bottom:32px}
+.ic-divider{width:50px;height:3px;background:#2A2520;margin-bottom:32px;border-radius:2px}
+.ww-section{display:flex;flex-direction:column;gap:16px;margin-bottom:36px}
+.ww-row{display:flex;gap:14px;align-items:baseline}
+.ww-label{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#2A2520;text-transform:uppercase;letter-spacing:0.08em;flex-shrink:0;width:90px}
+.ww-value{font-family:'Montserrat',sans-serif;font-size:16px;color:#5A504A;font-weight:500;line-height:1.5}
+.ic-stats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:36px}
+.ic-stat{background:#EDE5DD;border-radius:99px;padding:6px 16px;font-family:'Montserrat',sans-serif;font-size:15px;font-weight:700;color:#3A3028}
+.ic-agent{display:flex;align-items:center;gap:14px;padding:20px;background:rgba(42,37,32,0.06);border-radius:12px}
+.ic-agent-photo{width:72px;height:72px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#D8D0C8}
+.ic-agent-init{width:72px;height:72px;border-radius:50%;background:#D8D0C8;display:flex;align-items:center;justify-content:center;font-size:26px;color:#9A9290;flex-shrink:0}
+.ic-agent-info{}
+.ic-agent-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#2A2520;margin-bottom:3px}
+.ic-agent-detail{font-family:'Montserrat',sans-serif;font-size:14px;color:#7A706A;line-height:1.6}
+.bottom-bar{background:#2A2520;padding:32px 50px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bb-text{font-family:'Montserrat',sans-serif;font-size:16px;color:rgba(255,255,255,0.5);font-weight:600}
+.bb-neo img{max-height:28px;max-width:110px;object-fit:contain}
 </style></head><body>
 <div class="page">
   <div class="top-bar">
-    <div class="top-logos">
-      ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" />` : ''}
-      <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" />
+    <div class="tb-logos">
+      ${p.partner_logo ? `<img src="${p.partner_logo}" alt="${p.partner_name}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
     </div>
-    <div class="oh-badge">Open House</div>
+    <div class="tb-script">Open House</div>
   </div>
-  <div class="photo-frame">
-    ${hero ? `<img src="${hero}" alt="${p.address}" />` : `<div class="photo-fallback">🏡</div>`}
-    <div class="photo-overlay"></div>
-    <div class="photo-info">
-      ${price ? `<div class="price">${price}</div>` : ''}
-      <div class="address">${p.address}</div>
-      ${location ? `<div class="city">${location}</div>` : ''}
-      ${stats.length ? `<div class="stats-row">${stats.map(s=>`<span class="stat-chip">${s}</span>`).join('')}</div>` : ''}
+  <div class="middle">
+    <div class="photo-col">
+      <div class="ph">${ph1?`<img src="${ph1}" alt="" />`:`<div class="ph-empty"></div>`}</div>
+      <div class="ph">${ph2?`<img src="${ph2}" alt="" />`:`<div class="ph-empty"></div>`}</div>
+      <div class="ph">${ph3?`<img src="${ph3}" alt="" />`:`<div class="ph-empty"></div>`}</div>
+    </div>
+    <div class="info-col">
+      <div class="ic-serif">${headline.toUpperCase()}</div>
+      <div class="ic-message">${message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="ic-divider"></div>
+      <div class="ww-section">
+        ${when ? `<div class="ww-row"><div class="ww-label">WHEN</div><div class="ww-value">${when.replace(/&/g,'&amp;')}</div></div>` : ''}
+        ${where ? `<div class="ww-row"><div class="ww-label">WHERE</div><div class="ww-value">${where.replace(/&/g,'&amp;')}</div></div>` : ''}
+        ${price ? `<div class="ww-row"><div class="ww-label">PRICE</div><div class="ww-value" style="font-weight:800;font-size:20px;color:#2A2520">${price}</div></div>` : ''}
+      </div>
+      ${stats.length ? `<div class="ic-stats">${stats.map(s=>`<div class="ic-stat">${s}</div>`).join('')}</div>` : ''}
+      <div class="ic-agent">
+        ${p.partner_photo ? `<img class="ic-agent-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="ic-agent-init">👤</div>`}
+        <div class="ic-agent-info">
+          <div class="ic-agent-name">${p.partner_name||'Your Agent'}</div>
+          <div class="ic-agent-detail">${p.partner_title||'Listing Agent'}<br>${[p.partner_phone,p.partner_email].filter(Boolean).join(' · ')}</div>
+        </div>
+      </div>
     </div>
   </div>
-  <div class="bottom">
-    ${desc ? `<p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : ''}
-    <div class="contact-row">
-      ${p.partner_name ? `<div class="contact-person">${p.partner_photo ? `<img class="c-photo" src="${p.partner_photo}" alt="${p.partner_name}" />` : `<div class="c-init">${(p.partner_name[0]??'?').toUpperCase()}</div>`}<div><div class="c-role">${p.partner_title||'Listing Agent'}</div><div class="c-name">${p.partner_name}</div><div class="c-detail">${[p.partner_phone,p.partner_email,partnerNmls].filter(Boolean).join('<br>')}</div></div></div>` : ''}
-      ${p.partner_name && p.advisor_name ? `<div class="contact-divider"></div>` : ''}
-      ${p.advisor_name ? `<div class="contact-person">${p.advisor_photo ? `<img class="c-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="c-init">${(p.advisor_name[0]??'?').toUpperCase()}</div>`}<div><div class="c-role">${p.advisor_title||'Mortgage Advisor'} · NEO</div><div class="c-name">${p.advisor_name}</div><div class="c-detail">${[p.advisor_phone,p.advisor_email,advisorNmls].filter(Boolean).join('<br>')}</div></div></div>` : ''}
-    </div>
-  </div>
-  <div class="footer">
-    <span class="footer-disc">${DISCLAIMER}</span>
-    <img src="${EHL_LOGO}" alt="EHL" style="height:18px;width:auto;flex-shrink:0;opacity:0.5;" />
-  </div>
-</div>
-<script>window.onload=function(){window.print()}</script>
-</body></html>`
-}
-
-// ─── SOCIAL: Instagram Square ─────────────────────────────────────────────────
-function socialInstagram(p: PageData) {
-  const CYAN = C.accent; const NEO = C.navy
-  const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Instagram — ${p.partner_name}</title><style>
-*{box-sizing:border-box;margin:0;padding:0}@page{size:1080px 1080px;margin:0}
-html,body{width:1080px;height:1080px;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;background:${NEO};-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{width:1080px;height:1080px;background:linear-gradient(145deg,#080F1A 0%,#0A2540 60%,#0d3060 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;padding:60px}
-.glow{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(91,203,245,0.12) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
-.neo-logo-top{position:absolute;top:40px;right:40px}
-.neo-logo-top img{max-height:36px;max-width:140px;object-fit:contain}
-.tag{font-size:14px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${CYAN};margin-bottom:24px}
-.logo-wrap{margin-bottom:32px;padding:24px 36px;background:rgba(255,255,255,0.06);border:1px solid rgba(91,203,245,0.15);border-radius:16px;display:inline-flex;align-items:center;justify-content:center;min-width:260px}
-.logo-wrap img{max-height:80px;max-width:320px;object-fit:contain}
-.name{color:#fff;font-size:44px;font-weight:900;text-align:center;line-height:1.1;margin-bottom:8px}
-.title{color:rgba(255,255,255,0.55);font-size:20px;text-align:center;margin-bottom:36px}
-.divider{width:60px;height:2px;background:${CYAN};border-radius:1px;margin:0 auto 36px}
-.contact-row{display:flex;flex-direction:column;align-items:center;gap:12px}
-.contact-item{color:rgba(255,255,255,0.75);font-size:20px;font-weight:600;display:flex;align-items:center;gap:10px}
-.contact-icon{color:${CYAN};font-size:18px}
-.nmls{color:rgba(255,255,255,0.3);font-size:14px;margin-top:8px;text-align:center}
-.bottom-bar{position:absolute;bottom:0;left:0;right:0;background:${CYAN};padding:16px 40px;display:flex;align-items:center;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.bottom-text{font-size:16px;font-weight:800;color:${NEO}}
-.bottom-logo img{max-height:28px;max-width:100px;object-fit:contain}
-</style></head><body>
-<div class="page">
-  <div class="glow"></div>
-  <div class="neo-logo-top"><img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" /></div>
-  <div class="tag">Open House · Home Financing</div>
-  ${p.partner_logo ? `<div class="logo-wrap"><img src="${p.partner_logo}" alt="${p.partner_name}" /></div>` : ''}
-  <div class="name">${p.partner_name || 'Your Realtor'}</div>
-  ${p.partner_title ? `<div class="title">${p.partner_title}</div>` : ''}
-  <div class="divider"></div>
-  <div class="contact-row">
-    ${p.partner_phone ? `<div class="contact-item"><span class="contact-icon">📞</span>${p.partner_phone}</div>` : ''}
-    ${p.partner_email ? `<div class="contact-item"><span class="contact-icon">✉</span>${p.partner_email}</div>` : ''}
-  </div>
-  ${partnerNmls ? `<div class="nmls">${partnerNmls}</div>` : ''}
   <div class="bottom-bar">
-    <div class="bottom-text">Backed by NEO Home Loans</div>
-    <div class="bottom-logo"><img src="${NEO_WHITE_LOGO}" alt="NEO" /></div>
-  </div>
-</div>
-<script>window.onload=function(){window.print()}</script>
-</body></html>`
-}
-
-// ─── SOCIAL: Facebook Banner ──────────────────────────────────────────────────
-function socialFacebook(p: PageData) {
-  const CYAN = C.accent; const NEO = C.navy
-  const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
-  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
-  const location = [p.city, p.state].filter(Boolean).join(', ')
-  const hero = (p.photos??[])[0] ?? ''
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Facebook — ${p.partner_name}</title><style>
-*{box-sizing:border-box;margin:0;padding:0}@page{size:1200px 630px landscape;margin:0}
-html,body{width:1200px;height:630px;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;background:${NEO};-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{width:1200px;height:630px;display:flex}
-.left{flex:0 0 560px;position:relative;overflow:hidden;background:#0A2540}
-.left img{width:100%;height:100%;object-fit:cover;display:block}
-.left-overlay{position:absolute;inset:0;background:linear-gradient(to right,transparent 60%,${NEO} 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.left-badge{position:absolute;top:28px;left:28px;background:${CYAN};color:${NEO};font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:6px 16px;border-radius:99px}
-.left-info{position:absolute;bottom:28px;left:28px;right:28px}
-.left-price{color:${CYAN};font-size:28px;font-weight:900;margin-bottom:4px}
-.left-addr{color:#fff;font-size:15px;font-weight:700;margin-bottom:2px}
-.left-city{color:rgba(255,255,255,0.55);font-size:12px}
-.right{flex:1;background:${NEO};display:flex;flex-direction:column;justify-content:center;padding:40px 44px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.neo-logo{margin-bottom:24px}.neo-logo img{max-height:28px;max-width:110px;object-fit:contain}
-${p.partner_logo ? `.partner-logo{margin-bottom:20px;padding:16px 20px;background:rgba(255,255,255,0.05);border:1px solid rgba(91,203,245,0.15);border-radius:12px;display:inline-flex}.partner-logo img{max-height:60px;max-width:220px;object-fit:contain}` : ''}
-.name{color:#fff;font-size:30px;font-weight:900;line-height:1.1;margin-bottom:4px}
-.title{color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:20px}
-.divider{width:40px;height:2px;background:${CYAN};border-radius:1px;margin-bottom:20px}
-.contact{display:flex;flex-direction:column;gap:8px}
-.contact-item{color:rgba(255,255,255,0.75);font-size:14px;font-weight:600}
-.nmls{color:rgba(255,255,255,0.25);font-size:11px;margin-top:12px}
-</style></head><body>
-<div class="page">
-  <div class="left">
-    ${hero ? `<img src="${hero}" alt="${p.address}" />` : ''}
-    <div class="left-overlay"></div>
-    <div class="left-badge">Open House</div>
-    <div class="left-info">
-      ${price ? `<div class="left-price">${price}</div>` : ''}
-      <div class="left-addr">${p.address}</div>
-      ${location ? `<div class="left-city">${location}</div>` : ''}
-    </div>
-  </div>
-  <div class="right">
-    <div class="neo-logo"><img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" /></div>
-    ${p.partner_logo ? `<div class="partner-logo"><img src="${p.partner_logo}" alt="${p.partner_name}" /></div>` : ''}
-    <div class="name">${p.partner_name || 'Your Agent'}</div>
-    ${p.partner_title ? `<div class="title">${p.partner_title}</div>` : ''}
-    <div class="divider"></div>
-    <div class="contact">
-      ${p.partner_phone ? `<div class="contact-item">📞 ${p.partner_phone}</div>` : ''}
-      ${p.partner_email ? `<div class="contact-item">✉ ${p.partner_email}</div>` : ''}
-    </div>
-    ${partnerNmls ? `<div class="nmls">${partnerNmls}</div>` : ''}
-  </div>
-</div>
-<script>window.onload=function(){window.print()}</script>
-</body></html>`
-}
-
-// ─── SOCIAL: Story ────────────────────────────────────────────────────────────
-function socialStory(p: PageData) {
-  const CYAN = C.accent; const NEO = C.navy
-  const hero = (p.photos??[])[0] ?? ''
-  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
-  const location = [p.city, p.state].filter(Boolean).join(', ')
-  const stats = [p.beds?`${p.beds} BD`:'', p.baths?`${p.baths} BA`:'', p.sqft?`${p.sqft.toLocaleString()} SF`:''].filter(Boolean)
-  const partnerNmls = p.partner_nmls ? `NMLS# ${p.partner_nmls}` : ''
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Story — ${p.partner_name}</title><style>
-*{box-sizing:border-box;margin:0;padding:0}@page{size:1080px 1920px portrait;margin:0}
-html,body{width:1080px;height:1920px;overflow:hidden;font-family:'Arial',Helvetica,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.page{width:1080px;height:1920px;position:relative;background:${NEO}}
-.hero-half{position:absolute;top:0;left:0;right:0;height:960px;overflow:hidden}
-.hero-half img{width:100%;height:100%;object-fit:cover;display:block}
-.hero-fallback{width:100%;height:100%;background:linear-gradient(135deg,#0A2540 0%,#1a4a7c 100%)}
-.hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.2) 0%,rgba(10,37,64,0.98) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.top-logos{position:absolute;top:50px;left:0;right:0;padding:0 50px;display:flex;align-items:center;justify-content:space-between}
-.top-logos img{max-height:40px;max-width:150px;object-fit:contain}
-.oh-badge{position:absolute;top:50px;left:50%;transform:translateX(-50%);background:${CYAN};color:${NEO};font-size:14px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;padding:8px 24px;border-radius:99px}
-.property-info{position:absolute;bottom:60px;left:0;right:0;padding:0 50px;text-align:center}
-${price?`.prop-price{color:${CYAN};font-size:56px;font-weight:900;letter-spacing:-0.02em;margin-bottom:8px}`:''}
-.prop-addr{color:#fff;font-size:30px;font-weight:800;margin-bottom:6px;line-height:1.2}
-.prop-city{color:rgba(255,255,255,0.6);font-size:18px;margin-bottom:20px}
-.prop-stats{display:flex;justify-content:center;gap:0}
-.prop-stat{color:rgba(255,255,255,0.8);font-size:18px;font-weight:700;padding:0 20px;border-right:1px solid rgba(91,203,245,0.3)}
-.prop-stat:last-child{border-right:none}
-.bottom-half{position:absolute;top:960px;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 50px;background:${NEO};-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.bottom-label{font-size:14px;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;color:${CYAN};margin-bottom:28px}
-${p.partner_logo?`.logo-card{padding:28px 44px;background:rgba(255,255,255,0.06);border:1px solid rgba(91,203,245,0.15);border-radius:20px;margin-bottom:32px;display:inline-flex}.logo-card img{max-height:90px;max-width:360px;object-fit:contain}`:''}
-.agent-name{color:#fff;font-size:52px;font-weight:900;text-align:center;line-height:1.1;margin-bottom:8px}
-.agent-title{color:rgba(255,255,255,0.45);font-size:20px;text-align:center;margin-bottom:40px}
-.divider{width:60px;height:3px;background:${CYAN};border-radius:2px;margin:0 auto 40px}
-.contact-list{display:flex;flex-direction:column;align-items:center;gap:16px}
-.contact-item{color:rgba(255,255,255,0.75);font-size:24px;font-weight:600}
-.nmls{color:rgba(255,255,255,0.25);font-size:16px;margin-top:16px;text-align:center}
-.footer-bar{position:absolute;bottom:0;left:0;right:0;background:${CYAN};padding:20px 50px;display:flex;align-items:center;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.footer-text{color:${NEO};font-size:18px;font-weight:800}
-.footer-logo img{max-height:28px;max-width:120px;object-fit:contain}
-</style></head><body>
-<div class="page">
-  <div class="hero-half">
-    ${hero ? `<img src="${hero}" alt="${p.address}" />` : `<div class="hero-fallback"></div>`}
-    <div class="hero-overlay"></div>
-  </div>
-  <div class="top-logos">
-    ${p.partner_logo ? `<img src="${p.partner_logo}" alt="Partner" />` : '<div></div>'}
-    <img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" />
-  </div>
-  <div class="property-info">
-    ${price ? `<div class="prop-price">${price}</div>` : ''}
-    <div class="prop-addr">${p.address}</div>
-    ${location ? `<div class="prop-city">${location}</div>` : ''}
-    ${stats.length ? `<div class="prop-stats">${stats.map(s=>`<div class="prop-stat">${s}</div>`).join('')}</div>` : ''}
-  </div>
-  <div class="bottom-half">
-    <div class="bottom-label">Your Listing Agent</div>
-    ${p.partner_logo ? `<div class="logo-card"><img src="${p.partner_logo}" alt="${p.partner_name}" /></div>` : ''}
-    <div class="agent-name">${p.partner_name || 'Your Agent'}</div>
-    ${p.partner_title ? `<div class="agent-title">${p.partner_title}</div>` : ''}
-    <div class="divider"></div>
-    <div class="contact-list">
-      ${p.partner_phone ? `<div class="contact-item">📞 ${p.partner_phone}</div>` : ''}
-      ${p.partner_email ? `<div class="contact-item">✉ ${p.partner_email}</div>` : ''}
-    </div>
-    ${partnerNmls ? `<div class="nmls">${partnerNmls}</div>` : ''}
-  </div>
-  <div class="footer-bar">
-    <div class="footer-text">Backed by NEO Home Loans</div>
-    <div class="footer-logo"><img src="${NEO_WHITE_LOGO}" alt="NEO" /></div>
+    <div class="bb-text">Backed by NEO Home Loans</div>
+    <div class="bb-neo"><img src="${NEO_WHITE_LOGO}" alt="NEO Home Loans" /></div>
   </div>
 </div>
 <script>window.onload=function(){window.print()}</script>
@@ -549,16 +684,60 @@ const FLYERS = [
 ]
 
 const SOCIALS = [
-  { key: 'instagram', label: 'Instagram Post', sub: '1080 × 1080 · Square · Partner branding on navy', icon: '📸', size: '1080 × 1080', gen: socialInstagram },
-  { key: 'facebook', label: 'Facebook / LinkedIn', sub: '1200 × 630 · Landscape · Photo + partner card', icon: '💼', size: '1200 × 630', gen: socialFacebook },
-  { key: 'story', label: 'Story / Reel Cover', sub: '1080 × 1920 · Vertical · Property + agent spotlight', icon: '📱', size: '1080 × 1920', gen: socialStory },
+  { key: 'instagram', label: 'Instagram Post', sub: '1080 × 1080 · Warm editorial split — photos left, details right', icon: '📸', size: '1080 × 1080', gen: socialInstagram,
+    fields: [
+      { key: 'message', label: 'Personal message', placeholder: "I can't wait to give you a tour of this incredible home!", multiline: true },
+      { key: 'when', label: 'Date & time', placeholder: 'Saturday, Aug 17 · 12pm – 3pm' },
+      { key: 'where', label: 'Location (auto-filled)', placeholder: '' },
+    ]
+  },
+  { key: 'facebook', label: 'Facebook / LinkedIn', sub: '1200 × 630 · Hero photo top, photo strip + agent below', icon: '💼', size: '1200 × 630', gen: socialFacebook,
+    fields: [
+      { key: 'headline', label: 'Headline (first word italic, rest bold)', placeholder: 'Open House' },
+      { key: 'tagline', label: 'Tagline (auto-filled from address)', placeholder: '' },
+    ]
+  },
+  { key: 'story', label: 'Story / Reel Cover', sub: '1080 × 1920 · Photos left, editorial details right', icon: '📱', size: '1080 × 1920', gen: socialStory,
+    fields: [
+      { key: 'headline', label: 'Headline', placeholder: 'Open House' },
+      { key: 'message', label: 'Tagline message', placeholder: 'Join us for a private showing of this stunning home.' },
+      { key: 'when', label: 'Date & time', placeholder: 'Saturday, Aug 17 · 12pm – 3pm' },
+      { key: 'where', label: 'Location (auto-filled)', placeholder: '' },
+    ]
+  },
 ]
+
+// Wraps social HTML in a download-as-PNG page using html2canvas from CDN (blob tabs have no CSP)
+function openSocialBlob(html: string, filename: string) {
+  const wrapper = `<!DOCTYPE html><html><head><meta charset="utf-8">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a1a;display:flex;flex-direction:column;align-items:center;padding:32px 24px;gap:20px;font-family:system-ui,sans-serif}
+.dl-btn{background:#5BCBF5;color:#0A2540;font-size:15px;font-weight:800;padding:12px 32px;border-radius:8px;border:none;cursor:pointer;letter-spacing:0.04em}
+.dl-btn:hover{background:#7ad8f7}.hint{color:rgba(255,255,255,0.4);font-size:12px;margin-top:-8px}
+#wrap{display:inline-block;}</style></head><body>
+<button class="dl-btn" onclick="dl()">⬇ Download PNG</button>
+<div class="hint">Or right-click the image below → Save Image As</div>
+<div id="wrap">${html.replace(/<script>window\.onload=function\(\)\{window\.print\(\)\}<\/script>/g,'')}</div>
+<script>
+function dl(){
+  html2canvas(document.getElementById('wrap'),{scale:1,useCORS:true,allowTaint:true,logging:false}).then(c=>{
+    const a=document.createElement('a');a.download='${filename}.png';a.href=c.toDataURL('image/png');a.click()
+  })
+}
+<\/script></body></html>`
+  const blob = new Blob([wrapper], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 120000)
+}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function AgentPageClient({ slug }: { slug: string }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [socialEditing, setSocialEditing] = useState<string | null>(null)
+  const [socialEdits, setSocialEdits] = useState<Record<string, Record<string,string>>>({})
 
   useEffect(() => {
     const sb = createClient()
@@ -678,19 +857,80 @@ export default function AgentPageClient({ slug }: { slug: string }) {
         </Section>
 
         {/* Social section */}
-        <Section title="Social Media Templates" sub="Partner-branded graphics. Open in a new tab, then screenshot or print to PDF." icon="📲">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 16 }}>
-            {SOCIALS.map(s => (
-              <TemplateCard
-                key={s.key}
-                icon={s.icon}
-                label={s.label}
-                sub={s.sub}
-                accentColor={C.navy}
-                onOpen={() => openBlob(s.gen(page))}
-                badge={s.size}
-              />
-            ))}
+        <Section title="Social Media Templates" sub="Customize your message, then download as a PNG image ready to post." icon="📲">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 16 }}>
+            {SOCIALS.map(s => {
+              const edits = socialEdits[s.key] ?? {}
+              const isEditing = socialEditing === s.key
+              const defaultWhere = [page.address, page.city, page.state].filter(Boolean).join(', ')
+              const defaultTagline = Number(page.list_price) > 0 ? `${fmtPrice(page.list_price)} · ${page.address}` : page.address
+              return (
+                <div key={s.key} style={{ background: C.white, border: `1px solid ${isEditing ? C.accent : C.border}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color 0.2s' }}>
+                  {/* Card header */}
+                  <div style={{ padding: '18px 20px 14px', cursor: 'pointer' }} onClick={() => setSocialEditing(isEditing ? null : s.key)}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <div>
+                        <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
+                        <div style={{ fontWeight: 800, fontSize: 15, color: C.navy }}>{s.label}</div>
+                        <div style={{ fontSize: 12, color: C.muted, marginTop: 3, lineHeight: 1.4 }}>{s.sub}</div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, background: C.bg, padding: '3px 8px', borderRadius: 6, flexShrink: 0, marginTop: 2 }}>{s.size}</div>
+                    </div>
+                    <div style={{ marginTop: 10, fontSize: 12, color: isEditing ? C.accent : C.muted, fontWeight: 700 }}>
+                      {isEditing ? '▲ Collapse' : '▼ Edit copy before download'}
+                    </div>
+                  </div>
+                  {/* Editor */}
+                  {isEditing && (
+                    <div style={{ borderTop: `1px solid ${C.border}`, padding: '14px 20px 18px', background: '#f8fafb' }}>
+                      {s.fields.map(f => {
+                        const val = edits[f.key] ?? ''
+                        const placeholder = f.key === 'where' ? defaultWhere : f.key === 'tagline' ? defaultTagline : f.placeholder
+                        return (
+                          <div key={f.key} style={{ marginBottom: 12 }}>
+                            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 4, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</label>
+                            {f.multiline ? (
+                              <textarea
+                                value={val}
+                                placeholder={placeholder}
+                                rows={3}
+                                onChange={e => setSocialEdits(prev => ({ ...prev, [s.key]: { ...(prev[s.key]??{}), [f.key]: e.target.value } }))}
+                                style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, resize: 'vertical', fontFamily: 'inherit', color: C.dim, outline: 'none' }}
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                value={val}
+                                placeholder={placeholder}
+                                onChange={e => setSocialEdits(prev => ({ ...prev, [s.key]: { ...(prev[s.key]??{}), [f.key]: e.target.value } }))}
+                                style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', color: C.dim, outline: 'none' }}
+                              />
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {/* Download button */}
+                  <div style={{ padding: '0 20px 18px' }}>
+                    <button
+                      onClick={() => {
+                        const finalEdits: Record<string,string> = {
+                          where: defaultWhere,
+                          tagline: defaultTagline,
+                          ...edits,
+                        }
+                        const address = [page.address, page.city].filter(Boolean).join('-').replace(/[^a-zA-Z0-9-]/g, '').toLowerCase()
+                        openSocialBlob(s.gen(page, finalEdits), `${s.key}-${address}`)
+                      }}
+                      style={{ width: '100%', padding: '10px 0', background: C.navy, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer', letterSpacing: '0.03em' }}
+                    >
+                      ⬇ Download PNG
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </Section>
 

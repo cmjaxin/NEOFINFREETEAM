@@ -517,6 +517,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       partner_nmls: showPartner ? form.partner_nmls : '',
       partner_photo: showPartner ? form.partner_photo : '',
       partner_logo: showPartner ? form.partner_logo : '',
+      page_type: 'listing',
       updated_at: new Date().toISOString(),
     }
 
@@ -885,7 +886,7 @@ export default function OpenHouseView() {
 
   async function load() {
     if (!profile?.id) return
-    const { data } = await supabase.from('open_house_pages').select('*').eq('status', 'active').eq('created_by', profile.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('open_house_pages').select('*').eq('status', 'active').eq('created_by', profile.id).eq('page_type', 'listing').order('created_at', { ascending: false })
     setPages((data ?? []) as OHPage[])
     setLoading(false)
   }

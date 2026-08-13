@@ -262,9 +262,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
     </div>
   )
 
+  const hasLoanContent = !!(page.loan_description || page.tca_url)
   const TABS = [
     { id: 'overview', label: 'Property Info' },
-    { id: 'loan', label: 'Loan Scenarios' },
+    ...(hasLoanContent ? [{ id: 'loan', label: 'Loan Scenarios' }] : []),
     { id: 'contact', label: 'Contact' },
   ] as const
 
