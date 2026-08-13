@@ -26,6 +26,7 @@ interface OHPage {
   partner_name: string; partner_title: string; partner_email: string
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string
+  tca_screenshot: string
 }
 
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
@@ -56,13 +57,273 @@ function Field({ label, name, type = 'text', placeholder = '', half = false, not
   )
 }
 
+// ─── Flyer Generator ──────────────────────────────────────────────────────────
+function openFlyer(page: OHPage) {
+  const NEO = '#0A2540'
+  const CYAN = '#5BCBF5'
+  const photos = page.photos ?? []
+  const hero = photos[0] ?? ''
+  const small = [photos[1] ?? '', photos[2] ?? '', photos[3] ?? '']
+  const desc = (page.description ?? '').slice(0, 600)
+  const price = fmtPrice(page.list_price || 0)
+  const location = [page.city, page.state, page.zip].filter(Boolean).join(', ')
+  const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
+  const partnerNmls = page.partner_nmls ? `NMLS# ${page.partner_nmls}` : ''
+
+  const stats = [
+    page.beds ? `${page.beds} Beds` : '',
+    page.baths ? `${page.baths} Baths` : '',
+    page.sqft ? `${page.sqft.toLocaleString()} Sq Ft` : '',
+    page.lot_size ? `${page.lot_size} Lot` : '',
+    page.year_built ? `Built ${page.year_built}` : '',
+  ].filter(Boolean)
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Listing — ${page.address}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@page { size: letter portrait; margin: 0; }
+html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial', Helvetica, sans-serif; background: #fff; }
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  width: 100%; height: 3.1in;
+  overflow: hidden;
+  background: #CBD5E1;
+}
+.hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-fallback {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, ${NEO} 0%, #1a4a7c 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 72px;
+}
+.hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(10,37,64,0.88) 0%, rgba(10,37,64,0.1) 55%, transparent 100%);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.hero-content {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 18px 24px 16px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+}
+.hero-address { color: #fff; }
+.hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
+.hero-logo { text-align: right; }
+.hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; filter: brightness(0) invert(1); }
+
+/* ── PRICE BAR ── */
+.price-bar {
+  height: 0.55in;
+  background: ${NEO};
+  display: flex; align-items: center;
+  padding: 0 24px;
+  gap: 0;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.price-tag { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 10px; }
+.price-value { font-size: 30px; font-weight: 900; color: ${CYAN}; letter-spacing: -0.01em; }
+.price-divider { width: 1px; height: 28px; background: rgba(91,203,245,0.25); margin: 0 20px; flex-shrink: 0; }
+.stats-row { display: flex; gap: 0; flex-wrap: nowrap; overflow: hidden; }
+.stat-chip {
+  font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.85);
+  padding: 0 12px; white-space: nowrap;
+  border-right: 1px solid rgba(91,203,245,0.2);
+}
+.stat-chip:last-child { border-right: none; }
+
+/* ── MAIN ── */
+.main { display: flex; height: 5.3in; }
+
+/* LEFT COLUMN */
+.left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
+.section-label { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: ${CYAN}; margin-bottom: 5px; }
+.desc-text { font-size: 10px; line-height: 1.75; color: #374151; }
+.tca-card {
+  flex: 1;
+  border: 1px solid #E4E8EC;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  min-height: 0;
+}
+.tca-header {
+  background: ${NEO};
+  padding: 7px 12px;
+  display: flex; align-items: center; gap: 8px;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.tca-header-dot { width: 6px; height: 6px; border-radius: 50%; background: ${CYAN}; flex-shrink: 0; }
+.tca-header-text { font-size: 9px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.1em; }
+.tca-img { flex: 1; overflow: hidden; min-height: 0; }
+.tca-img img { width: 100%; height: 100%; object-fit: contain; object-position: top; display: block; }
+.tca-placeholder {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  background: #F8FAFC;
+  flex-direction: column; gap: 8px;
+  color: #94A3B8; font-size: 11px; text-align: center; padding: 20px;
+}
+
+/* RIGHT COLUMN */
+.right { flex: 0 0 42%; padding: 16px 20px 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.photo-slot { flex: 1; min-height: 0; overflow: hidden; border-radius: 8px; border: 1px solid #E4E8EC; background: #F1F5F9; }
+.photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; }
+.photo-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #CBD5E1; font-size: 28px; }
+
+/* ── CONTACT BAR ── */
+.contact-bar {
+  height: 1.3in;
+  background: ${NEO};
+  display: flex; align-items: stretch;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.contact-cell { flex: 1; display: flex; align-items: center; gap: 14px; padding: 0 22px; }
+.contact-sep { width: 1px; background: rgba(91,203,245,0.18); margin: 14px 0; flex-shrink: 0; }
+.contact-center { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 0 18px; }
+.contact-center img { max-height: 36px; max-width: 120px; object-fit: contain; filter: brightness(0) invert(1); }
+.c-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${CYAN}; }
+.c-init { width: 56px; height: 56px; border-radius: 50%; background: rgba(91,203,245,0.12); border: 2px solid rgba(91,203,245,0.35); display: flex; align-items: center; justify-content: center; color: ${CYAN}; font-size: 22px; font-weight: 900; flex-shrink: 0; }
+.c-info { color: #fff; }
+.c-role { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: ${CYAN}; margin-bottom: 3px; }
+.c-name { font-size: 14px; font-weight: 800; line-height: 1.15; }
+.c-detail { font-size: 9px; color: rgba(255,255,255,0.55); margin-top: 5px; line-height: 1.6; }
+
+/* ── FOOTER ── */
+.footer {
+  height: 0.2in;
+  background: #F8FAFC;
+  border-top: 2px solid ${CYAN};
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.footer-disc { font-size: 6px; color: #9CA3AF; }
+.footer-ehl { font-size: 7px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.05em; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  ${hero ? `<img src="${hero}" alt="${page.address}" />` : `<div class="hero-fallback">🏡</div>`}
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-address">
+      <div class="hero-street">${page.address}</div>
+      ${location ? `<div class="hero-city">${location}</div>` : ''}
+    </div>
+    <div class="hero-logo">
+      <img src="/neo-logo.png" alt="NEO Home Loans" />
+    </div>
+  </div>
+</div>
+
+<!-- PRICE BAR -->
+<div class="price-bar">
+  <span class="price-tag">List Price</span>
+  <span class="price-value">${price}</span>
+  ${stats.length > 0 ? `<div class="price-divider"></div><div class="stats-row">${stats.map(s => `<span class="stat-chip">${s}</span>`).join('')}</div>` : ''}
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="left">
+    ${desc ? `
+    <div>
+      <div class="section-label">About This Property</div>
+      <p class="desc-text">${desc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
+    </div>` : ''}
+
+    <div class="tca-card">
+      <div class="tca-header">
+        <div class="tca-header-dot"></div>
+        <span class="tca-header-text">Total Cost Analysis — MortgageCoach</span>
+      </div>
+      ${page.tca_screenshot
+        ? `<div class="tca-img"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>`
+        : `<div class="tca-placeholder">
+            <div style="font-size:28px;opacity:0.4">📊</div>
+            <div>Upload a TCA screenshot<br>in the listing editor to show it here</div>
+           </div>`}
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    ${small.map((url, i) => `
+    <div class="photo-slot">
+      ${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : `<div class="photo-empty">🏠</div>`}
+    </div>`).join('')}
+  </div>
+
+</div>
+
+<!-- CONTACT BAR -->
+<div class="contact-bar">
+  ${page.partner_name ? `
+  <div class="contact-cell">
+    ${page.partner_photo
+      ? `<img class="c-photo" src="${page.partner_photo}" alt="${page.partner_name}" />`
+      : `<div class="c-init">${(page.partner_name[0] ?? '?').toUpperCase()}</div>`}
+    <div class="c-info">
+      <div class="c-role">${page.partner_title || 'Listing Agent'}</div>
+      <div class="c-name">${page.partner_name}</div>
+      <div class="c-detail">${[page.partner_phone, page.partner_email, partnerNmls].filter(Boolean).join('<br>')}</div>
+    </div>
+  </div>
+  <div class="contact-sep"></div>` : ''}
+
+  <div class="contact-center">
+    ${page.partner_logo
+      ? `<img src="${page.partner_logo}" alt="${page.partner_name}" style="filter:none;max-height:44px;max-width:130px;object-fit:contain;" />`
+      : `<img src="/neo-logo.png" alt="NEO Home Loans" />`}
+  </div>
+
+  ${page.advisor_name ? `
+  <div class="contact-sep"></div>
+  <div class="contact-cell" style="justify-content:flex-end">
+    <div class="c-info" style="text-align:right">
+      <div class="c-role">${page.advisor_title || 'Mortgage Advisor'} · NEO Home Loans</div>
+      <div class="c-name">${page.advisor_name}</div>
+      <div class="c-detail">${[page.advisor_phone, page.advisor_email, advisorNmls].filter(Boolean).join('<br>')}</div>
+    </div>
+    ${page.advisor_photo
+      ? `<img class="c-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" />`
+      : `<div class="c-init">${(page.advisor_name[0] ?? '?').toUpperCase()}</div>`}
+  </div>` : ''}
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <span class="footer-disc">NEO Home Loans NMLS #1770216. Equal Housing Lender. This is not a commitment to lend. Rates and terms subject to change without notice. NMLS Consumer Access: www.nmlsconsumeraccess.org</span>
+  <span class="footer-ehl">⊟ EQUAL HOUSING LENDER</span>
+</div>
+
+<script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`
+
+  const w = window.open('', '_blank')
+  if (w) { w.document.write(html); w.document.close() }
+}
+
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
 function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [tcaUploading, setTcaUploading] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
+  const tcaRef = useRef<HTMLInputElement>(null)
   const [marketingPartners, setMarketingPartners] = useState<MarketingPartner[]>([])
 
   useEffect(() => {
@@ -104,6 +365,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     photos: init.photos ?? [] as string[],
     list_price: String(init.list_price ?? ''),
     tca_url: (init as OHPage).tca_url ?? '',
+    tca_screenshot: (init as OHPage).tca_screenshot ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
     advisor_title: init.advisor_title || profile?.title || '',
     advisor_email: init.advisor_email || profile?.email || '',
@@ -121,6 +383,20 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   const [showPartner, setShowPartner] = useState(!!(init as OHPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
   const [showPartnerDropdown, setShowPartnerDropdown] = useState(false)
+
+  // Sync profile fields when profile loads asynchronously (useState only runs once on mount)
+  useEffect(() => {
+    if (!profile) return
+    setForm(f => ({
+      ...f,
+      advisor_name: f.advisor_name || profile.full_name || '',
+      advisor_title: f.advisor_title || profile.title || '',
+      advisor_email: f.advisor_email || profile.email || '',
+      advisor_phone: f.advisor_phone || profile.phone || '',
+      advisor_nmls: f.advisor_nmls || profile.nmls || '',
+      advisor_photo: f.advisor_photo || profile.headshot_url || '',
+    }))
+  }, [profile?.id])
 
   function set(k: string, v: unknown) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -190,6 +466,18 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     setPhotoUploading(false)
   }
 
+  async function uploadTcaScreenshot(file: File) {
+    setTcaUploading(true)
+    const resized = await resizeImage(file, 2400, 0.9)
+    const path = `open-house/tca-${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+    const { error } = await supabase.storage.from('splice-clips').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
+    if (!error) {
+      const { data } = supabase.storage.from('splice-clips').getPublicUrl(path)
+      set('tca_screenshot', data.publicUrl)
+    }
+    setTcaUploading(false)
+  }
+
   function triggerSlotUpload(i: number) {
     slotUploadIndex.current = i
     photoRef.current?.click()
@@ -216,6 +504,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       photos: form.photos,
       list_price: Number(form.list_price) || 0,
       tca_url: form.tca_url || null,
+      tca_screenshot: form.tca_screenshot || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
       advisor_email: form.advisor_email,
@@ -241,10 +530,10 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       }
     }
     let { error } = await attempt(payload)
-    // If tca_url column doesn't exist yet, retry without it
-    if (error?.code === '42703' && error.message.includes('tca_url')) {
-      const { tca_url: _omit, ...payloadWithout } = payload
-      ;({ error } = await attempt(payloadWithout as typeof payload))
+    // If any new optional columns don't exist yet in the DB, strip them and retry
+    if (error?.code === '42703') {
+      const { tca_url: _a, tca_screenshot: _b, ...corePayload } = payload
+      ;({ error } = await attempt(corePayload as typeof payload))
     }
     if (error) { setMsg(`Save failed: ${error.message} (${error.code})`); setSaving(false); return }
     setSaving(false)
@@ -271,7 +560,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="City" name="city" placeholder="Salt Lake City" half value={form.city} onChange={set} />
               <Field label="State" name="state" placeholder="UT" half value={form.state} onChange={set} />
               <Field label="Zip" name="zip" placeholder="84101" half value={form.zip} onChange={set} />
-              <Field label="List Price *" name="list_price" type="number" placeholder="500000" half value={String(form.list_price ?? '')} onChange={set} />
+              <Field label="List Price" name="list_price" type="number" placeholder="500000" half value={String(form.list_price ?? '')} onChange={set} />
               <Field label="Beds" name="beds" type="number" placeholder="4" half value={String(form.beds ?? '')} onChange={set} />
               <Field label="Baths" name="baths" type="number" placeholder="2.5" half value={String(form.baths ?? '')} onChange={set} />
               <Field label="Sq Ft" name="sqft" type="number" placeholder="2400" half value={String(form.sqft ?? '')} onChange={set} />
@@ -292,17 +581,16 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
           {/* Photos */}
           <section>
-            <SectionHead title="Photos" sub="Photos 1–4 are used on the flyer. Add more below for the online gallery." />
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Flyer Photos</div>
+            <SectionHead title="Photos" sub="Photo 1 is the hero. Photos 2–4 appear in the right column of the flyer." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {[0, 1, 2, 3].map(i => {
                 const photos = form.photos as string[]
                 const url = photos[i] ?? ''
                 const labels = [
-                  'Photo 1 — Exterior Hero (large flyer image)',
-                  'Photo 2 — Right column top',
-                  'Photo 3 — Right column middle',
-                  'Photo 4 — Right column bottom',
+                  'Photo 1 — Hero (full-width flyer banner)',
+                  'Photo 2 — Flyer right column, top',
+                  'Photo 3 — Flyer right column, middle',
+                  'Photo 4 — Flyer right column, bottom',
                 ]
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -340,10 +628,38 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
             <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
           </section>
 
-          {/* TCA Link */}
+          {/* TCA Link + Screenshot */}
           <section>
-            <SectionHead title="TCA Link" sub="Paste your MortgageCoach report URL — it embeds live on the Seller Advantage tab" />
-            <Field label="MortgageCoach URL" name="tca_url" placeholder="https://report.mortgagecoach.com/v2/classic/#…" value={form.tca_url} onChange={set} note="Each listing gets its own TCA link. The Seller Advantage PDF is shared across all listings." />
+            <SectionHead title="MortgageCoach TCA" sub="The URL embeds live on the Seller Advantage tab. The screenshot appears on the printed flyer." />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Field label="TCA URL (for online page)" name="tca_url" placeholder="https://report.mortgagecoach.com/v2/classic/#…" value={form.tca_url} onChange={set} />
+              {/* TCA Screenshot for Flyer */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>TCA Screenshot (for flyer)</label>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Take a screenshot of your MortgageCoach report and upload it here — it prints on the left side of the flyer.</div>
+                {form.tca_screenshot ? (
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <img src={form.tca_screenshot} alt="TCA Screenshot" style={{ width: '100%', maxHeight: 200, objectFit: 'contain', objectPosition: 'top left', borderRadius: 8, border: `1px solid ${C.border}`, display: 'block' }} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <button onClick={() => tcaRef.current?.click()} disabled={tcaUploading}
+                        style={{ padding: '6px 14px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.dim, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
+                        {tcaUploading ? 'Uploading…' : 'Replace'}
+                      </button>
+                      <button onClick={() => set('tca_screenshot', '')}
+                        style={{ padding: '6px 12px', border: 'none', borderRadius: 6, background: '#FEF2F2', color: C.red, fontSize: 12, cursor: 'pointer' }}>
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => tcaRef.current?.click()} disabled={tcaUploading}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6, width: '100%', height: 100, border: `2px dashed ${C.border}`, borderRadius: 10, background: C.white, color: C.muted, cursor: 'pointer', fontSize: 13 }}>
+                    {tcaUploading ? <span>Uploading…</span> : <><span style={{ fontSize: 28 }}>📊</span><span>Upload TCA Screenshot</span></>}
+                  </button>
+                )}
+                <input ref={tcaRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) uploadTcaScreenshot(e.target.files[0]) }} />
+              </div>
+            </div>
           </section>
 
           {/* Advisor */}
@@ -485,16 +801,27 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
           {page.baths ? <span>{page.baths} ba</span> : null}
           {page.sqft ? <span>{page.sqft.toLocaleString()} sqft</span> : null}
         </div>
-        {page.tca_url && (
-          <div style={{ marginTop: 8, fontSize: 11, background: 'rgba(91,203,245,0.1)', borderRadius: 6, padding: '4px 8px', color: C.navy, display: 'inline-flex', gap: 6, alignSelf: 'flex-start' }}>
-            ✓ TCA linked
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+          {page.tca_url && (
+            <div style={{ fontSize: 11, background: 'rgba(91,203,245,0.1)', borderRadius: 6, padding: '3px 8px', color: C.navy, fontWeight: 600 }}>
+              ✓ TCA linked
+            </div>
+          )}
+          {page.tca_screenshot && (
+            <div style={{ fontSize: 11, background: 'rgba(22,163,74,0.1)', borderRadius: 6, padding: '3px 8px', color: C.green, fontWeight: 600 }}>
+              ✓ Flyer screenshot
+            </div>
+          )}
+        </div>
         <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a href={url} target="_blank" rel="noopener noreferrer"
             style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
             View Page
           </a>
+          <button onClick={() => openFlyer(page)}
+            style={{ padding: '8px 12px', background: C.accent, border: 'none', borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+            Print Flyer
+          </button>
           <button onClick={() => { navigator.clipboard.writeText(window.location.origin + url) }}
             style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
             Copy Link
