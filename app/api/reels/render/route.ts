@@ -59,7 +59,7 @@ function buildCaptionElements(words: WhisperWord[], timelineOffset: number, chun
       background_y_padding: '18%',
       background_border_radius: '25%',
       x: '50%',
-      y: '82%',
+      y: '76%',
       width: '85%',
       x_alignment: '50%',
       y_alignment: '50%',
