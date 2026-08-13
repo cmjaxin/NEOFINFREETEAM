@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'production' as const,  label: 'Production' },
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
-    { id: 'openhouse' as const,   label: 'Listing Presentations' },
+    ...(profile?.can_listings ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
     { id: 'reels' as const,       label: 'Splice' },
   ]
 

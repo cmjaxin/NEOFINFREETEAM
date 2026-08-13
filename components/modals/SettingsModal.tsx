@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useApp } from '@/lib/appContext'
 import Modal from '@/components/ui/Modal'
 import { Input, Label } from '@/components/ui/Input'
@@ -33,6 +33,14 @@ export default function SettingsModal() {
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_listings?: boolean }[]>([])
+
+  useEffect(() => {
+    if (profile?.role !== 'admin') return
+    supabase.from('profiles').select('id, full_name, email, can_listings').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
+      if (data) setApprovedProfiles(data)
+    })
+  }, [profile?.id])
 
   function set(k: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -70,6 +78,11 @@ export default function SettingsModal() {
     } catch (e: any) {
       setError(e.message ?? 'Something went wrong')
     }
+  }
+
+  async function toggleListings(id: string, current: boolean) {
+    await supabase.from('profiles').update({ can_listings: !current }).eq('id', id)
+    setApprovedProfiles(prev => prev.map(p => p.id === id ? { ...p, can_listings: !current } : p))
   }
 
   async function approve(id: string) {
@@ -160,6 +173,40 @@ export default function SettingsModal() {
                   </div>
                   <button onClick={() => deny(p.id)} style={{ background: '#fff', border: '1px solid #E4D3CF', color: '#9A5A54', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Deny</button>
                   <button onClick={() => approve(p.id)} style={{ background: '#2E7D57', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Approve</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {profile?.role === 'admin' && approvedProfiles.length > 0 && (
+          <div style={{ marginTop: 22, borderTop: '1px solid #EEF1F4', paddingTop: 18 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#858889', marginBottom: 4 }}>Feature Access</div>
+            <div style={{ fontSize: 12.5, color: '#858889', marginBottom: 12 }}>Control which team members can create Listing Presentations.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {approvedProfiles.map(p => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #EEF1F4', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#132B44' }}>{p.full_name}</div>
+                    <div style={{ fontSize: 11, color: '#858889' }}>{p.email}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: '#858889' }}>Listing Pages</span>
+                    <button
+                      onClick={() => toggleListings(p.id, !!p.can_listings)}
+                      style={{
+                        width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                        background: p.can_listings ? '#0A2540' : '#D1D5DB',
+                        position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute', top: 3, left: p.can_listings ? 21 : 3,
+                        width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                        transition: 'left 0.2s',
+                      }} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
