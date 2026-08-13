@@ -139,7 +139,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .stat-chip:last-child { border-right: none; }
 
 /* ── MAIN ── */
-.main { display: flex; height: 5.57in; }
+.main { display: flex; height: 6.12in; }
 
 /* LEFT COLUMN */
 .left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
