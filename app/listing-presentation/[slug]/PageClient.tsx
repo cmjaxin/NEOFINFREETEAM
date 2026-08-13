@@ -4,9 +4,8 @@
 const SELLER_ADVANTAGE_PDF_URL = 'https://qrkwcdyqqozkvenwuoun.supabase.co/storage/v1/object/public/splice-clips/Stern%20Team%20Seller%20Advantage%20Program_081026.pdf'
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import LeadCaptureModal from '@/components/LeadCaptureModal'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -199,15 +198,6 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'tca' | 'contact'>('tca')
-  const [showLead, setShowLead] = useState(false)
-  const leadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    try { if (sessionStorage.getItem('lp_lead_captured')) return } catch {}
-    leadTimerRef.current = setTimeout(() => setShowLead(true), 15000)
-    return () => { if (leadTimerRef.current) clearTimeout(leadTimerRef.current) }
-  }, [])
-
   useEffect(() => {
     const sb = createClient()
     sb.from('open_house_pages')
@@ -276,13 +266,6 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Montserrat', system-ui, sans-serif" }}>
-      {showLead && (
-        <LeadCaptureModal
-          address={page.address + (page.city ? ', ' + page.city : '')}
-          bntouchUserId={page.bntouch_user_id}
-          onDismiss={() => setShowLead(false)}
-        />
-      )}
       {/* Header */}
       <header style={{ background: C.navy, padding: '14px 0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
