@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import LeadCaptureModal from '@/components/LeadCaptureModal'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -423,22 +424,11 @@ export default function SignRiderPage({ slug }: { slug: string }) {
 
       {/* BNTouch Lead Capture Modal (15 second timer) */}
       {showLead && page.bntouch_user_id && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 480, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
-            <div style={{ background: C.navy, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ color: '#fff', fontWeight: 800, fontSize: 17 }}>Get More Info on This Home</div>
-                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 3 }}>Leave your info and we&apos;ll reach out with details</div>
-              </div>
-              <button onClick={() => setShowLead(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button>
-            </div>
-            <iframe
-              src={`https://crm.bntouch.com/widget/lead-form/${page.bntouch_user_id}`}
-              style={{ width: '100%', height: 420, border: 'none', display: 'block' }}
-              title="Contact Form"
-            />
-          </div>
-        </div>
+        <LeadCaptureModal
+          address={page.address}
+          bntouchUserId={page.bntouch_user_id}
+          onDismiss={() => setShowLead(false)}
+        />
       )}
 
       <style>{`

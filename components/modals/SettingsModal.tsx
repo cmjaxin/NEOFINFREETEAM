@@ -27,6 +27,7 @@ export default function SettingsModal() {
     phone: profile?.phone ?? '',
     headshot_url: profile?.headshot_url ?? '',
     schedule_url: profile?.schedule_url ?? '',
+    apply_url: (profile as any)?.apply_url ?? '',
     bntouch_user_id: profile?.bntouch_user_id ?? '',
     password: '',
   })
@@ -69,6 +70,7 @@ export default function SettingsModal() {
         phone: form.phone.trim(),
         headshot_url: form.headshot_url,
         schedule_url: form.schedule_url.trim() || null,
+        apply_url: form.apply_url.trim() || null,
         bntouch_user_id: form.bntouch_user_id.trim() || null,
       }).eq('id', profile!.id)
       if (form.password) {
@@ -153,6 +155,11 @@ export default function SettingsModal() {
           <Label>Booking / Scheduling Link</Label>
           <Input value={form.schedule_url} onChange={set('schedule_url')} placeholder="https://youcanbook.me/…" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Schedule" button on your listing presentation pages.</div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Label>Apply Now Link</Label>
+          <Input value={form.apply_url} onChange={set('apply_url')} placeholder="https://apply.neohomeloans.com/…" />
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Apply Now" button on your sign rider pages.</div>
         </div>
         <div style={{ marginTop: 12 }}>
           <Label>BNTouch User ID</Label>
