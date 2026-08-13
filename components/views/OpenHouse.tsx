@@ -139,7 +139,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .stat-chip:last-child { border-right: none; }
 
 /* ── MAIN ── */
-.main { display: flex; height: 6.12in; }
+.main { display: flex; height: 5.97in; }
 
 /* LEFT COLUMN */
 .left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
@@ -196,7 +196,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 
 /* ── FOOTER ── */
 .footer {
-  height: 0.28in;
+  height: 0.43in;
   background: #F8FAFC;
   border-top: 2px solid ${CYAN};
   display: flex; align-items: center; justify-content: space-between;
@@ -304,6 +304,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 <!-- FOOTER -->
 <div class="footer">
   <span class="footer-disc">BETTER MORTGAGE RESERVES THE RIGHT TO MODIFY OR DISCONTINUE PRODUCTS, PROMOTIONS AND BENEFITS AT ANY TIME WITHOUT NOTICE. Rates and Terms are subject to change at any time without notice and are subject to state restrictions. The Better Home Logo is Registered in the U.S. Patent and Trademark Office. © 2025 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access.</span>
+  <img src="https://ourcpb.bank/wp-content/uploads/2024/03/equal-housing-lender-logo-png-transparent.png" alt="Equal Housing Lender" style="height:22px;width:auto;object-fit:contain;flex-shrink:0;margin-left:10px;" />
 </div>
 
 <script>window.onload = function() { window.print(); }</script>
