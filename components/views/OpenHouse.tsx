@@ -582,13 +582,16 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="Year Built" name="year_built" type="number" placeholder="2005" half value={String(form.year_built ?? '')} onChange={set} />
             </div>
             <div style={{ marginTop: 12 }}>
-              <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                <label style={{ fontSize: 11.5, fontWeight: 700, color: C.dim, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Description</label>
+                <span style={{ fontSize: 11, color: form.description.length > 900 ? C.red : C.muted }}>{form.description.length} / 900</span>
+              </div>
               <textarea
                 placeholder="Describe the property…"
                 value={form.description}
-                onChange={e => set('description', e.target.value)}
+                onChange={e => set('description', e.target.value.slice(0, 900))}
                 rows={3}
-                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${form.description.length >= 900 ? C.red : C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
               />
             </div>
           </section>
