@@ -720,6 +720,151 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:#FAF0E8;-webkit-
 </body></html>`
 }
 
+// ─── SOCIAL: Square Bold Dark ─────────────────────────────────────────────────
+// Full-bleed photo, dark gradient, large price/address hero, agent strip bottom
+function socialSquareBold(p: PageData, edits: Record<string,string>) {
+  const NEO = C.navy; const CYAN = C.accent
+  const photos = p.photos ?? []
+  const hero = photos[0] ?? ''
+  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
+  const headline = edits.headline || 'Open House'
+  const when = edits.when || ''
+  const where = edits.where || [p.address, p.city, p.state].filter(Boolean).join(', ')
+  const stats = [p.beds?`${p.beds} BD`:'',p.baths?`${p.baths} BA`:'',p.sqft?`${p.sqft.toLocaleString()} SF`:''].filter(Boolean)
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${SOCIAL_FONTS}<title>Square Bold — ${p.address}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}@page{size:1080px 1080px;margin:0}
+html,body{width:1080px;height:1080px;overflow:hidden;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:1080px;height:1080px;position:relative}
+.bg{position:absolute;inset:0}
+.bg img{width:100%;height:100%;object-fit:cover;display:block}
+.bg-fallback{width:100%;height:100%;background:linear-gradient(135deg,${NEO},#0d3060)}
+.overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.2) 0%,rgba(0,0,0,0.05) 30%,rgba(0,0,0,0.75) 65%,rgba(0,0,0,0.97) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.top{position:absolute;top:0;left:0;right:0;padding:50px 54px;display:flex;align-items:center;justify-content:space-between}
+.top-badge{background:${CYAN};color:#000;font-family:'Montserrat',sans-serif;font-size:17px;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;padding:11px 28px;border-radius:99px}
+.top-logo{background:rgba(255,255,255,0.9);padding:10px 18px;border-radius:10px;display:flex;align-items:center;gap:14px}
+.top-logo .partner-img{max-height:42px;max-width:160px;object-fit:contain}
+.top-logo .sep{width:1px;height:32px;background:#D1D5DB}
+.top-logo .neo-img{max-height:24px;max-width:90px;object-fit:contain;opacity:0.6}
+.bottom{position:absolute;bottom:0;left:0;right:0;padding:0 54px 54px}
+.b-headline{font-family:'Playfair Display',serif;font-size:38px;font-style:italic;color:rgba(255,255,255,0.55);letter-spacing:0.04em;margin-bottom:6px}
+.b-price{font-family:'Montserrat',sans-serif;font-size:88px;font-weight:900;color:#fff;letter-spacing:-0.04em;line-height:1;margin-bottom:12px}
+.b-addr{font-family:'Montserrat',sans-serif;font-size:28px;font-weight:700;color:rgba(255,255,255,0.9);margin-bottom:6px}
+.b-city{font-family:'Montserrat',sans-serif;font-size:20px;color:rgba(255,255,255,0.5);margin-bottom:28px}
+.b-stats{display:flex;gap:0;margin-bottom:40px}
+.b-stat{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:700;color:rgba(255,255,255,0.8);padding-right:22px;margin-right:22px;border-right:1px solid rgba(91,203,245,0.4)}
+.b-stat:last-child{border:none}
+.b-row{display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid rgba(255,255,255,0.12);padding-top:28px}
+.b-when{font-family:'Montserrat',sans-serif;font-size:17px;color:rgba(255,255,255,0.6);font-weight:600;line-height:1.5}
+.b-agent{text-align:right}
+.b-agent-name{font-family:'Montserrat',sans-serif;font-size:22px;font-weight:800;color:#fff}
+.b-agent-detail{font-family:'Montserrat',sans-serif;font-size:15px;color:rgba(255,255,255,0.5);margin-top:3px}
+</style></head><body>
+<div class="page">
+  <div class="bg">${hero?`<img src="${hero}" alt="" />`:`<div class="bg-fallback"></div>`}</div>
+  <div class="overlay"></div>
+  <div class="top">
+    <div class="top-badge">${headline}</div>
+    <div class="top-logo">
+      ${p.partner_logo?`<img class="partner-img" src="${p.partner_logo}" alt="" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /><div class="sep"></div>`:''}
+      <img class="neo-img" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+    </div>
+  </div>
+  <div class="bottom">
+    <div class="b-headline">For Sale</div>
+    ${price?`<div class="b-price">${price}</div>`:''}
+    <div class="b-addr">${p.address}</div>
+    ${p.city||p.state?`<div class="b-city">${[p.city,p.state].filter(Boolean).join(', ')}</div>`:''}
+    ${stats.length?`<div class="b-stats">${stats.map(s=>`<div class="b-stat">${s}</div>`).join('')}</div>`:''}
+    <div class="b-row">
+      <div class="b-when">${when?`📅 ${when}`:where}</div>
+      <div class="b-agent">
+        <div class="b-agent-name">${p.partner_name||''}</div>
+        <div class="b-agent-detail">${p.partner_phone||''}</div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
+// ─── SOCIAL: Square Minimal ───────────────────────────────────────────────────
+// Clean white card: photo top 55%, white bottom with editorial headline + agent
+function socialSquareMinimal(p: PageData, edits: Record<string,string>) {
+  const NEO = C.navy; const CYAN = C.accent
+  const photos = p.photos ?? []
+  const hero = photos[0] ?? ''; const ph2 = photos[1] ?? ''
+  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
+  const headline = edits.headline || 'Open House'
+  const message = edits.message || "This stunning home is ready for you. Come see it in person."
+  const when = edits.when || ''
+  const stats = [p.beds?`${p.beds} Bed`:'',p.baths?`${p.baths} Bath`:'',p.sqft?`${p.sqft.toLocaleString()} ft²`:''].filter(Boolean)
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">${SOCIAL_FONTS}<title>Square Minimal — ${p.address}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}@page{size:1080px 1080px;margin:0}
+html,body{width:1080px;height:1080px;overflow:hidden;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:1080px;height:1080px;display:flex;flex-direction:column}
+.photos{height:520px;display:flex;gap:4px;flex-shrink:0}
+.ph-main{flex:0 0 680px;overflow:hidden;background:#E4E8EC}
+.ph-main img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-side{flex:1;overflow:hidden;background:#D0D5DD}
+.ph-side img{width:100%;height:100%;object-fit:cover;display:block}
+.ph-empty{width:100%;height:100%;background:#E4E8EC}
+.content{flex:1;background:#fff;display:flex;flex-direction:column;padding:0}
+.top-stripe{background:${NEO};height:5px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.inner{flex:1;padding:38px 50px 32px;display:flex;flex-direction:column}
+.headline-row{display:flex;align-items:baseline;gap:16px;margin-bottom:18px}
+.h-script{font-family:'Dancing Script',cursive;font-size:64px;font-weight:700;color:${CYAN};line-height:1}
+.h-serif{font-family:'Playfair Display',serif;font-size:64px;font-weight:900;color:${NEO};line-height:1;letter-spacing:-0.02em}
+.price-row{display:flex;align-items:center;gap:28px;margin-bottom:14px}
+.price{font-family:'Montserrat',sans-serif;font-size:46px;font-weight:900;color:${NEO};letter-spacing:-0.02em}
+.stats{display:flex;gap:0}
+.stat{font-family:'Montserrat',sans-serif;font-size:18px;font-weight:700;color:#6B7280;padding-right:16px;margin-right:16px;border-right:1px solid #E4E8EC}
+.stat:last-child{border:none}
+.message{font-family:'Montserrat',sans-serif;font-size:19px;color:#4B5563;line-height:1.65;font-weight:500;flex:1}
+.bottom-row{display:flex;align-items:center;justify-content:space-between;margin-top:24px;padding-top:20px;border-top:1px solid #E4E8EC}
+.agent-info{display:flex;align-items:center;gap:16px}
+.agent-photo{width:60px;height:60px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#E4E8EC}
+.agent-init{width:60px;height:60px;border-radius:50%;background:${NEO};display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-size:22px;font-weight:900;color:${CYAN};flex-shrink:0}
+.agent-name{font-family:'Montserrat',sans-serif;font-size:20px;font-weight:800;color:${NEO}}
+.agent-detail{font-family:'Montserrat',sans-serif;font-size:14px;color:#9CA3AF;margin-top:2px}
+.logos{display:flex;align-items:center;gap:14px}
+.logos img{object-fit:contain}
+.logos .partner-img{max-height:40px;max-width:150px}
+.logos .logo-sep{width:1px;height:30px;background:#E4E8EC}
+.logos .neo-img{max-height:22px;max-width:86px;opacity:0.4}
+.when-tag{font-family:'Montserrat',sans-serif;font-size:16px;font-weight:700;color:${CYAN};background:rgba(91,203,245,0.1);padding:8px 18px;border-radius:99px;margin-bottom:14px;display:inline-block}
+</style></head><body>
+<div class="page">
+  <div class="photos">
+    <div class="ph-main">${hero?`<img src="${hero}" alt="" />`:`<div class="ph-empty"></div>`}</div>
+    <div class="ph-side">${ph2?`<img src="${ph2}" alt="" />`:`<div class="ph-empty"></div>`}</div>
+  </div>
+  <div class="top-stripe"></div>
+  <div class="content">
+    <div class="inner">
+      <div class="headline-row"><span class="h-script">Open</span><span class="h-serif">HOUSE</span></div>
+      ${when?`<div class="when-tag">📅 ${when}</div>`:''}
+      ${price?`<div class="price-row"><div class="price">${price}</div>${stats.length?`<div class="stats">${stats.map(s=>`<div class="stat">${s}</div>`).join('')}</div>`:''}</div>`:''}
+      <div class="message">${message.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="bottom-row">
+        <div class="agent-info">
+          ${p.partner_photo?`<img class="agent-photo" src="${p.partner_photo}" alt="" />`:`<div class="agent-init">${(p.partner_name||'A')[0].toUpperCase()}</div>`}
+          <div><div class="agent-name">${p.partner_name||'Your Agent'}</div><div class="agent-detail">${p.partner_phone||p.partner_email||''}</div></div>
+        </div>
+        <div class="logos">
+          ${p.partner_logo?`<img class="partner-img" src="${p.partner_logo}" alt="" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /><div class="logo-sep"></div>`:''}
+          <img class="neo-img" src="${NEO_BIG_LOGO}" alt="NEO" />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
 // ─── Template cards config ────────────────────────────────────────────────────
 const FLYERS = [
   { key: 'standard', label: 'Standard', sub: 'Classic layout with property photos, TCA, and contact bar', icon: '📄', color: '#0A2540', gen: flyerStandard },
@@ -729,14 +874,26 @@ const FLYERS = [
 ]
 
 const SOCIALS = [
-  { key: 'instagram', label: 'Square Post', sub: '1080 × 1080 · Instagram, Facebook — warm editorial split', icon: '◻', size: '1080 × 1080', aspect: 1/1, gen: socialInstagram,
+  { key: 'instagram', label: 'Editorial Split', sub: '1080 × 1080 · Warm photos left, message right', icon: '◻', size: '1080 × 1080', srcW: 1080, srcH: 1080, gen: socialInstagram,
     fields: [
       { key: 'message', label: 'Personal message', placeholder: "I can't wait to give you a tour of this incredible home!", multiline: true },
       { key: 'when', label: 'Date & time', placeholder: 'Saturday, Aug 17 · 12pm – 3pm' },
       { key: 'where', label: 'Location (auto-filled)', placeholder: '' },
     ]
   },
-  { key: 'story', label: 'Story / Reel', sub: '1080 × 1920 · Instagram & Facebook Stories, TikTok', icon: '▯', size: '1080 × 1920', aspect: 9/16, gen: socialStory,
+  { key: 'bold', label: 'Bold Dark', sub: '1080 × 1080 · Full-bleed photo, dramatic price overlay', icon: '◼', size: '1080 × 1080', srcW: 1080, srcH: 1080, gen: socialSquareBold,
+    fields: [
+      { key: 'headline', label: 'Badge text', placeholder: 'Open House' },
+      { key: 'when', label: 'Date & time', placeholder: 'Saturday, Aug 17 · 12pm – 3pm' },
+    ]
+  },
+  { key: 'minimal', label: 'Clean Minimal', sub: '1080 × 1080 · White card, photo top, editorial bottom', icon: '▭', size: '1080 × 1080', srcW: 1080, srcH: 1080, gen: socialSquareMinimal,
+    fields: [
+      { key: 'message', label: 'Personal message', placeholder: 'This stunning home is ready for you. Come see it in person.', multiline: true },
+      { key: 'when', label: 'Date & time', placeholder: 'Saturday, Aug 17 · 12pm – 3pm' },
+    ]
+  },
+  { key: 'story', label: 'Story / Reel', sub: '1080 × 1920 · Instagram & Facebook Stories, TikTok', icon: '▯', size: '1080 × 1920', srcW: 1080, srcH: 1920, gen: socialStory,
     fields: [
       { key: 'headline', label: 'Headline', placeholder: 'Open House' },
       { key: 'message', label: 'Tagline message', placeholder: 'Join us for a private showing of this stunning home.' },
@@ -904,12 +1061,9 @@ export default function AgentPageClient({ slug }: { slug: string }) {
               const defaultTagline = Number(page.list_price) > 0 ? `${fmtPrice(page.list_price)} · ${page.address}` : page.address
               const finalEdits: Record<string,string> = { where: defaultWhere, tagline: defaultTagline, ...edits }
               const previewHtml = s.gen(page, finalEdits).replace('<script>window.onload=function(){window.print()}</script>', '')
-              const previewBlob = typeof window !== 'undefined' ? URL.createObjectURL(new Blob([previewHtml], { type: 'text/html' })) : ''
-              // Preview panel height based on aspect ratio
-              const previewW = 340
-              const previewH = Math.round(previewW / s.aspect)
-              const srcW = s.size.split(' × ')[0] ? parseInt(s.size.split(' × ')[0]) : 1080
-              const scale = previewW / srcW
+              const previewW = 320
+              const previewH = Math.round(previewW * s.srcH / s.srcW)
+              const scale = previewW / s.srcW
               return (
                 <div key={s.key} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
                   {/* Header */}
@@ -959,10 +1113,10 @@ export default function AgentPageClient({ slug }: { slug: string }) {
                     <div style={{ flex: 1, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: previewH + 48 }}>
                       <div style={{ position: 'relative', width: previewW, height: previewH, borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', flexShrink: 0 }}>
                         <iframe
-                          key={JSON.stringify(finalEdits)}
-                          src={previewBlob}
-                          style={{ width: srcW, height: Math.round(srcW / s.aspect), transform: `scale(${scale})`, transformOrigin: 'top left', border: 'none', display: 'block', pointerEvents: 'none' }}
+                          srcDoc={previewHtml}
+                          style={{ width: s.srcW, height: s.srcH, transform: `scale(${scale})`, transformOrigin: 'top left', border: 'none', display: 'block', pointerEvents: 'none' }}
                           title={`${s.label} preview`}
+                          sandbox="allow-same-origin"
                         />
                       </div>
                     </div>
