@@ -56,8 +56,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
     ...(profile?.can_listings ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
-    ...(profile?.can_listings ? [{ id: 'ohevents' as const, label: 'Open Houses' }] : []),
-    ...(profile?.can_listings ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
+    { id: 'ohevents' as const, label: 'Open Houses' },
+    ...(profile?.can_sign_riders ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
     { id: 'reels' as const,       label: 'Splice' },
   ]
 

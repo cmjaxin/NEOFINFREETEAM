@@ -17,6 +17,7 @@ export interface Profile {
   schedule_url?: string
   bntouch_user_id?: string
   can_listings?: boolean
+  can_sign_riders?: boolean
 }
 
 export interface Employee {
