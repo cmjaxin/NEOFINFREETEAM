@@ -425,7 +425,7 @@ export default function SignRiderPage({ slug }: { slug: string }) {
       {/* BNTouch Lead Capture Modal (15 second timer) */}
       {showLead && page.bntouch_user_id && (
         <LeadCaptureModal
-          address={page.address}
+          address={`Sign Rider ${slug.match(/(\d+)$/)?.[1] ?? ''}`}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
         />
