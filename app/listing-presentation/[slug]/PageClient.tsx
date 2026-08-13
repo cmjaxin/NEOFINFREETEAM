@@ -84,13 +84,13 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-fallback { width: 100%; height: 100%; background: linear-gradient(135deg, ${NEO} 0%, #1a4a7c 100%); display: flex; align-items: center; justify-content: center; font-size: 72px; }
 .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,37,64,0.88) 0%, rgba(10,37,64,0.1) 55%, transparent 100%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.hero-top { position: absolute; top: 0; left: 0; right: 0; padding: 14px 20px; display: flex; align-items: center; background: linear-gradient(to bottom, rgba(10,37,64,0.65) 0%, transparent 100%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.hero-top img { max-height: 52px; max-width: 180px; object-fit: contain; }
 .hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 24px 16px; display: flex; align-items: flex-end; justify-content: space-between; }
 .hero-address { color: #fff; }
 .hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
+.hero-logo { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
+.hero-partner-logo { max-height: 52px; max-width: 160px; object-fit: contain; }
 .price-bar { height: 0.55in; background: ${NEO}; display: flex; align-items: center; padding: 0 24px; gap: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .price-tag { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 10px; }
 .price-value { font-size: 30px; font-weight: 900; color: ${CYAN}; letter-spacing: -0.01em; }
@@ -125,13 +125,13 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 <div class="hero">
   ${hero ? `<img src="${hero}" alt="${page.address}" />` : `<div class="hero-fallback">🏡</div>`}
   <div class="hero-overlay"></div>
-  ${page.partner_logo ? `<div class="hero-top"><img src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /></div>` : ''}
   <div class="hero-content">
     <div class="hero-address">
       <div class="hero-street">${page.address}</div>
       ${location ? `<div class="hero-city">${location}</div>` : ''}
     </div>
     <div class="hero-logo">
+      ${page.partner_logo ? `<img class="hero-partner-logo" src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
       <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
     </div>
   </div>
@@ -151,7 +151,6 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 </div>
 <div class="contact-bar">
   ${page.partner_name ? `<div class="contact-cell">${page.partner_photo ? `<img class="c-photo" src="${page.partner_photo}" alt="${page.partner_name}" />` : `<div class="c-init">${(page.partner_name[0] ?? '?').toUpperCase()}</div>`}<div class="c-info"><div class="c-role">${page.partner_title || 'Listing Agent'}</div><div class="c-name">${page.partner_name}</div><div class="c-detail">${[page.partner_phone, page.partner_email, partnerNmls].filter(Boolean).join('<br>')}</div></div></div><div class="contact-sep"></div>` : ''}
-  <div class="contact-center"><img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style="max-height:36px;max-width:120px;object-fit:contain;" /></div>
   ${page.advisor_name ? `<div class="contact-sep"></div><div class="contact-cell" style="justify-content:flex-end"><div class="c-info" style="text-align:right"><div class="c-role">${page.advisor_title || 'Mortgage Advisor'} · NEO Home Loans</div><div class="c-name">${page.advisor_name}</div><div class="c-detail">${[page.advisor_phone, page.advisor_email, advisorNmls].filter(Boolean).join('<br>')}</div></div>${page.advisor_photo ? `<img class="c-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" />` : `<div class="c-init">${(page.advisor_name[0] ?? '?').toUpperCase()}</div>`}</div>` : ''}
 </div>
 <div class="footer">

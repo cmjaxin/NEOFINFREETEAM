@@ -115,16 +115,9 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero-address { color: #fff; }
 .hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
-.hero-logo { text-align: right; }
+.hero-logo { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
-.hero-top {
-  position: absolute; top: 0; left: 0; right: 0;
-  padding: 14px 20px;
-  display: flex; align-items: center;
-  background: linear-gradient(to bottom, rgba(10,37,64,0.65) 0%, transparent 100%);
-  -webkit-print-color-adjust: exact; print-color-adjust: exact;
-}
-.hero-top img { max-height: 52px; max-width: 180px; object-fit: contain; }
+.hero-partner-logo { max-height: 52px; max-width: 160px; object-fit: contain; }
 
 /* ── PRICE BAR ── */
 .price-bar {
@@ -221,13 +214,13 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 <div class="hero">
   ${hero ? `<img src="${hero}" alt="${page.address}" />` : `<div class="hero-fallback">🏡</div>`}
   <div class="hero-overlay"></div>
-  ${page.partner_logo ? `<div class="hero-top"><img src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /></div>` : ''}
   <div class="hero-content">
     <div class="hero-address">
       <div class="hero-street">${page.address}</div>
       ${location ? `<div class="hero-city">${location}</div>` : ''}
     </div>
     <div class="hero-logo">
+      ${page.partner_logo ? `<img class="hero-partner-logo" src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
       <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
     </div>
   </div>
@@ -290,9 +283,6 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
   </div>
   <div class="contact-sep"></div>` : ''}
 
-  <div class="contact-center">
-    <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style="max-height:36px;max-width:120px;object-fit:contain;" />
-  </div>
 
   ${page.advisor_name ? `
   <div class="contact-sep"></div>
