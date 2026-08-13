@@ -1,4 +1,5 @@
 // alter table open_house_pages add column if not exists loom_url text;
+// alter table open_house_pages add column if not exists callout_text text;
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '@/lib/appContext'
@@ -27,6 +28,7 @@ interface SRPage {
   tca_url: string
   tca_screenshot: string
   loom_url: string
+  callout_text: string
 }
 
 function fmtPrice(n: number) { return '$' + Math.round(n).toLocaleString() }
@@ -111,6 +113,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
     tca_url: (init as SRPage).tca_url ?? '',
     tca_screenshot: (init as SRPage).tca_screenshot ?? '',
     loom_url: (init as SRPage).loom_url ?? '',
+    callout_text: (init as SRPage).callout_text ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
     advisor_title: init.advisor_title || profile?.title || '',
     advisor_email: init.advisor_email || profile?.email || '',
@@ -250,6 +253,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
       loom_url: form.loom_url || null,
+      callout_text: form.callout_text || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
       advisor_email: form.advisor_email,
@@ -279,7 +283,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
     }
     let res = await attempt(payload as Record<string, unknown>)
     if (res.error?.code === '42703') {
-      const { tca_url: _a, tca_screenshot: _b, loom_url: _c, ...corePayload } = payload
+      const { tca_url: _a, tca_screenshot: _b, loom_url: _c, callout_text: _d, ...corePayload } = payload
       res = await attempt(corePayload as Record<string, unknown>)
     }
     if (res.error) { setMsg(`Save failed: ${res.error.message} (${res.error.code})`); setSaving(false); return }
@@ -395,6 +399,18 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
           <section>
             <SectionHead title="Loan Details" sub="Loom video and MortgageCoach TCA shown to buyers on the Loan Details tab." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Callout Box */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Custom Callout Box</label>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Shown above the Loom video on the public page. Great for property highlights, open house times, or a quick note to buyers.</div>
+                <textarea
+                  placeholder="e.g. 🏡 Open House this Sunday 1–4pm! Rate buydown available. Ask us about 0% down options."
+                  value={form.callout_text}
+                  onChange={e => set('callout_text', e.target.value)}
+                  rows={3}
+                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
+                />
+              </div>
               <Field
                 label="Loom Video URL"
                 name="loom_url"
@@ -554,9 +570,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
 }
 
 // ─── Page Card ────────────────────────────────────────────────────────────────
-function PageCard({ page, onEdit, onDelete }: { page: SRPage; onEdit: () => void; onDelete: () => void }) {
+function PageCard({ page, onEdit, slotNum }: { page: SRPage; onEdit: () => void; slotNum: number }) {
   const url = `/sign-rider/${page.slug}`
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [copied, setCopied] = useState(false)
 
   function copyLink() {
@@ -568,9 +583,15 @@ function PageCard({ page, onEdit, onDelete }: { page: SRPage; onEdit: () => void
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {page.photos && page.photos.length > 0 ? (
-        <img src={page.photos[0]} alt={page.address} style={{ width: '100%', height: 160, objectFit: 'cover' }} />
+        <div style={{ position: 'relative' }}>
+          <img src={page.photos[0]} alt={page.address} style={{ width: '100%', height: 160, objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(10,37,64,0.85)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 99 }}>Sign Rider {slotNum}</div>
+        </div>
       ) : (
-        <div style={{ height: 100, background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🪧</div>
+        <div style={{ height: 100, background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>Sign Rider {slotNum}</div>
+          <span style={{ fontSize: 30 }}>🪧</span>
+        </div>
       )}
       <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontWeight: 700, fontSize: 20, color: C.navy }}>{page.list_price ? fmtPrice(page.list_price) : 'Price TBD'}</div>
@@ -604,40 +625,20 @@ function PageCard({ page, onEdit, onDelete }: { page: SRPage; onEdit: () => void
           )}
         </div>
 
-        {confirmDelete ? (
-          <div style={{ marginTop: 'auto', paddingTop: 14, background: '#FEF2F2', borderRadius: 10, padding: 12, border: '1px solid #FECACA' }}>
-            <div style={{ fontSize: 12, color: '#991B1B', fontWeight: 600, marginBottom: 10 }}>Delete this sign rider?</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={onDelete}
-                style={{ flex: 1, padding: '8px 0', background: '#EF4444', border: 'none', borderRadius: 8, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
-                Yes, Delete
-              </button>
-              <button onClick={() => setConfirmDelete(false)}
-                style={{ flex: 1, padding: '8px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href={url} target="_blank" rel="noopener noreferrer"
-              style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
-              View Page
-            </a>
-            <button onClick={copyLink}
-              style={{ padding: '8px 12px', background: copied ? 'rgba(22,163,74,0.1)' : C.bg, border: `1px solid ${copied ? C.green : C.border}`, borderRadius: 8, fontSize: 12, color: copied ? C.green : C.dim, cursor: 'pointer', fontWeight: 600 }}>
-              {copied ? 'Copied!' : 'Copy Link'}
-            </button>
-            <button onClick={onEdit}
-              style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
-              Edit
-            </button>
-            <button onClick={() => setConfirmDelete(true)}
-              style={{ padding: '8px 12px', background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
-              Delete
-            </button>
-          </div>
-        )}
+        <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
+            View Page
+          </a>
+          <button onClick={copyLink}
+            style={{ padding: '8px 12px', background: copied ? 'rgba(22,163,74,0.1)' : C.bg, border: `1px solid ${copied ? C.green : C.border}`, borderRadius: 8, fontSize: 12, color: copied ? C.green : C.dim, cursor: 'pointer', fontWeight: 600 }}>
+            {copied ? 'Copied!' : 'Copy Link'}
+          </button>
+          <button onClick={onEdit}
+            style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
+            Edit
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -646,67 +647,93 @@ function PageCard({ page, onEdit, onDelete }: { page: SRPage; onEdit: () => void
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function SignRidersView() {
   const { supabase, profile } = useApp()
-  const [pages, setPages] = useState<SRPage[]>([])
+  const [slots, setSlots] = useState<(SRPage | null)[]>([null, null, null, null, null])
   const [loading, setLoading] = useState(true)
-  const [showCreate, setShowCreate] = useState(false)
   const [editingPage, setEditingPage] = useState<SRPage | null>(null)
 
-  async function load() {
+  function getSlugPrefix(uid: string) {
+    return uid.replace(/-/g, '').slice(0, 8)
+  }
+
+  async function ensureSlots() {
     if (!profile?.id) return
-    const { data } = await supabase.from('open_house_pages').select('*').eq('status', 'active').eq('created_by', profile.id).eq('page_type', 'sign_rider').order('created_at', { ascending: false })
-    setPages((data ?? []) as SRPage[])
+    const prefix = getSlugPrefix(profile.id)
+    const expectedSlugs = [1, 2, 3, 4, 5].map(n => `sr-${prefix}-${n}`)
+
+    const { data: existing } = await supabase
+      .from('open_house_pages')
+      .select('*')
+      .in('slug', expectedSlugs)
+      .eq('page_type', 'sign_rider')
+
+    const bySlug: Record<string, SRPage> = {}
+    for (const row of existing ?? []) bySlug[row.slug] = row as SRPage
+
+    // Create any missing slots
+    const toCreate = expectedSlugs
+      .filter(slug => !bySlug[slug])
+      .map((slug, _i) => {
+        const n = Number(slug.slice(-1))
+        return {
+          slug,
+          address: `Sign Rider ${n}`,
+          city: '', state: 'UT', zip: '',
+          page_type: 'sign_rider',
+          status: 'active',
+          created_by: profile.id,
+          photos: [],
+        }
+      })
+
+    if (toCreate.length > 0) {
+      const { data: created } = await supabase.from('open_house_pages').insert(toCreate).select('*')
+      for (const row of created ?? []) bySlug[(row as SRPage).slug] = row as SRPage
+    }
+
+    setSlots(expectedSlugs.map(slug => bySlug[slug] ?? null))
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [profile?.id])
+  useEffect(() => { ensureSlots() }, [profile?.id])
 
-  async function deletePage(page: SRPage) {
-    setPages(prev => prev.filter(p => p.id !== page.id))
-    const { error } = await supabase.from('open_house_pages').delete().eq('id', page.id)
-    if (error) {
-      alert(`Delete failed: ${error.message} (${error.code})`)
-      load()
-    }
+  async function reload() {
+    if (!profile?.id) return
+    const prefix = getSlugPrefix(profile.id)
+    const expectedSlugs = [1, 2, 3, 4, 5].map(n => `sr-${prefix}-${n}`)
+    const { data } = await supabase.from('open_house_pages').select('*').in('slug', expectedSlugs).eq('page_type', 'sign_rider')
+    const bySlug: Record<string, SRPage> = {}
+    for (const row of data ?? []) bySlug[(row as SRPage).slug] = row as SRPage
+    setSlots(expectedSlugs.map(slug => bySlug[slug] ?? null))
   }
 
   return (
     <div style={{ padding: '28px 36px', background: C.bg, minHeight: '100vh' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Sign Riders</div>
-          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Create QR code pages for yard signs — buyers scan to see a Loom walkthrough + loan details</div>
-        </div>
-        <button onClick={() => setShowCreate(true)}
-          style={{ padding: '10px 20px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>+</span> New Sign Rider
-        </button>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Sign Riders</div>
+        <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>5 permanent QR code pages for your yard signs — edit anytime without changing the URL</div>
       </div>
 
       {loading ? (
-        <div style={{ color: C.muted, padding: 32, textAlign: 'center' }}>Loading…</div>
-      ) : pages.length === 0 ? (
-        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>🪧</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No sign riders yet</div>
-          <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>Create a sign rider page to put on yard signs. Buyers scan the QR code and see your Loom video + loan details.</div>
-          <button onClick={() => setShowCreate(true)}
-            style={{ padding: '12px 28px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Create Your First Sign Rider
-          </button>
-        </div>
+        <div style={{ color: C.muted, padding: 32, textAlign: 'center' }}>Setting up your sign rider slots…</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-          {pages.map(p => (
-            <PageCard key={p.id} page={p} onEdit={() => setEditingPage(p)} onDelete={() => deletePage(p)} />
+          {slots.map((p, i) => p ? (
+            <PageCard key={p.id} page={p} slotNum={i + 1} onEdit={() => setEditingPage(p)} />
+          ) : (
+            <div key={i} style={{ background: C.white, borderRadius: 14, border: `2px dashed ${C.border}`, padding: 32, textAlign: 'center', color: C.muted }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🪧</div>
+              <div style={{ fontWeight: 600 }}>Sign Rider {i + 1}</div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>Setting up…</div>
+            </div>
           ))}
         </div>
       )}
 
-      {(showCreate || editingPage) && (
+      {editingPage && (
         <CreateModal
           editing={editingPage}
-          onClose={() => { setShowCreate(false); setEditingPage(null) }}
-          onSaved={() => { setShowCreate(false); setEditingPage(null); load() }}
+          onClose={() => setEditingPage(null)}
+          onSaved={() => { setEditingPage(null); reload() }}
         />
       )}
     </div>

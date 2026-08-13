@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
 const C = {
@@ -69,7 +69,10 @@ interface PageData {
   tca_url: string | null
   tca_screenshot: string | null
   loom_url: string | null
+  callout_text: string | null
   schedule_url: string | null
+  apply_url: string | null
+  bntouch_user_id: string | null
 }
 
 export default function SignRiderPage({ slug }: { slug: string }) {
@@ -77,6 +80,8 @@ export default function SignRiderPage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'loan' | 'contact'>('loan')
+  const [showLead, setShowLead] = useState(false)
+  const leadShown = useRef(false)
 
   useEffect(() => {
     const sb = createClient()
@@ -93,22 +98,25 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
           partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null,
-          tca_screenshot: null, loom_url: null, schedule_url: null,
+          tca_screenshot: null, loom_url: null, callout_text: null, schedule_url: null,
+          apply_url: null, bntouch_user_id: null,
           ...row,
         } as PageData
 
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
-              ? sb.from('profiles').select('schedule_url').eq('id', row.created_by).single()
+              ? sb.from('profiles').select('schedule_url, apply_url, bntouch_user_id').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
           ])
-          const profileData = profileRes.data as { schedule_url?: string } | null
+          const profileData = profileRes.data as { schedule_url?: string; apply_url?: string; bntouch_user_id?: string } | null
           const scheduleUrl = profileData?.schedule_url ?? null
-          let finalData = { ...pageData, schedule_url: scheduleUrl }
+          const applyUrl = profileData?.apply_url ?? null
+          const bntouchUserId = profileData?.bntouch_user_id ?? null
+          let finalData = { ...pageData, schedule_url: scheduleUrl, apply_url: applyUrl, bntouch_user_id: bntouchUserId }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
@@ -121,6 +129,12 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         setLoading(false)
       }, (e: unknown) => { setDbError(`Fetch error: ${e}`); setLoading(false) })
   }, [slug])
+
+  useEffect(() => {
+    if (!page || leadShown.current) return
+    const t = setTimeout(() => { leadShown.current = true; setShowLead(true) }, 15000)
+    return () => clearTimeout(t)
+  }, [page])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
@@ -282,6 +296,14 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         {activeTab === 'loan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
+            {/* Callout Box */}
+            {page.callout_text && (
+              <div style={{ background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                <div style={{ fontSize: 24, flexShrink: 0, marginTop: 2 }}>📣</div>
+                <div style={{ fontSize: 15, color: '#fff', lineHeight: 1.6, fontWeight: 500 }}>{page.callout_text}</div>
+              </div>
+            )}
+
             {/* Loom Video */}
             {loomId ? (
               <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
@@ -352,6 +374,19 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         {activeTab === 'contact' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
+            {/* Apply Now */}
+            {page.apply_url && (
+              <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Ready to move forward?</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 6 }}>Apply Now</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Start your mortgage application online in minutes.</div>
+                <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 36px', borderRadius: 10, textDecoration: 'none' }}>
+                  Start My Application →
+                </a>
+              </div>
+            )}
+
             {/* Schedule CTA */}
             <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
@@ -385,6 +420,26 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         )}
 
       </div>
+
+      {/* BNTouch Lead Capture Modal (15 second timer) */}
+      {showLead && page.bntouch_user_id && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 480, overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.35)' }}>
+            <div style={{ background: C.navy, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ color: '#fff', fontWeight: 800, fontSize: 17 }}>Get More Info on This Home</div>
+                <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 3 }}>Leave your info and we&apos;ll reach out with details</div>
+              </div>
+              <button onClick={() => setShowLead(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 8, padding: '6px 12px', color: '#fff', cursor: 'pointer', fontSize: 16 }}>✕</button>
+            </div>
+            <iframe
+              src={`https://crm.bntouch.com/widget/lead-form/${page.bntouch_user_id}`}
+              style={{ width: '100%', height: 420, border: 'none', display: 'block' }}
+              title="Contact Form"
+            />
+          </div>
+        </div>
+      )}
 
       <style>{`
         * { box-sizing: border-box; }
