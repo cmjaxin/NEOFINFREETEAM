@@ -308,8 +308,8 @@ export default function SignRiderPage({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Loom Video */}
-            {loomId ? (
+            {/* Loom Video — only shown if a valid Loom URL is set */}
+            {loomId && (
               <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Video Walkthrough</div>
@@ -329,11 +329,6 @@ export default function SignRiderPage({ slug }: { slug: string }) {
                     allowFullScreen
                   />
                 </div>
-              </div>
-            ) : (
-              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 32, textAlign: 'center', color: C.muted }}>
-                <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.4 }}>🎥</div>
-                <div style={{ fontWeight: 600 }}>No video walkthrough attached yet.</div>
               </div>
             )}
 
