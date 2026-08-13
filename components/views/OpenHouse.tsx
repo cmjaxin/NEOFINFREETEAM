@@ -65,7 +65,7 @@ function openFlyer(page: OHPage) {
   const hero = photos[0] ?? ''
   const small = [photos[1] ?? '', photos[2] ?? '', photos[3] ?? '']
   const desc = (page.description ?? '').slice(0, 600)
-  const price = fmtPrice(page.list_price || 0)
+  const price = page.list_price ? fmtPrice(page.list_price) : ''
   const location = [page.city, page.state, page.zip].filter(Boolean).join(', ')
   const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
   const partnerNmls = page.partner_nmls ? `NMLS# ${page.partner_nmls}` : ''
@@ -116,7 +116,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
 .hero-logo { text-align: right; }
-.hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; filter: brightness(0) invert(1); }
+.hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
 
 /* ── PRICE BAR ── */
 .price-bar {
@@ -186,7 +186,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .contact-cell { flex: 1; display: flex; align-items: center; gap: 14px; padding: 0 22px; }
 .contact-sep { width: 1px; background: rgba(91,203,245,0.18); margin: 14px 0; flex-shrink: 0; }
 .contact-center { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 0 18px; }
-.contact-center img { max-height: 36px; max-width: 120px; object-fit: contain; filter: brightness(0) invert(1); }
+.contact-center img { max-height: 36px; max-width: 120px; object-fit: contain; }
 .c-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${CYAN}; }
 .c-init { width: 56px; height: 56px; border-radius: 50%; background: rgba(91,203,245,0.12); border: 2px solid rgba(91,203,245,0.35); display: flex; align-items: center; justify-content: center; color: ${CYAN}; font-size: 22px; font-weight: 900; flex-shrink: 0; }
 .c-info { color: #fff; }
@@ -219,16 +219,16 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
       ${location ? `<div class="hero-city">${location}</div>` : ''}
     </div>
     <div class="hero-logo">
-      <img src="/neo-logo.png" alt="NEO Home Loans" />
+      <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
     </div>
   </div>
 </div>
 
 <!-- PRICE BAR -->
 <div class="price-bar">
-  <span class="price-tag">List Price</span>
-  <span class="price-value">${price}</span>
-  ${stats.length > 0 ? `<div class="price-divider"></div><div class="stats-row">${stats.map(s => `<span class="stat-chip">${s}</span>`).join('')}</div>` : ''}
+  ${price ? `<span class="price-tag">List Price</span><span class="price-value">${price}</span>` : ''}
+  ${(price && stats.length > 0) ? `<div class="price-divider"></div>` : ''}
+  ${stats.length > 0 ? `<div class="stats-row">${stats.map(s => `<span class="stat-chip">${s}</span>`).join('')}</div>` : ''}
 </div>
 
 <!-- MAIN CONTENT -->
@@ -567,7 +567,15 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               <Field label="City" name="city" placeholder="Salt Lake City" half value={form.city} onChange={set} />
               <Field label="State" name="state" placeholder="UT" half value={form.state} onChange={set} />
               <Field label="Zip" name="zip" placeholder="84101" half value={form.zip} onChange={set} />
-              <Field label="List Price" name="list_price" type="number" placeholder="500000" half value={String(form.list_price ?? '')} onChange={set} />
+              <div style={{ flex: '0 0 calc(50% - 6px)', minWidth: 0 }}>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>List Price</label>
+                <div style={{ display: 'flex', alignItems: 'center', border: `1px solid ${C.border}`, borderRadius: 8, background: C.white, overflow: 'hidden' }}>
+                  <span style={{ padding: '9px 10px 9px 12px', fontSize: 14, color: C.muted, fontWeight: 600, userSelect: 'none' }}>$</span>
+                  <input type="text" inputMode="decimal" placeholder="750,000" value={String(form.list_price ?? '')}
+                    onChange={e => set('list_price', e.target.value)}
+                    style={{ flex: 1, padding: '9px 12px 9px 0', border: 'none', outline: 'none', fontSize: 14, color: C.text, background: 'transparent' }} />
+                </div>
+              </div>
               <Field label="Beds" name="beds" type="number" placeholder="4" half value={String(form.beds ?? '')} onChange={set} />
               <Field label="Baths" name="baths" type="number" placeholder="2.5" half value={String(form.baths ?? '')} onChange={set} />
               <Field label="Sq Ft" name="sqft" type="number" placeholder="2400" half value={String(form.sqft ?? '')} onChange={set} />
@@ -883,9 +891,9 @@ export default function OpenHouseView() {
   useEffect(() => { load() }, [profile?.id])
 
   async function deletePage(page: OHPage) {
-    // Use UPDATE instead of DELETE to work around missing DELETE RLS policy
-    await supabase.from('open_house_pages').update({ status: 'deleted' }).eq('id', page.id)
-    load()
+    setPages(prev => prev.filter(p => p.id !== page.id))
+    const { error } = await supabase.from('open_house_pages').update({ status: 'deleted' }).eq('id', page.id)
+    if (error) load()
   }
 
   return (
