@@ -1347,7 +1347,7 @@ function ConversionTab({ maData }: { maData: MARecord[] }) {
 
   function pct(num: number, denom: number) {
     if (!denom) return '—'
-    return (num / denom * 100).toFixed(1) + '%'
+    return Math.min(num / denom * 100, 100).toFixed(1) + '%'
   }
 
   function leadsForMA(ma: MARecord): number {
