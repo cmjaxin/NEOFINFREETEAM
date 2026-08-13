@@ -16,6 +16,10 @@ export interface Profile {
   headshot_url: string
   schedule_url?: string
   bntouch_user_id?: string
+  can_production?: boolean
+  can_wins?: boolean
+  can_marketing?: boolean
+  can_open_houses?: boolean
   can_listings?: boolean
   can_sign_riders?: boolean
 }

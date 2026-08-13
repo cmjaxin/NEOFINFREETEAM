@@ -52,13 +52,13 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   ]
 
   const advisorNavItems = [
-    { id: 'production' as const,  label: 'Production' },
-    { id: 'wins' as const,        label: 'Monthly Wins' },
-    { id: 'marketing' as const,   label: 'Marketing' },
-    ...(profile?.can_listings ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
-    { id: 'ohevents' as const, label: 'Open Houses' },
-    ...(profile?.can_sign_riders ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
-    { id: 'reels' as const,       label: 'Splice' },
+    ...((profile?.can_production  ?? true)  ? [{ id: 'production' as const, label: 'Production' }] : []),
+    ...((profile?.can_wins        ?? true)  ? [{ id: 'wins'       as const, label: 'Monthly Wins' }] : []),
+    ...((profile?.can_marketing   ?? true)  ? [{ id: 'marketing'  as const, label: 'Marketing' }] : []),
+    ...((profile?.can_open_houses ?? true)  ? [{ id: 'ohevents'  as const, label: 'Open Houses' }] : []),
+    ...(profile?.can_listings               ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
+    ...(profile?.can_sign_riders            ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
+    { id: 'reels' as const, label: 'Splice' },
   ]
 
   const navItems = isAdmin ? adminNavItems : advisorNavItems

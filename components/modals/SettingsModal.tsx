@@ -35,11 +35,11 @@ export default function SettingsModal() {
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_listings?: boolean; can_sign_riders?: boolean }[]>([])
+  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_production?: boolean; can_wins?: boolean; can_marketing?: boolean; can_open_houses?: boolean; can_listings?: boolean; can_sign_riders?: boolean }[]>([])
 
   useEffect(() => {
     if (profile?.role !== 'admin') return
-    supabase.from('profiles').select('id, full_name, email, can_listings, can_sign_riders').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
+    supabase.from('profiles').select('id, full_name, email, can_production, can_wins, can_marketing, can_open_houses, can_listings, can_sign_riders').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
       if (data) setApprovedProfiles(data)
     })
   }, [profile?.id])
@@ -84,14 +84,9 @@ export default function SettingsModal() {
     }
   }
 
-  async function toggleListings(id: string, current: boolean) {
-    await supabase.from('profiles').update({ can_listings: !current }).eq('id', id)
-    setApprovedProfiles(prev => prev.map(p => p.id === id ? { ...p, can_listings: !current } : p))
-  }
-
-  async function toggleSignRiders(id: string, current: boolean) {
-    await supabase.from('profiles').update({ can_sign_riders: !current }).eq('id', id)
-    setApprovedProfiles(prev => prev.map(p => p.id === id ? { ...p, can_sign_riders: !current } : p))
+  async function toggleFeature(id: string, field: string, current: boolean) {
+    await supabase.from('profiles').update({ [field]: !current }).eq('id', id)
+    setApprovedProfiles(prev => prev.map(p => p.id === id ? { ...p, [field]: !current } : p))
   }
 
   async function approve(id: string) {
@@ -200,30 +195,40 @@ export default function SettingsModal() {
 
         {profile?.role === 'admin' && approvedProfiles.length > 0 && (
           <div style={{ marginTop: 22, borderTop: '1px solid #EEF1F4', paddingTop: 18 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#858889', marginBottom: 4 }}>Feature Access</div>
-            <div style={{ fontSize: 12.5, color: '#858889', marginBottom: 12 }}>Control which features each team member can access.</div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: '#858889', marginBottom: 4 }}>Page Access</div>
+            <div style={{ fontSize: 12.5, color: '#858889', marginBottom: 12 }}>Control which pages each team member can see.</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {approvedProfiles.map(p => (
-                <div key={p.id} style={{ border: '1px solid #EEF1F4', borderRadius: 10, padding: '10px 12px' }}>
-                  <div style={{ marginBottom: 8 }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#132B44' }}>{p.full_name}</div>
-                    <div style={{ fontSize: 11, color: '#858889' }}>{p.email}</div>
+              {approvedProfiles.map(p => {
+                const features = [
+                  { label: 'Production',     field: 'can_production',  val: p.can_production  ?? true },
+                  { label: 'Monthly Wins',   field: 'can_wins',        val: p.can_wins        ?? true },
+                  { label: 'Marketing',      field: 'can_marketing',   val: p.can_marketing   ?? true },
+                  { label: 'Open Houses',    field: 'can_open_houses', val: p.can_open_houses ?? true },
+                  { label: 'Listing Pages',  field: 'can_listings',    val: p.can_listings    ?? false },
+                  { label: 'Sign Riders',    field: 'can_sign_riders', val: p.can_sign_riders ?? false },
+                ]
+                return (
+                  <div key={p.id} style={{ border: '1px solid #EEF1F4', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ marginBottom: 10 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: '#132B44' }}>{p.full_name}</div>
+                      <div style={{ fontSize: 11, color: '#858889' }}>{p.email}</div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
+                      {features.map(({ label, field, val }) => (
+                        <div key={field} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                          <span style={{ fontSize: 12, color: '#374151', fontWeight: 500 }}>{label}</span>
+                          <button
+                            onClick={() => toggleFeature(p.id, field, val)}
+                            style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: val ? '#0A2540' : '#D1D5DB', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}
+                          >
+                            <div style={{ position: 'absolute', top: 3, left: val ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    {[
-                      { label: 'Listing Pages', val: !!p.can_listings, toggle: () => toggleListings(p.id, !!p.can_listings) },
-                      { label: 'Sign Riders', val: !!p.can_sign_riders, toggle: () => toggleSignRiders(p.id, !!p.can_sign_riders) },
-                    ].map(({ label, val, toggle }) => (
-                      <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ fontSize: 11, color: '#858889' }}>{label}</span>
-                        <button onClick={toggle} style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', background: val ? '#0A2540' : '#D1D5DB', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-                          <div style={{ position: 'absolute', top: 3, left: val ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         )}
