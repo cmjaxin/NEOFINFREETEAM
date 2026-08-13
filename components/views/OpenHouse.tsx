@@ -116,8 +116,8 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
 .hero-logo { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
-.hero-partner-logo { max-height: 52px; max-width: 160px; object-fit: contain; }
+.hero-logo .neo-logo { max-height: 30px; max-width: 110px; object-fit: contain; }
+.hero-logo .hero-partner-logo { max-height: 56px; max-width: 180px; object-fit: contain; }
 
 /* ── PRICE BAR ── */
 .price-bar {
@@ -221,7 +221,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
     </div>
     <div class="hero-logo">
       ${page.partner_logo ? `<img class="hero-partner-logo" src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
-      <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
+      <img class="neo-logo" src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
     </div>
   </div>
 </div>

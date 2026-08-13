@@ -89,8 +89,8 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
 .hero-logo { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-.hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
-.hero-partner-logo { max-height: 52px; max-width: 160px; object-fit: contain; }
+.hero-logo .neo-logo { max-height: 30px; max-width: 110px; object-fit: contain; }
+.hero-logo .hero-partner-logo { max-height: 56px; max-width: 180px; object-fit: contain; }
 .price-bar { height: 0.55in; background: ${NEO}; display: flex; align-items: center; padding: 0 24px; gap: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .price-tag { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 10px; }
 .price-value { font-size: 30px; font-weight: 900; color: ${CYAN}; letter-spacing: -0.01em; }
@@ -102,6 +102,13 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
 .section-label { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: ${CYAN}; margin-bottom: 5px; }
 .desc-text { font-size: 10px; line-height: 1.75; color: #374151; }
+.tca-card { flex: 1; border: 1px solid #E4E8EC; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.tca-header { background: ${NEO}; padding: 7px 12px; display: flex; align-items: center; gap: 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.tca-header-dot { width: 6px; height: 6px; border-radius: 50%; background: ${CYAN}; flex-shrink: 0; }
+.tca-header-text { font-size: 9px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.1em; }
+.tca-img { flex: 1; overflow: hidden; min-height: 0; }
+.tca-img img { width: 100%; height: 100%; object-fit: contain; object-position: top; display: block; }
+.tca-placeholder { flex: 1; display: flex; align-items: center; justify-content: center; background: #F8FAFC; flex-direction: column; gap: 8px; color: #94A3B8; font-size: 11px; text-align: center; padding: 20px; }
 .right { flex: 0 0 42%; padding: 16px 20px 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .photo-slot { flex: 1; min-height: 0; overflow: hidden; border-radius: 8px; border: 1px solid #E4E8EC; background: #F1F5F9; }
 .photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; }
@@ -132,7 +139,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
     </div>
     <div class="hero-logo">
       ${page.partner_logo ? `<img class="hero-partner-logo" src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" />` : ''}
-      <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
+      <img class="neo-logo" src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
     </div>
   </div>
 </div>
@@ -144,6 +151,10 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 <div class="main">
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p></div>` : ''}
+    <div class="tca-card">
+      <div class="tca-header"><div class="tca-header-dot"></div><span class="tca-header-text">Total Cost Analysis</span></div>
+      ${page.tca_screenshot ? `<div class="tca-img"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>` : `<div class="tca-placeholder"><div style="font-size:28px;opacity:0.4">📊</div><div>Upload a TCA screenshot in the listing editor</div></div>`}
+    </div>
   </div>
   <div class="right">
     ${small.map((url: string, i: number) => `<div class="photo-slot">${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : `<div class="photo-empty">🏠</div>`}</div>`).join('')}
@@ -177,6 +188,7 @@ interface PageData {
   partner_name: string; partner_title: string; partner_email: string
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string | null
+  tca_screenshot: string | null
   schedule_url: string | null
 }
 
@@ -199,7 +211,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
         const row = data[0]
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
-          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, schedule_url: null,
+          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, tca_screenshot: null, schedule_url: null,
           ...row,
         } as PageData
 
