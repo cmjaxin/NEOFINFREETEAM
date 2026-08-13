@@ -672,7 +672,7 @@ export default function SignRidersView() {
     // Create any missing slots
     const toCreate = expectedSlugs
       .filter(slug => !bySlug[slug])
-      .map((slug, _i) => {
+      .map((slug) => {
         const n = Number(slug.slice(-1))
         return {
           slug,
@@ -682,6 +682,12 @@ export default function SignRidersView() {
           status: 'active',
           created_by: profile.id,
           photos: [],
+          advisor_name: profile.full_name || '',
+          advisor_title: profile.title || '',
+          advisor_email: profile.email || '',
+          advisor_phone: profile.phone || '',
+          advisor_nmls: profile.nmls || '',
+          advisor_photo: profile.headshot_url || '',
         }
       })
 
