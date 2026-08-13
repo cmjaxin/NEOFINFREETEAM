@@ -884,6 +884,10 @@ function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => voi
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Copy Link
             </button>
+            <a href={`${url}/agent`} target="_blank" rel="noopener noreferrer"
+              style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.1)', border: `1px solid rgba(91,203,245,0.3)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700, textDecoration: 'none' }}>
+              Agent Hub ↗
+            </a>
             <button onClick={onEdit}
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Edit
