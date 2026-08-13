@@ -64,7 +64,7 @@ function openFlyer(page: OHPage) {
   const photos = page.photos ?? []
   const hero = photos[0] ?? ''
   const small = [photos[1] ?? '', photos[2] ?? '', photos[3] ?? '']
-  const desc = (page.description ?? '').slice(0, 600)
+  const desc = (page.description ?? '').slice(0, 900)
   const price = page.list_price ? fmtPrice(page.list_price) : ''
   const location = [page.city, page.state, page.zip].filter(Boolean).join(', ')
   const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
@@ -139,7 +139,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .stat-chip:last-child { border-right: none; }
 
 /* ── MAIN ── */
-.main { display: flex; height: 5.3in; }
+.main { display: flex; height: 5.75in; }
 
 /* LEFT COLUMN */
 .left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
@@ -178,7 +178,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 
 /* ── CONTACT BAR ── */
 .contact-bar {
-  height: 1.3in;
+  height: 0.95in;
   background: ${NEO};
   display: flex; align-items: stretch;
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
@@ -187,8 +187,8 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .contact-sep { width: 1px; background: rgba(91,203,245,0.18); margin: 14px 0; flex-shrink: 0; }
 .contact-center { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 0 18px; }
 .contact-center img { max-height: 36px; max-width: 120px; object-fit: contain; }
-.c-photo { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${CYAN}; }
-.c-init { width: 56px; height: 56px; border-radius: 50%; background: rgba(91,203,245,0.12); border: 2px solid rgba(91,203,245,0.35); display: flex; align-items: center; justify-content: center; color: ${CYAN}; font-size: 22px; font-weight: 900; flex-shrink: 0; }
+.c-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${CYAN}; }
+.c-init { width: 44px; height: 44px; border-radius: 50%; background: rgba(91,203,245,0.12); border: 2px solid rgba(91,203,245,0.35); display: flex; align-items: center; justify-content: center; color: ${CYAN}; font-size: 18px; font-weight: 900; flex-shrink: 0; }
 .c-info { color: #fff; }
 .c-role { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: ${CYAN}; margin-bottom: 3px; }
 .c-name { font-size: 14px; font-weight: 800; line-height: 1.15; }
@@ -196,7 +196,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 
 /* ── FOOTER ── */
 .footer {
-  height: 0.2in;
+  height: 0.15in;
   background: #F8FAFC;
   border-top: 2px solid ${CYAN};
   display: flex; align-items: center; justify-content: space-between;
