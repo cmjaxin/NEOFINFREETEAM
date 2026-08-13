@@ -11,6 +11,7 @@ import Wins from '@/components/views/Wins'
 import Marketing from '@/components/views/Marketing'
 import Reels from '@/components/views/Reels'
 import OpenHouse from '@/components/views/OpenHouse'
+import OpenHouseEvents from '@/components/views/OpenHouseEvents'
 import EmployeeProfile from '@/components/views/EmployeeProfile'
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal'
 import SettingsModal from '@/components/modals/SettingsModal'
@@ -139,6 +140,7 @@ function Shell() {
           {view === 'marketing' && <Marketing />}
           {view === 'reels' && <Reels />}
           {view === 'openhouse' && <OpenHouse />}
+          {view === 'ohevents' && <OpenHouseEvents />}
         </div>{/* end main-content */}
       </main>
 

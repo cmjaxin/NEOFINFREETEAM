@@ -32,7 +32,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const isColin = SPLICE_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
   const isAdmin = profile?.role === 'admin' || isColin
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents') {
     setView(id)
     onClose()
   }
@@ -44,6 +44,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
     { id: 'openhouse' as const,   label: 'Listing Presentations' },
+    { id: 'ohevents' as const,    label: 'Open Houses' },
     { id: 'reels' as const,       label: 'Splice' },
     { id: 'terminated' as const,  label: 'Terminated' },
     { id: 'templates' as const,   label: 'Templates' },
@@ -54,6 +55,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
     ...(profile?.can_listings ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
+    ...(profile?.can_listings ? [{ id: 'ohevents' as const, label: 'Open Houses' }] : []),
     { id: 'reels' as const,       label: 'Splice' },
   ]
 
