@@ -502,7 +502,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       year_built: form.year_built ? Number(form.year_built) : null,
       description: form.description,
       photos: form.photos,
-      list_price: Number(form.list_price) || 0,
+      list_price: Number(String(form.list_price).replace(/,/g, '')) || 0,
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
       advisor_name: form.advisor_name,
