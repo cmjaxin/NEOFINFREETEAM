@@ -222,6 +222,12 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
                 </div>
               </div>
             </div>
+            {(page.schedule_url || page.advisor_phone) && (
+              <a href={page.schedule_url || `tel:${page.advisor_phone}`} target={page.schedule_url ? '_blank' : undefined} rel="noopener noreferrer"
+                style={{ display: 'block', marginTop: 14, textAlign: 'center', background: C.accent, color: C.navy, fontWeight: 700, fontSize: 13, padding: '10px 0', borderRadius: 9, textDecoration: 'none' }}>
+                Schedule a Time to Talk →
+              </a>
+            )}
           </div>
 
         </div>
