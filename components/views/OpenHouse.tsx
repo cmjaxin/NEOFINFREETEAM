@@ -892,7 +892,7 @@ export default function OpenHouseView() {
 
   async function deletePage(page: OHPage) {
     setPages(prev => prev.filter(p => p.id !== page.id))
-    const { error } = await supabase.from('open_house_pages').update({ status: 'inactive' }).eq('id', page.id)
+    const { error } = await supabase.from('open_house_pages').delete().eq('id', page.id)
     if (error) {
       alert(`Delete failed: ${error.message} (${error.code})`)
       load()
