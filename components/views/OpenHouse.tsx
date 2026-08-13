@@ -363,7 +363,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     year_built: String(init.year_built ?? ''),
     description: init.description ?? '',
     photos: init.photos ?? [] as string[],
-    list_price: String(init.list_price ?? ''),
+    list_price: init.list_price ? String(init.list_price) : '',
     tca_url: (init as OHPage).tca_url ?? '',
     tca_screenshot: (init as OHPage).tca_screenshot ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
@@ -792,6 +792,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 // ─── Page Card ────────────────────────────────────────────────────────────────
 function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
   const url = `/listing-presentation/${page.slug}`
+  const [confirmDelete, setConfirmDelete] = useState(false)
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {page.photos && page.photos.length > 0 ? (
@@ -800,7 +801,7 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
         <div style={{ height: 100, background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36 }}>🏡</div>
       )}
       <div style={{ padding: 16, flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <div style={{ fontWeight: 700, fontSize: 20, color: C.navy }}>{fmtPrice(page.list_price)}</div>
+        <div style={{ fontWeight: 700, fontSize: 20, color: C.navy }}>{page.list_price ? fmtPrice(page.list_price) : 'Price TBD'}</div>
         <div style={{ fontSize: 13, fontWeight: 600, color: C.dim, marginTop: 2 }}>{page.address}</div>
         <div style={{ fontSize: 12, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state}</div>
         <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 12, color: C.muted }}>
@@ -820,28 +821,45 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
             </div>
           )}
         </div>
-        <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <a href={url} target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
-            View Page
-          </a>
-          <button onClick={() => openFlyer(page)}
-            style={{ padding: '8px 12px', background: C.accent, border: 'none', borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
-            Print Flyer
-          </button>
-          <button onClick={() => { navigator.clipboard.writeText(window.location.origin + url) }}
-            style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
-            Copy Link
-          </button>
-          <button onClick={onEdit}
-            style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
-            Edit
-          </button>
-          <button onClick={onDelete}
-            style={{ padding: '8px 12px', background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
-            Delete
-          </button>
-        </div>
+
+        {confirmDelete ? (
+          <div style={{ marginTop: 'auto', paddingTop: 14, background: '#FEF2F2', borderRadius: 10, padding: 12, border: '1px solid #FECACA' }}>
+            <div style={{ fontSize: 12, color: '#991B1B', fontWeight: 600, marginBottom: 10 }}>Delete this listing?</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={onDelete}
+                style={{ flex: 1, padding: '8px 0', background: '#EF4444', border: 'none', borderRadius: 8, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                Yes, Delete
+              </button>
+              <button onClick={() => setConfirmDelete(false)}
+                style={{ flex: 1, padding: '8px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
+              View Page
+            </a>
+            <button onClick={() => openFlyer(page)}
+              style={{ padding: '8px 12px', background: C.accent, border: 'none', borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+              Print Flyer
+            </button>
+            <button onClick={() => { navigator.clipboard.writeText(window.location.origin + url) }}
+              style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
+              Copy Link
+            </button>
+            <button onClick={onEdit}
+              style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
+              Edit
+            </button>
+            <button onClick={() => setConfirmDelete(true)}
+              style={{ padding: '8px 12px', background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
+              Delete
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -865,7 +883,6 @@ export default function OpenHouseView() {
   useEffect(() => { load() }, [profile?.id])
 
   async function deletePage(page: OHPage) {
-    if (!confirm(`Delete "${page.address}"? This will permanently remove the page and all photos.`)) return
     const photos: string[] = (page.photos ?? []).filter(Boolean)
     if (photos.length > 0) {
       const paths = photos.map(url => {

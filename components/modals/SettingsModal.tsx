@@ -26,6 +26,7 @@ export default function SettingsModal() {
     nmls: profile?.nmls ?? '',
     phone: profile?.phone ?? '',
     headshot_url: profile?.headshot_url ?? '',
+    schedule_url: profile?.schedule_url ?? '',
     password: '',
   })
   const [error, setError] = useState('')
@@ -58,6 +59,7 @@ export default function SettingsModal() {
         nmls: form.nmls.trim(),
         phone: form.phone.trim(),
         headshot_url: form.headshot_url,
+        schedule_url: form.schedule_url.trim() || null,
       }).eq('id', profile!.id)
       if (form.password) {
         const { error: pwErr } = await supabase.auth.updateUser({ password: form.password })
@@ -131,6 +133,11 @@ export default function SettingsModal() {
           <div><Label>Phone</Label><Input value={form.phone} onChange={set('phone')} placeholder="(801) 555-0100" /></div>
           <div><Label>Email</Label><Input value={form.email} onChange={set('email')} /></div>
           <div><Label>New password</Label><Input type="password" value={form.password} onChange={set('password')} placeholder="Leave blank to keep" /></div>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <Label>Booking / Scheduling Link</Label>
+          <Input value={form.schedule_url} onChange={set('schedule_url')} placeholder="https://youcanbook.me/…" />
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Schedule" button on your listing presentation pages.</div>
         </div>
 
         {error && <div style={{ fontSize: 13, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>{error}</div>}

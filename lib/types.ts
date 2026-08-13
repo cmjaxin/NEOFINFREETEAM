@@ -14,6 +14,7 @@ export interface Profile {
   nmls: string
   phone: string
   headshot_url: string
+  schedule_url?: string
 }
 
 export interface Employee {

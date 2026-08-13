@@ -61,6 +61,7 @@ interface PageData {
   partner_name: string; partner_title: string; partner_email: string
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string | null
+  schedule_url: string | null
 }
 
 export default function ListingPresentationPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
@@ -83,23 +84,31 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
         const row = data[0]
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
-          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null,
+          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, schedule_url: null,
           ...row,
         } as PageData
-        // Backfill partner logo from marketing_partners if missing
-        if (!pageData.partner_logo && pageData.partner_name) {
-          sb.from('marketing_partners').select('logo_url, name').then(({ data: partners }) => {
-            if (partners) {
-              const match = partners.find((p: { name: string; logo_url: string }) =>
-                p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
-              )
-              if (match?.logo_url) { setPage({ ...pageData, partner_logo: match.logo_url }); return }
-            }
-            setPage(pageData)
-          })
-        } else {
-          setPage(pageData)
+
+        // Fetch advisor profile for schedule_url + backfill partner logo
+        const fetchExtras = async () => {
+          const [profileRes, partnerRes] = await Promise.all([
+            row.created_by
+              ? sb.from('profiles').select('schedule_url').eq('id', row.created_by).single()
+              : Promise.resolve({ data: null }),
+            (!pageData.partner_logo && pageData.partner_name)
+              ? sb.from('marketing_partners').select('logo_url, name')
+              : Promise.resolve({ data: null }),
+          ])
+          const scheduleUrl = (profileRes.data as { schedule_url?: string } | null)?.schedule_url ?? null
+          let finalData = { ...pageData, schedule_url: scheduleUrl }
+          if (partnerRes.data) {
+            const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
+              p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
+            )
+            if (match?.logo_url) finalData = { ...finalData, partner_logo: match.logo_url }
+          }
+          setPage(finalData)
         }
+        fetchExtras()
         setLoading(false)
       }, (e: unknown) => { setDbError(`Fetch error: ${e}`); setLoading(false) })
   }, [params.slug])
@@ -145,7 +154,7 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
 
           {/* Left: price, address, stats */}
           <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-            <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{fmtPrice(page.list_price)}</div>
+            <div className="lp-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>{page.list_price ? fmtPrice(page.list_price) : 'Price Upon Request'}</div>
             <div style={{ fontSize: 16, color: C.dim, marginTop: 6, fontWeight: 600 }}>{page.address}</div>
             <div style={{ fontSize: 14, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state} {page.zip}</div>
 
@@ -301,66 +310,105 @@ export default function ListingPresentationPage({ params: paramsPromise }: { par
 
         {/* Contact Tab */}
         {activeTab === 'contact' && (
-          <div className="lp-contact-grid" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
-              <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 20 }}>
-                {page.advisor_photo ? (
-                  <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
-                    {page.advisor_name?.[0] ?? '?'}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Schedule CTA */}
+            <div style={{ background: C.navy, borderRadius: 16, padding: '28px 28px 24px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 20 }}>
+                Schedule a time to talk with {page.advisor_name?.split(' ')[0] || 'your advisor'}
+              </div>
+
+              {/* Two reasons */}
+              <div style={{ display: 'flex', gap: 12, marginBottom: 24, textAlign: 'left', flexWrap: 'wrap' }}>
+                {[
+                  { num: '01', text: 'Answer all your questions about the Seller Advantage program' },
+                  { num: '02', text: 'Help you secure below-market interest rates on your new home purchase' },
+                ].map(r => (
+                  <div key={r.num} style={{ flex: '1 1 200px', background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, marginTop: 1 }}>{r.num}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{r.text}</div>
                   </div>
-                )}
-                <div>
-                  <div style={{ fontWeight: 800, fontSize: 18, color: C.navy }}>{page.advisor_name || 'Your Loan Advisor'}</div>
-                  <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{page.advisor_title || 'Mortgage Advisor'}</div>
-                  {page.advisor_nmls && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>NMLS# {page.advisor_nmls}</div>}
-                </div>
+                ))}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {page.advisor_phone && (
-                  <a href={`tel:${page.advisor_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: C.navy, borderRadius: 10, color: '#fff', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>
-                    <span>📞</span> {page.advisor_phone}
-                  </a>
-                )}
-                {page.advisor_email && (
-                  <a href={`mailto:${page.advisor_email}?subject=Listing Presentation — ${page.address}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, color: C.navy, fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>
-                    <span>✉️</span> {page.advisor_email}
-                  </a>
-                )}
-              </div>
+
+              {page.schedule_url ? (
+                <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none', letterSpacing: '0.01em' }}>
+                  Schedule a Free Consultation →
+                </a>
+              ) : page.advisor_phone ? (
+                <a href={`tel:${page.advisor_phone}`}
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none' }}>
+                  Call to Schedule →
+                </a>
+              ) : null}
             </div>
-            {page.partner_name && (
-              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Listing Agent</div>
-                <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-                  {page.partner_photo ? (
-                    <img src={page.partner_photo} alt={page.partner_name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  ) : (
-                    <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: C.accent, fontWeight: 700, flexShrink: 0 }}>
-                      {page.partner_name[0]}
-                    </div>
-                  )}
+
+            {/* Side-by-side contact cards */}
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+
+              {/* Advisor card */}
+              <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 18px 16px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12 }}>Loan Advisor</div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+                  {page.advisor_photo
+                    ? <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.accent, fontWeight: 800, flexShrink: 0 }}>{page.advisor_name?.[0] ?? '?'}</div>
+                  }
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: C.navy }}>{page.partner_name}</div>
-                    <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{page.partner_title || 'Listing Agent'}</div>
-                    {page.partner_nmls && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>NMLS# {page.partner_nmls}</div>}
+                    <div style={{ fontWeight: 800, fontSize: 14, color: C.navy }}>{page.advisor_name || 'Loan Advisor'}</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{page.advisor_title || 'Mortgage Advisor'}</div>
+                    {page.advisor_nmls && <div style={{ fontSize: 11, color: C.muted }}>NMLS# {page.advisor_nmls}</div>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {page.partner_phone && (
-                    <a href={`tel:${page.partner_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, color: C.navy, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
-                      📞 {page.partner_phone}
+                  {page.advisor_phone && (
+                    <a href={`tel:${page.advisor_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: C.navy, borderRadius: 8, color: '#fff', fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>
+                      📞 {page.advisor_phone}
                     </a>
                   )}
-                  {page.partner_email && (
-                    <a href={`mailto:${page.partner_email}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 9, color: C.navy, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}>
-                      ✉️ {page.partner_email}
+                  {page.advisor_email && (
+                    <a href={`mailto:${page.advisor_email}?subject=Listing Presentation — ${page.address}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.navy, fontWeight: 600, fontSize: 12, textDecoration: 'none', wordBreak: 'break-all' }}>
+                      ✉️ {page.advisor_email}
                     </a>
                   )}
                 </div>
               </div>
-            )}
+
+              {/* Partner card */}
+              {page.partner_name && (
+                <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 18px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Listing Agent</div>
+                    {page.partner_logo && <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 22, maxWidth: 80, objectFit: 'contain' }} />}
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+                    {page.partner_photo
+                      ? <img src={page.partner_photo} alt={page.partner_name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.bg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.navy, fontWeight: 800, flexShrink: 0 }}>{page.partner_name[0]}</div>
+                    }
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: C.navy }}>{page.partner_name}</div>
+                      <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{page.partner_title || 'Listing Agent'}</div>
+                      {page.partner_nmls && <div style={{ fontSize: 11, color: C.muted }}>NMLS# {page.partner_nmls}</div>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {page.partner_phone && (
+                      <a href={`tel:${page.partner_phone}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.navy, fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>
+                        📞 {page.partner_phone}
+                      </a>
+                    )}
+                    {page.partner_email && (
+                      <a href={`mailto:${page.partner_email}`} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.navy, fontWeight: 600, fontSize: 12, textDecoration: 'none', wordBreak: 'break-all' }}>
+                        ✉️ {page.partner_email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
