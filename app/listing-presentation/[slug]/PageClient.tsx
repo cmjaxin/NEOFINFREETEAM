@@ -51,6 +51,123 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
   )
 }
 
+// ─── Flyer Generator ──────────────────────────────────────────────────────────
+function openFlyer(page: PageData) {
+  const NEO = '#0A2540'
+  const CYAN = '#5BCBF5'
+  const photos = page.photos ?? []
+  const hero = photos[0] ?? ''
+  const small = [photos[1] ?? '', photos[2] ?? '', photos[3] ?? '']
+  const desc = (page.description ?? '').slice(0, 900)
+  const price = Number(page.list_price) > 0 ? '$' + Math.round(page.list_price).toLocaleString() : ''
+  const location = [page.city, page.state, page.zip].filter(Boolean).join(', ')
+  const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
+  const partnerNmls = page.partner_nmls ? `NMLS# ${page.partner_nmls}` : ''
+  const stats = [
+    page.beds ? `${page.beds} Beds` : '',
+    page.baths ? `${page.baths} Baths` : '',
+    page.sqft ? `${page.sqft.toLocaleString()} Sq Ft` : '',
+    page.lot_size ? `${page.lot_size} Lot` : '',
+    page.year_built ? `Built ${page.year_built}` : '',
+  ].filter(Boolean)
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Listing — ${page.address}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+@page { size: letter portrait; margin: 0; }
+html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial', Helvetica, sans-serif; background: #fff; }
+.hero { position: relative; width: 100%; height: 3.1in; overflow: hidden; background: #CBD5E1; }
+.hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hero-fallback { width: 100%; height: 100%; background: linear-gradient(135deg, ${NEO} 0%, #1a4a7c 100%); display: flex; align-items: center; justify-content: center; font-size: 72px; }
+.hero-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,37,64,0.88) 0%, rgba(10,37,64,0.1) 55%, transparent 100%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.hero-top { position: absolute; top: 0; left: 0; right: 0; padding: 14px 20px; display: flex; align-items: center; background: linear-gradient(to bottom, rgba(10,37,64,0.65) 0%, transparent 100%); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.hero-top img { max-height: 52px; max-width: 180px; object-fit: contain; }
+.hero-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px 24px 16px; display: flex; align-items: flex-end; justify-content: space-between; }
+.hero-address { color: #fff; }
+.hero-street { font-size: 22px; font-weight: 900; line-height: 1.1; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
+.hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
+.price-bar { height: 0.55in; background: ${NEO}; display: flex; align-items: center; padding: 0 24px; gap: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.price-tag { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 10px; }
+.price-value { font-size: 30px; font-weight: 900; color: ${CYAN}; letter-spacing: -0.01em; }
+.price-divider { width: 1px; height: 28px; background: rgba(91,203,245,0.25); margin: 0 20px; flex-shrink: 0; }
+.stats-row { display: flex; gap: 0; flex-wrap: nowrap; overflow: hidden; }
+.stat-chip { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.85); padding: 0 12px; white-space: nowrap; border-right: 1px solid rgba(91,203,245,0.2); }
+.stat-chip:last-child { border-right: none; }
+.main { display: flex; height: 5.97in; }
+.left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
+.section-label { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: ${CYAN}; margin-bottom: 5px; }
+.desc-text { font-size: 10px; line-height: 1.75; color: #374151; }
+.right { flex: 0 0 42%; padding: 16px 20px 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.photo-slot { flex: 1; min-height: 0; overflow: hidden; border-radius: 8px; border: 1px solid #E4E8EC; background: #F1F5F9; }
+.photo-slot img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 8px; }
+.photo-empty { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #CBD5E1; font-size: 28px; }
+.contact-bar { height: 0.95in; background: ${NEO}; display: flex; align-items: stretch; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.contact-cell { flex: 1; display: flex; align-items: center; gap: 14px; padding: 0 22px; }
+.contact-sep { width: 1px; background: rgba(91,203,245,0.18); margin: 14px 0; flex-shrink: 0; }
+.contact-center { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; padding: 0 18px; }
+.contact-center img { max-height: 36px; max-width: 120px; object-fit: contain; }
+.c-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 2px solid ${CYAN}; }
+.c-init { width: 44px; height: 44px; border-radius: 50%; background: rgba(91,203,245,0.12); border: 2px solid rgba(91,203,245,0.35); display: flex; align-items: center; justify-content: center; color: ${CYAN}; font-size: 18px; font-weight: 900; flex-shrink: 0; }
+.c-info { color: #fff; }
+.c-role { font-size: 8px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: ${CYAN}; margin-bottom: 3px; }
+.c-name { font-size: 14px; font-weight: 800; line-height: 1.15; }
+.c-detail { font-size: 9px; color: rgba(255,255,255,0.55); margin-top: 5px; line-height: 1.6; }
+.footer { height: 0.43in; background: #F8FAFC; border-top: 2px solid ${CYAN}; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.footer-disc { font-size: 5px; color: #9CA3AF; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="hero">
+  ${hero ? `<img src="${hero}" alt="${page.address}" />` : `<div class="hero-fallback">🏡</div>`}
+  <div class="hero-overlay"></div>
+  ${page.partner_logo ? `<div class="hero-top"><img src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /></div>` : ''}
+  <div class="hero-content">
+    <div class="hero-address">
+      <div class="hero-street">${page.address}</div>
+      ${location ? `<div class="hero-city">${location}</div>` : ''}
+    </div>
+    <div class="hero-logo">
+      <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" />
+    </div>
+  </div>
+</div>
+<div class="price-bar">
+  ${price ? `<span class="price-tag">List Price</span><span class="price-value">${price}</span>` : ''}
+  ${(price && stats.length > 0) ? `<div class="price-divider"></div>` : ''}
+  ${stats.length > 0 ? `<div class="stats-row">${stats.map((s: string) => `<span class="stat-chip">${s}</span>`).join('')}</div>` : ''}
+</div>
+<div class="main">
+  <div class="left">
+    ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p></div>` : ''}
+  </div>
+  <div class="right">
+    ${small.map((url: string, i: number) => `<div class="photo-slot">${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : `<div class="photo-empty">🏠</div>`}</div>`).join('')}
+  </div>
+</div>
+<div class="contact-bar">
+  ${page.partner_name ? `<div class="contact-cell">${page.partner_photo ? `<img class="c-photo" src="${page.partner_photo}" alt="${page.partner_name}" />` : `<div class="c-init">${(page.partner_name[0] ?? '?').toUpperCase()}</div>`}<div class="c-info"><div class="c-role">${page.partner_title || 'Listing Agent'}</div><div class="c-name">${page.partner_name}</div><div class="c-detail">${[page.partner_phone, page.partner_email, partnerNmls].filter(Boolean).join('<br>')}</div></div></div><div class="contact-sep"></div>` : ''}
+  <div class="contact-center"><img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style="max-height:36px;max-width:120px;object-fit:contain;" /></div>
+  ${page.advisor_name ? `<div class="contact-sep"></div><div class="contact-cell" style="justify-content:flex-end"><div class="c-info" style="text-align:right"><div class="c-role">${page.advisor_title || 'Mortgage Advisor'} · NEO Home Loans</div><div class="c-name">${page.advisor_name}</div><div class="c-detail">${[page.advisor_phone, page.advisor_email, advisorNmls].filter(Boolean).join('<br>')}</div></div>${page.advisor_photo ? `<img class="c-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" />` : `<div class="c-init">${(page.advisor_name[0] ?? '?').toUpperCase()}</div>`}</div>` : ''}
+</div>
+<div class="footer">
+  <span class="footer-disc">BETTER MORTGAGE RESERVES THE RIGHT TO MODIFY OR DISCONTINUE PRODUCTS, PROMOTIONS AND BENEFITS AT ANY TIME WITHOUT NOTICE. Rates and Terms are subject to change at any time without notice and are subject to state restrictions. The Better Home Logo is Registered in the U.S. Patent and Trademark Office. © 2025 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access.</span>
+  <img src="https://ourcpb.bank/wp-content/uploads/2024/03/equal-housing-lender-logo-png-transparent.png" alt="Equal Housing Lender" style="height:22px;width:auto;object-fit:contain;flex-shrink:0;margin-left:10px;" />
+</div>
+<script>window.onload = function() { window.print(); }</script>
+</body>
+</html>`
+
+  const blob = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 interface PageData {
   id: string; slug: string; address: string; city: string; state: string; zip: string
@@ -87,13 +204,13 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
           ...row,
         } as PageData
 
-        // Fetch advisor profile for schedule_url + backfill partner logo
+        // Fetch advisor profile for schedule_url + always get latest partner logo
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
               ? sb.from('profiles').select('schedule_url').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
-            (!pageData.partner_logo && pageData.partner_name)
+            pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
           ])
@@ -140,9 +257,15 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
       <header style={{ background: C.navy, padding: '14px 0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {page.partner_logo && (
-            <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 36, maxWidth: 140, objectFit: 'contain' }} />
+            <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 52, maxWidth: 180, objectFit: 'contain' }} />
           )}
-          <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
+            <button onClick={() => openFlyer(page)}
+              style={{ background: C.accent, color: C.navy, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              ↓ Download Flyer
+            </button>
+          </div>
         </div>
       </header>
 
@@ -181,7 +304,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
             <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Listing Agent</div>
-                {page.partner_logo && <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain' }} />}
+                {page.partner_logo && <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 52, maxWidth: 160, objectFit: 'contain' }} />}
               </div>
               <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 {page.partner_photo

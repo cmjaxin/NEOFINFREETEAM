@@ -117,6 +117,14 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .hero-city { font-size: 13px; font-weight: 500; opacity: 0.85; margin-top: 3px; }
 .hero-logo { text-align: right; }
 .hero-logo img { max-height: 30px; max-width: 110px; object-fit: contain; }
+.hero-top {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 14px 20px;
+  display: flex; align-items: center;
+  background: linear-gradient(to bottom, rgba(10,37,64,0.65) 0%, transparent 100%);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.hero-top img { max-height: 52px; max-width: 180px; object-fit: contain; }
 
 /* ── PRICE BAR ── */
 .price-bar {
@@ -213,6 +221,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 <div class="hero">
   ${hero ? `<img src="${hero}" alt="${page.address}" />` : `<div class="hero-fallback">🏡</div>`}
   <div class="hero-overlay"></div>
+  ${page.partner_logo ? `<div class="hero-top"><img src="${page.partner_logo}" alt="Partner" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /></div>` : ''}
   <div class="hero-content">
     <div class="hero-address">
       <div class="hero-street">${page.address}</div>
@@ -245,7 +254,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
     <div class="tca-card">
       <div class="tca-header">
         <div class="tca-header-dot"></div>
-        <span class="tca-header-text">Total Cost Analysis — MortgageCoach</span>
+        <span class="tca-header-text">Total Cost Analysis</span>
       </div>
       ${page.tca_screenshot
         ? `<div class="tca-img"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>`
@@ -282,9 +291,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
   <div class="contact-sep"></div>` : ''}
 
   <div class="contact-center">
-    ${page.partner_logo
-      ? `<img src="${page.partner_logo}" alt="${page.partner_name}" style="filter:none;max-height:44px;max-width:130px;object-fit:contain;" />`
-      : `<img src="/neo-logo.png" alt="NEO Home Loans" />`}
+    <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style="max-height:36px;max-width:120px;object-fit:contain;" />
   </div>
 
   ${page.advisor_name ? `
@@ -311,8 +318,10 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 </body>
 </html>`
 
-  const w = window.open('', '_blank')
-  if (w) { w.document.write(html); w.document.close() }
+  const blob = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
