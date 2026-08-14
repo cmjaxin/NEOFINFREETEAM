@@ -143,7 +143,7 @@ export default function SettingsModal() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 6 }}>
           <div><Label>Full name</Label><Input value={form.name} onChange={set('name')} /></div>
           <div><Label>Job title</Label><Input value={form.title} onChange={set('title')} placeholder="Mortgage Advisor" /></div>
           <div><Label>NMLS #</Label><Input value={form.nmls} onChange={set('nmls')} placeholder="123456" /></div>
@@ -151,17 +151,17 @@ export default function SettingsModal() {
           <div><Label>Email</Label><Input value={form.email} onChange={set('email')} /></div>
           <div><Label>New password</Label><Input type="password" value={form.password} onChange={set('password')} placeholder="Leave blank to keep" /></div>
         </div>
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 6 }}>
           <Label>Booking / Scheduling Link</Label>
           <Input value={form.schedule_url} onChange={set('schedule_url')} placeholder="https://youcanbook.me/…" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Schedule" button on your listing presentation pages.</div>
         </div>
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 6 }}>
           <Label>Apply Now Link</Label>
           <Input value={form.apply_url} onChange={set('apply_url')} placeholder="https://apply.neohomeloans.com/…" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Apply Now" button on your sign rider pages.</div>
         </div>
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 6 }}>
           <Label>BNTouch User ID</Label>
           <Input value={form.bntouch_user_id} onChange={set('bntouch_user_id')} placeholder="e.g. 10543" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Your BNTouch user ID — powers the lead capture form on your listing pages.</div>
