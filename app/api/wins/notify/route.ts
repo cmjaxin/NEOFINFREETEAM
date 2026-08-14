@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createClient } from '@supabase/supabase-js'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function resend() { return new Resend(process.env.RESEND_API_KEY ?? 'missing') }
 
 function admin() {
   return createClient(
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       ? `<p style="margin:0 0 8px;color:#5C6570;font-size:14px;">Also tagged: ${othersTagged.join(', ')}</p>`
       : ''
 
-    const { error } = await resend.emails.send({
+    const { error } = await resend().emails.send({
       from:    'Team Wins <FINFREEwins@neoentrepreneurhomeloans.com>',
       to:      prof.email,
       subject: `🏆 ${author_name} tagged you in a team win!`,
