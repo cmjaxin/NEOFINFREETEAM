@@ -192,7 +192,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'loan' | 'contact'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'loan' | 'contact'>('loan')
   const [showLead, setShowLead] = useState(false)
   const leadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
