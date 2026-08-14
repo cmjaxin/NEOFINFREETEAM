@@ -1821,10 +1821,21 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
           )}
 
           {msg && <div style={{ fontSize: 12, color: msg.startsWith('Error') ? '#EF4444' : '#10B981', marginBottom: 10 }}>{msg}</div>}
-          <button onClick={handleSave} disabled={saving || !tplName.trim()}
-            style={{ width: '100%', background: (saving || !tplName.trim()) ? '#D1D5DB' : '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13, cursor: (saving || !tplName.trim()) ? 'default' : 'pointer' }}>
-            {saving ? 'Saving…' : editTemplate ? 'Save Changes' : 'Publish to Library'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {editTemplate && (
+              <button onClick={async () => {
+                if (!confirm('Delete this template? This cannot be undone.')) return
+                await supabase.from('marketing_templates').delete().eq('id', editTemplate.id)
+                onDone()
+              }} style={{ background: '#FEE2E2', color: '#EF4444', border: 'none', borderRadius: 10, padding: '11px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>
+                Delete
+              </button>
+            )}
+            <button onClick={handleSave} disabled={saving || !tplName.trim()}
+              style={{ flex: 1, background: (saving || !tplName.trim()) ? '#D1D5DB' : '#0A2540', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 0', fontWeight: 700, fontSize: 13, cursor: (saving || !tplName.trim()) ? 'default' : 'pointer' }}>
+              {saving ? 'Saving…' : editTemplate ? 'Save Changes' : 'Publish to Library'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
