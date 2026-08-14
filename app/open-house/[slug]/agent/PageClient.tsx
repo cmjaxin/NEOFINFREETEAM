@@ -71,12 +71,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .left{flex:0 0 58%;padding:16px 18px 12px 24px;display:flex;flex-direction:column;gap:14px;border-right:1px solid #E4E8EC;overflow:hidden}
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:10px;line-height:1.75;color:#374151}
-.tca-card{flex:1;border:1px solid #E4E8EC;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-.tca-header{background:${NEO};padding:7px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.tca-dot{width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0}
-.tca-label{font-size:9px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em}
-.tca-img{flex:1;overflow:hidden;min-height:0}.tca-img img{width:100%;height:100%;object-fit:contain;object-position:top;display:block}
-.tca-empty{flex:1;display:flex;align-items:center;justify-content:center;background:#F8FAFC;color:#94A3B8;font-size:11px;text-align:center;padding:20px}
+.qr-card{flex:1;border:2px solid ${CYAN};border-radius:10px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:16px;background:linear-gradient(160deg,#F0F9FF 0%,#fff 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qr-card img{width:130px;height:130px;display:block;border-radius:6px}
+.qr-label{margin-top:9px;font-size:9px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
+.qr-sub{margin-top:3px;font-size:7.5px;color:#64748B;text-align:center;line-height:1.5}
 .right{flex:0 0 42%;padding:16px 20px 12px 14px;display:flex;flex-direction:column;gap:10px}
 .photo-slot{flex:1;min-height:0;overflow:hidden;border-radius:8px;border:1px solid #E4E8EC;background:#F1F5F9}
 .photo-slot img{width:100%;height:100%;object-fit:cover;display:block;border-radius:8px}
@@ -110,9 +108,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 <div class="main">
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
-    <div class="tca-card">
-      <div class="tca-header"><div class="tca-dot"></div><span class="tca-label">Total Cost Analysis</span></div>
-      ${p.tca_screenshot ? `<div class="tca-img"><img src="${p.tca_screenshot}" alt="TCA" /></div>` : `<div class="tca-empty">Upload a TCA screenshot in the editor</div>`}
+    <div class="qr-card">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${p.slug}`)}&size=260x260&margin=2&color=0A2540" alt="QR Code" />
+      <div class="qr-label">Scan to View Special<br>Financing Options</div>
+      <div class="qr-sub">Payment breakdowns, loan scenarios &amp; more.</div>
     </div>
   </div>
   <div class="right">
@@ -171,12 +170,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .right-body{flex:1;padding:14px 20px 10px;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.75;color:#374151}
-.tca-card{border:1px solid #E4E8EC;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;flex:1;min-height:0}
-.tca-header{background:${NEO};padding:6px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.tca-dot{width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0}
-.tca-label{font-size:8.5px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em}
-.tca-img{flex:1;overflow:hidden;min-height:0}.tca-img img{width:100%;height:100%;object-fit:contain;object-position:top;display:block}
-.tca-empty{flex:1;display:flex;align-items:center;justify-content:center;background:#F8FAFC;color:#94A3B8;font-size:10px;text-align:center;padding:16px}
+.qr-card2{border:2px solid ${CYAN};border-radius:10px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:0;padding:14px;background:linear-gradient(160deg,#F0F9FF 0%,#fff 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qr-card2 img{width:120px;height:120px;display:block;border-radius:6px}
+.qr-label2{margin-top:8px;font-size:8.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
+.qr-sub2{margin-top:3px;font-size:7px;color:#64748B;text-align:center;line-height:1.5}
 .photo-strip{display:flex;gap:4px;height:1.1in;flex-shrink:0}
 .strip-photo{flex:1;overflow:hidden;border-radius:6px;background:#E4E8EC}
 .strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
@@ -216,9 +213,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       </div>
       <div class="right-body">
         ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
-        <div class="tca-card">
-          <div class="tca-header"><div class="tca-dot"></div><span class="tca-label">Total Cost Analysis</span></div>
-          ${p.tca_screenshot ? `<div class="tca-img"><img src="${p.tca_screenshot}" alt="TCA" /></div>` : `<div class="tca-empty">Upload a TCA screenshot in the editor</div>`}
+        <div class="qr-card2">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${p.slug}`)}&size=240x240&margin=2&color=0A2540" alt="QR Code" />
+          <div class="qr-label2">Scan to View Special<br>Financing Options</div>
+          <div class="qr-sub2">Payment breakdowns, loan scenarios &amp; more.</div>
         </div>
         <div class="photo-strip">
           <div class="strip-photo">${ph2 ? `<img src="${ph2}" alt="Photo 2" />` : `<div class="strip-empty"></div>`}</div>
@@ -288,14 +286,12 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .col-desc{flex:0 0 3.0in;padding:14px 16px 12px 22px;display:flex;flex-direction:column;gap:10px;overflow:hidden;border-right:1px solid #E4E8EC}
 .sec-label{font-size:7.5px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9px;line-height:1.8;color:#374151}
-/* Mid: TCA */
+/* Mid: QR */
 .col-tca{flex:1;padding:14px 14px 12px;display:flex;flex-direction:column;border-right:1px solid #E4E8EC;min-width:0}
-.tca-card{flex:1;border:1.5px solid #E4E8EC;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-height:0}
-.tca-hdr{background:${NEO};padding:6px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.tca-dot{width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0}
-.tca-lbl{font-size:8px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em}
-.tca-img{flex:1;overflow:hidden;min-height:0}.tca-img img{width:100%;height:100%;object-fit:contain;object-position:top;display:block}
-.tca-empty{flex:1;display:flex;align-items:center;justify-content:center;background:#F8FAFC;color:#94A3B8;font-size:9px;text-align:center;padding:12px;line-height:1.5}
+.qr-card3{flex:1;border:2px solid ${CYAN};border-radius:9px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:12px;background:linear-gradient(160deg,#F0F9FF 0%,#fff 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qr-card3 img{width:110px;height:110px;display:block;border-radius:5px}
+.qr-label3{margin-top:8px;font-size:8px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
+.qr-sub3{margin-top:3px;font-size:7px;color:#64748B;text-align:center;line-height:1.5}
 /* Right: features + photos */
 .col-right{flex:0 0 1.85in;padding:14px 18px 12px 14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
 .feat-item{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #F0F0F0}
@@ -339,10 +335,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       ${desc ? `<div><div class="sec-label">About This Home</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
     </div>
     <div class="col-tca">
-      <div class="sec-label">Total Cost Analysis</div>
-      <div class="tca-card">
-        <div class="tca-hdr"><div class="tca-dot"></div><span class="tca-lbl">Payment Breakdown</span></div>
-        ${p.tca_screenshot ? `<div class="tca-img"><img src="${p.tca_screenshot}" alt="TCA" /></div>` : `<div class="tca-empty">Upload a TCA screenshot<br>in the open house editor</div>`}
+      <div class="qr-card3">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
+        <div class="qr-label3">Scan to View Special<br>Financing Options</div>
+        <div class="qr-sub3">See payment breakdowns, loan scenarios,<br>and connect with your mortgage advisor.</div>
       </div>
     </div>
     <div class="col-right">
