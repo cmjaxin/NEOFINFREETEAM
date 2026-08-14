@@ -991,10 +991,12 @@ function dl(){
 export default function AgentPageClient({ slug }: { slug: string }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
   const [socialEditing, setSocialEditing] = useState<string | null>(null)
   const [socialEdits, setSocialEdits] = useState<Record<string, Record<string,string>>>({})
 
+  useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
     const sb = createClient()
     sb.from('open_house_pages')
@@ -1038,7 +1040,7 @@ export default function AgentPageClient({ slug }: { slug: string }) {
       })
   }, [slug])
 
-  if (loading) return (
+  if (!mounted || loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
       <div style={{ color: C.muted, fontSize: 16 }}>Loading…</div>
     </div>

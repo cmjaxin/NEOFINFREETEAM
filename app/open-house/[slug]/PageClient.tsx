@@ -190,10 +190,13 @@ interface PageData {
 export default function OpenHousePage({ slug }: { slug: string }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'overview' | 'loan' | 'contact'>('overview')
   const [showLead, setShowLead] = useState(false)
   const leadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     try { if (sessionStorage.getItem('lp_lead_captured')) return } catch {}
@@ -246,7 +249,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
       }, (e: unknown) => { setDbError(`Fetch error: ${e}`); setLoading(false) })
   }, [slug])
 
-  if (loading) return (
+  if (!mounted || loading) return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
       <div style={{ color: C.muted, fontSize: 16 }}>Loading…</div>
     </div>
