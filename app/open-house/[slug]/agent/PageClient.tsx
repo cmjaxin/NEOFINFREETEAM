@@ -819,9 +819,12 @@ html,body{width:1080px;height:1080px;overflow:hidden;background:#000;-webkit-pri
     <div class="b-row">
       <div style="display:flex;flex-direction:column;gap:8px">
         <div class="b-when">${when?`📅 ${when}`:where}</div>
-        <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px">
-          <div style="background:#fff;border-radius:5px;padding:3px;flex-shrink:0"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=160x160&margin=2&color=0A2540" alt="QR" style="width:46px;height:46px;display:block;border-radius:2px" /></div>
-          <div style="font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);line-height:1.4">Scan for<br>Financing Options</div>
+        <div style="display:flex;align-items:center;gap:18px;background:rgba(255,255,255,0.08);border-radius:14px;padding:16px 20px">
+          <div style="background:#fff;border-radius:8px;padding:5px;flex-shrink:0"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=240x240&margin=2&color=0A2540" alt="QR" style="width:80px;height:80px;display:block;border-radius:3px" /></div>
+          <div>
+            <div style="font-family:'Montserrat',sans-serif;font-size:20px;font-weight:900;color:#fff;line-height:1.25;margin-bottom:6px">Scan for Special<br>Financing Options</div>
+            <div style="font-family:'Montserrat',sans-serif;font-size:14px;color:rgba(255,255,255,0.55);line-height:1.5">Payment breakdowns &amp; loan scenarios<br>for this property.</div>
+          </div>
         </div>
       </div>
       <div class="b-agent">
