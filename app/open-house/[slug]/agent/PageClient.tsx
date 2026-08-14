@@ -109,7 +109,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
     <div class="qr-card">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${p.slug}`)}&size=260x260&margin=2&color=0A2540" alt="QR Code" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=260x260&margin=2&color=0A2540" alt="QR Code" />
       <div class="qr-label">Scan to View Special<br>Financing Options</div>
       <div class="qr-sub">Payment breakdowns, loan scenarios &amp; more.</div>
     </div>
@@ -214,7 +214,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       <div class="right-body">
         ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
         <div class="qr-card2">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${p.slug}`)}&size=240x240&margin=2&color=0A2540" alt="QR Code" />
+          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=240x240&margin=2&color=0A2540" alt="QR Code" />
           <div class="qr-label2">Scan to View Special<br>Financing Options</div>
           <div class="qr-sub2">Payment breakdowns, loan scenarios &amp; more.</div>
         </div>
@@ -336,7 +336,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
     </div>
     <div class="col-tca">
       <div class="qr-card3">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
+        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
         <div class="qr-label3">Scan to View Special<br>Financing Options</div>
         <div class="qr-sub3">See payment breakdowns, loan scenarios,<br>and connect with your mortgage advisor.</div>
       </div>

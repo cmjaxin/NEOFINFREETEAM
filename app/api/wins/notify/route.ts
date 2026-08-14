@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
                 <!-- CTA -->
                 <tr>
                   <td style="background:#ffffff;padding:0 36px 32px;border-left:1px solid #E4E8EC;border-right:1px solid #E4E8EC;text-align:center;">
-                    <a href="https://neofinfree.vercel.app" style="display:inline-block;background:#0A2540;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 28px;border-radius:10px;">
+                    <a href="https://neofinfree.com" style="display:inline-block;background:#0A2540;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:13px 28px;border-radius:10px;">
                       View on Team Hub →
                     </a>
                   </td>

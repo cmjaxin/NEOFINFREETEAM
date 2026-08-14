@@ -250,7 +250,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
     </div>` : ''}
 
     <div class="qr-card">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${page.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${page.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
       <div class="qr-label">Scan to View Special<br>Financing Options</div>
       <div class="qr-sub">See payment breakdowns, loan scenarios,<br>and connect with your mortgage advisor.</div>
     </div>
