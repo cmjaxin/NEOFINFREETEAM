@@ -515,17 +515,22 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const [downloading, setDownloading] = useState(false)
   const [headshotUploading, setHeadshotUploading] = useState(false)
   const [mobileTab, setMobileTab] = useState<'preview' | 'fill'>('fill')
+  const [zoom, setZoom] = useState(1)
   function switchToPreview() {
     setMobileTab('preview')
     // Canvas was hidden (display:none), so containerRef.clientWidth was 0 — re-render after show
     requestAnimationFrame(() => renderPreview())
   }
   const [posOverrides, setPosOverrides] = useState<Record<string, {x: number; y: number}>>({})
+  const [guides, setGuides] = useState<{ x?: number; y?: number }[]>([])
   const previewRef = useRef<HTMLCanvasElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<{id: string; ox: number; oy: number; mx0: number; my0: number} | null>(null)
   const posOverridesRef = useRef<Record<string, {x: number; y: number}>>({})
+
+  const SNAP_THRESHOLD = 0.015
+  const SNAP_ANCHORS = [0, 0.25, 0.5, 0.75, 1]
 
   function getPageWithOverrides(page: TplPage, overrides = posOverridesRef.current): TplPage {
     if (Object.keys(overrides).length === 0) return page
@@ -562,18 +567,35 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     e.preventDefault()
     const { x, y } = canvasFraction(e.clientX, e.clientY)
     const { id, ox, oy, mx0, my0 } = dragRef.current
-    const nx = Math.max(0, Math.min(1, ox + x - mx0))
-    const ny = Math.max(0, Math.min(1, oy + y - my0))
+    let nx = Math.max(0, Math.min(1, ox + x - mx0))
+    let ny = Math.max(0, Math.min(1, oy + y - my0))
+
+    // Collect snap targets: other fields + grid anchors
+    const page = template.pages[pageIdx]
+    const otherXs = page.fields.filter(f => f.id !== id).map(f => posOverridesRef.current[f.id]?.x ?? f.x)
+    const otherYs = page.fields.filter(f => f.id !== id).map(f => posOverridesRef.current[f.id]?.y ?? f.y)
+    const snapXs = [...SNAP_ANCHORS, ...otherXs]
+    const snapYs = [...SNAP_ANCHORS, ...otherYs]
+
+    const newGuides: { x?: number; y?: number }[] = []
+    for (const sx of snapXs) {
+      if (Math.abs(nx - sx) < SNAP_THRESHOLD) { nx = sx; newGuides.push({ x: sx }) }
+    }
+    for (const sy of snapYs) {
+      if (Math.abs(ny - sy) < SNAP_THRESHOLD) { ny = sy; newGuides.push({ y: sy }) }
+    }
+    setGuides(newGuides)
+
     posOverridesRef.current = { ...posOverridesRef.current, [id]: { x: nx, y: ny } }
     setPosOverrides({ ...posOverridesRef.current })
-    const canvas = previewRef.current, container = containerRef.current
-    if (!canvas || !container) return
-    const maxW = Math.min(container.clientWidth, 560)
-    const previewH = Math.round(maxW * (size.h / size.w))
-    renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, maxW, previewH).catch(() => {})
+    const canvas = previewRef.current
+    if (!canvas) return
+    const drawW = Math.round(560 * zoom)
+    const drawH = Math.round(drawW * (size.h / size.w))
+    renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, drawW, drawH).catch(() => {})
   }
 
-  function handlePreviewMouseUp() { dragRef.current = null }
+  function handlePreviewMouseUp() { dragRef.current = null; setGuides([]) }
 
   const usedFields = new Set<FieldType>()
   template.pages.forEach(p => p.fields.forEach(f => usedFields.has(f.type) || usedFields.add(f.type)))
@@ -587,15 +609,15 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(renderPreview, 200)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [values, pageIdx, posOverrides])
+  }, [values, pageIdx, posOverrides, zoom])
 
   async function renderPreview() {
-    const canvas = previewRef.current, container = containerRef.current
-    if (!canvas || !container) return
+    const canvas = previewRef.current
+    if (!canvas) return
     setRendering(true)
-    const maxW = Math.min(container.clientWidth, 560)
-    const previewH = Math.round(maxW * (size.h / size.w))
-    try { await renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, maxW, previewH) } catch {}
+    const drawW = Math.round(560 * zoom)
+    const drawH = Math.round(drawW * (size.h / size.w))
+    try { await renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, drawW, drawH) } catch {}
     setRendering(false)
   }
 
@@ -789,13 +811,33 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
 
         {/* Canvas preview */}
         <div ref={containerRef} className="mkt-modal-canvas" data-hidden={mobileTab !== 'preview' ? 'true' : undefined}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 560 }}>
-            <canvas ref={previewRef} onMouseDown={handlePreviewMouseDown} onMouseMove={handlePreviewMouseMove} onMouseUp={handlePreviewMouseUp} onMouseLeave={handlePreviewMouseUp} style={{ width: '100%', aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.7)', opacity: rendering ? 0.5 : 1, transition: 'opacity .15s', cursor: 'grab' }} />
-            {rendering && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ background: 'rgba(0,0,0,.55)', color: '#fff', borderRadius: 8, padding: '8px 18px', fontSize: 13 }}>Updating…</div>
-              </div>
-            )}
+          {/* Zoom controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexShrink: 0 }}>
+            <button onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,.6)', fontWeight: 600, minWidth: 36, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(3, +(z + 0.25).toFixed(2)))} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+            {zoom !== 1 && <button onClick={() => setZoom(1)} style={{ background: 'rgba(255,255,255,.08)', border: 'none', color: 'rgba(255,255,255,.5)', borderRadius: 6, padding: '0 8px', height: 28, fontSize: 11, cursor: 'pointer' }}>Reset</button>}
+          </div>
+          {/* Scrollable zoom container */}
+          <div style={{ overflow: 'auto', width: '100%', maxHeight: 'calc(100vh - 160px)' }}>
+            <div style={{ width: `${560 * zoom}px`, position: 'relative' }}>
+              <canvas ref={previewRef} onMouseDown={handlePreviewMouseDown} onMouseMove={handlePreviewMouseMove} onMouseUp={handlePreviewMouseUp} onMouseLeave={handlePreviewMouseUp}
+                style={{ width: `${560 * zoom}px`, aspectRatio: `${size.w} / ${size.h}`, display: 'block', borderRadius: 8, boxShadow: '0 8px 40px rgba(0,0,0,.7)', opacity: rendering ? 0.5 : 1, transition: 'opacity .15s', cursor: dragRef.current ? 'grabbing' : 'grab' }} />
+              {/* Alignment guide overlays */}
+              {guides.length > 0 && (
+                <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', borderRadius: 8 }} viewBox="0 0 1 1" preserveAspectRatio="none">
+                  {guides.map((g, i) => g.x !== undefined
+                    ? <line key={i} x1={g.x} y1={0} x2={g.x} y2={1} stroke="#5BCBF5" strokeWidth="0.004" strokeDasharray="0.02 0.01" />
+                    : <line key={i} x1={0} y1={g.y!} x2={1} y2={g.y!} stroke="#5BCBF5" strokeWidth="0.004" strokeDasharray="0.02 0.01" />
+                  )}
+                </svg>
+              )}
+              {rendering && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ background: 'rgba(0,0,0,.55)', color: '#fff', borderRadius: 8, padding: '8px 18px', fontSize: 13 }}>Updating…</div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
