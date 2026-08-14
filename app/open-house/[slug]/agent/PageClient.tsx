@@ -531,7 +531,11 @@ html,body{width:1080px;height:1080px;overflow:hidden;background:${BG};-webkit-pr
 .ww-row{display:flex;gap:16px;align-items:baseline}
 .ww-label{font-family:'Playfair Display',serif;font-size:16px;font-weight:900;color:${DARK};letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;width:80px}
 .ww-value{font-family:'Montserrat',sans-serif;font-size:15px;color:#5A504A;font-weight:500;line-height:1.5}
-.r-bottom{margin-top:20px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(0,0,0,0.1);padding-top:16px}
+.qr-insta{display:flex;align-items:center;gap:20px;margin-top:14px;padding:16px 18px;background:rgba(0,0,0,0.05);border-radius:14px}
+.qr-insta img{width:90px;height:90px;border-radius:8px;flex-shrink:0}
+.qr-insta-label{font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:${DARK};line-height:1.25;margin-bottom:6px}
+.qr-insta-sub{font-family:'Montserrat',sans-serif;font-size:13px;color:#5A504A;line-height:1.55}
+.r-bottom{margin-top:16px;display:flex;align-items:center;justify-content:flex-end;border-top:1px solid rgba(0,0,0,0.1);padding-top:14px}
 .rb-neo img{max-height:22px;max-width:90px;object-fit:contain;opacity:0.4}
 .rb-name{font-family:'Montserrat',sans-serif;font-size:12px;font-weight:700;color:#9A9290;text-align:right}
 </style></head><body>
@@ -559,13 +563,16 @@ html,body{width:1080px;height:1080px;overflow:hidden;background:${BG};-webkit-pr
         ${when ? `<div class="ww-row"><div class="ww-label">WHEN:</div><div class="ww-value">${when.replace(/&/g,'&amp;')}</div></div>` : ''}
         ${where ? `<div class="ww-row"><div class="ww-label">WHERE:</div><div class="ww-value">${where.replace(/&/g,'&amp;')}</div></div>` : ''}
         ${price ? `<div class="ww-row"><div class="ww-label">PRICE:</div><div class="ww-value" style="font-weight:800;color:${DARK};font-size:18px">${price}</div></div>` : ''}
+        <div class="qr-insta">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=240x240&margin=2&color=0A2540" alt="QR Code" />
+          <div>
+            <div class="qr-insta-label">Scan for Special<br>Financing Options</div>
+            <div class="qr-insta-sub">Payment breakdowns, loan scenarios &amp; connect with your mortgage advisor.</div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="r-bottom">
-      <div style="display:flex;align-items:center;gap:14px">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=140x140&margin=2&color=0A2540" alt="QR" style="width:52px;height:52px;border-radius:4px" />
-        <div style="font-family:'Montserrat',sans-serif;font-size:11px;font-weight:700;color:${DARK};line-height:1.4">Scan for<br>Financing Options</div>
-      </div>
       <div class="rb-name">${p.partner_name||''}<br>${p.partner_phone||''}</div>
     </div>
   </div>
@@ -812,7 +819,7 @@ html,body{width:1080px;height:1080px;overflow:hidden;background:#000;-webkit-pri
       <div style="display:flex;flex-direction:column;gap:8px">
         <div class="b-when">${when?`📅 ${when}`:where}</div>
         <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.08);border-radius:10px;padding:10px 14px">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=160x160&margin=2&color=ffffff" alt="QR" style="width:46px;height:46px;border-radius:4px" />
+          <div style="background:#fff;border-radius:5px;padding:3px;flex-shrink:0"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=160x160&margin=2&color=0A2540" alt="QR" style="width:46px;height:46px;display:block;border-radius:2px" /></div>
           <div style="font-family:'Montserrat',sans-serif;font-size:13px;font-weight:700;color:rgba(255,255,255,0.7);line-height:1.4">Scan for<br>Financing Options</div>
         </div>
       </div>
