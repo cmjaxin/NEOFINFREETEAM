@@ -282,17 +282,18 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .stripe-stat span{color:${CYAN}}
 /* Main content: 3 columns */
 .body{flex:1;display:flex;min-height:0;gap:0}
-/* Left: description */
-.col-desc{flex:1;padding:14px 16px 12px 22px;display:flex;flex-direction:column;gap:10px;overflow:hidden;border-right:1px solid #E4E8EC}
+/* Left: description + QR */
+.col-desc{flex:0 0 2.75in;padding:14px 14px 12px 22px;display:flex;flex-direction:column;gap:0;overflow:hidden;border-right:1px solid #E4E8EC}
 .sec-label{font-size:7.5px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.85;color:#374151}
-/* Mid: QR */
-.col-tca{flex:0 0 1.55in;padding:12px 10px;display:flex;flex-direction:column;border-right:1px solid #E4E8EC;min-width:0}
-.qr-card3{flex:1;border:2px solid ${CYAN};border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:12px 8px;background:linear-gradient(160deg,#EBF8FF 0%,#fff 60%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.qr-card3 img{width:88px;height:88px;display:block;border-radius:4px;border:3px solid #fff;box-shadow:0 2px 8px rgba(10,37,64,0.18)}
-.qr-eyebrow{font-size:6px;font-weight:900;letter-spacing:0.18em;text-transform:uppercase;color:${CYAN};margin-bottom:7px;text-align:center}
-.qr-label3{margin-top:9px;font-size:9.5px;font-weight:900;color:${NEO};text-align:center;line-height:1.4}
-.qr-sub3{margin-top:5px;font-size:7.5px;color:#475569;text-align:center;line-height:1.6;padding:0 2px}
+.qr-card3{margin-top:10px;border:2px solid ${CYAN};border-radius:10px;display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(135deg,#EBF8FF 0%,#fff 100%);flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qr-card3 img{width:64px;height:64px;display:block;border-radius:4px;flex-shrink:0;border:2px solid #fff;box-shadow:0 2px 6px rgba(10,37,64,0.15)}
+.qr-text3{display:flex;flex-direction:column;gap:3px}
+.qr-label3{font-size:9px;font-weight:900;color:${NEO};line-height:1.3}
+.qr-sub3{font-size:7px;color:#475569;line-height:1.5}
+/* Mid: vertical photo */
+.col-tca{flex:1;overflow:hidden;border-right:1px solid #E4E8EC;min-width:0;background:#E4E8EC}
+.col-tca img{width:100%;height:100%;object-fit:cover;display:block}
 /* Right: features + photos */
 .col-right{flex:0 0 1.85in;padding:14px 18px 12px 14px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
 .feat-item{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #F0F0F0}
@@ -334,19 +335,20 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
   <div class="body">
     <div class="col-desc">
       ${desc ? `<div><div class="sec-label">About This Home</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
+      <div class="qr-card3">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=200x200&margin=2&color=0A2540" alt="QR Code" />
+        <div class="qr-text3">
+          <div class="qr-label3">Scan for Special<br>Financing Options</div>
+          <div class="qr-sub3">Payment breakdowns, loan scenarios<br>&amp; connect with your mortgage advisor.</div>
+        </div>
+      </div>
     </div>
     <div class="col-tca">
-      <div class="qr-card3">
-        <div class="qr-eyebrow">Financing Info</div>
-        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
-        <div class="qr-label3">Scan for Special<br>Financing Options</div>
-        <div class="qr-sub3">Payment breakdowns, loan scenarios & your mortgage advisor.</div>
-      </div>
+      ${ph2 ? `<img src="${ph2}" alt="Interior" />` : ''}
     </div>
     <div class="col-right">
       ${features.length ? `<div><div class="sec-label">Features</div>${features.map(f=>`<div class="feat-item"><div class="feat-dot"></div><div class="feat-lbl">${f}</div></div>`).join('')}</div>` : ''}
       <div class="mini-photos">
-        ${ph2 ? `<div class="mini-photo"><img src="${ph2}" alt="Photo 2" /></div>` : ''}
         ${ph3 ? `<div class="mini-photo"><img src="${ph3}" alt="Photo 3" /></div>` : ''}
       </div>
     </div>
@@ -403,12 +405,16 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .strip-photo{flex:1;overflow:hidden;background:#CBD5E1}
 .strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .strip-empty{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#CBD5E1;background:#F1F5F9}
-.content{flex:1;display:flex;min-height:0;padding:14px 22px 10px;gap:18px}
+.content{flex:1;display:flex;min-height:0;padding:14px 22px 10px;gap:18px;background:#F9FAFB}
 .desc-col{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px}
 .desc-text{font-size:9.5px;line-height:1.78;color:#222}
+.qr-bold{margin-top:auto;border:2px solid ${CYAN};border-radius:9px;display:flex;flex-direction:row;align-items:center;gap:11px;padding:10px 13px;background:#fff;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qr-bold img{width:62px;height:62px;border-radius:4px;flex-shrink:0;border:2px solid rgba(91,203,245,0.3)}
+.qr-bold-label{font-size:9px;font-weight:900;color:${CHARCOAL};line-height:1.35}
+.qr-bold-sub{font-size:7px;color:#555;line-height:1.55;margin-top:3px}
 .features-col{flex:0 0 2.5in;display:flex;flex-direction:column;gap:0}
 .feat-title{font-size:13px;font-weight:900;color:#111;margin-bottom:10px}
-.feat-item{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid #F0F0F0}
+.feat-item{display:flex;align-items:center;gap:9px;padding:5px 0;border-bottom:1px solid #E4E8EC}
 .feat-check{width:18px;height:18px;border-radius:50%;background:${CYAN};display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .feat-check svg{width:10px;height:10px}
 .feat-label{font-size:11px;font-weight:700;color:#222}
@@ -451,6 +457,13 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
   <div class="content">
     <div class="desc-col">
       ${desc ? `<p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p>` : ''}
+      <div class="qr-bold">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=200x200&margin=2&color=0A2540" alt="QR Code" />
+        <div>
+          <div class="qr-bold-label">Scan for Special<br>Financing Options</div>
+          <div class="qr-bold-sub">Payment breakdowns, loan scenarios<br>&amp; connect with your mortgage advisor.</div>
+        </div>
+      </div>
     </div>
     ${features.length ? `<div class="features-col"><div class="feat-title">House Features:</div>${features.map(f=>`<div class="feat-item"><div class="feat-check"><svg viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#0A2540" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="feat-label">${f}</span></div>`).join('')}</div>` : ''}
   </div>
