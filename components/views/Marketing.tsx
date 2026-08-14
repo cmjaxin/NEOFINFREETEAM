@@ -811,13 +811,6 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
 
         {/* Canvas preview */}
         <div ref={containerRef} className="mkt-modal-canvas" data-hidden={mobileTab !== 'preview' ? 'true' : undefined}>
-          {/* Zoom controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, flexShrink: 0 }}>
-            <button onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,.6)', fontWeight: 600, minWidth: 36, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(z => Math.min(3, +(z + 0.25).toFixed(2)))} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
-            {zoom !== 1 && <button onClick={() => setZoom(1)} style={{ background: 'rgba(255,255,255,.08)', border: 'none', color: 'rgba(255,255,255,.5)', borderRadius: 6, padding: '0 8px', height: 28, fontSize: 11, cursor: 'pointer' }}>Reset</button>}
-          </div>
           {/* Scrollable zoom container */}
           <div style={{ overflow: 'auto', width: '100%', maxHeight: 'calc(100vh - 160px)' }}>
             <div style={{ width: `${560 * zoom}px`, position: 'relative' }}>
@@ -838,6 +831,13 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
                 </div>
               )}
             </div>
+          </div>
+          {/* Zoom controls — below the graphic */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10, flexShrink: 0 }}>
+            <button onClick={() => setZoom(z => Math.max(0.5, +(z - 0.25).toFixed(2)))} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>−</button>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,.6)', fontWeight: 600, minWidth: 36, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(z => Math.min(3, +(z + 0.25).toFixed(2)))} style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', borderRadius: 6, width: 28, height: 28, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
+            {zoom !== 1 && <button onClick={() => setZoom(1)} style={{ background: 'rgba(255,255,255,.08)', border: 'none', color: 'rgba(255,255,255,.5)', borderRadius: 6, padding: '0 8px', height: 28, fontSize: 11, cursor: 'pointer' }}>Reset</button>}
           </div>
         </div>
 
