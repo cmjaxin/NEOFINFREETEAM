@@ -242,7 +242,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 function flyerModern(p: PageData) {
   const NEO = C.navy; const CYAN = C.accent
   const photos = p.photos ?? []
-  const hero = photos[0] ?? ''; const ph2 = photos[1] ?? ''; const ph3 = photos[2] ?? ''
+  const hero = photos[0] ?? ''; const ph2 = photos[1] ?? ''; const ph3 = photos[2] ?? ''; const ph4 = photos[3] ?? ''
   const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : ''
   const location = [p.city, p.state, p.zip].filter(Boolean).join(', ')
   const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
@@ -350,6 +350,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       ${features.length ? `<div><div class="sec-label">Features</div>${features.map(f=>`<div class="feat-item"><div class="feat-dot"></div><div class="feat-lbl">${f}</div></div>`).join('')}</div>` : ''}
       <div class="mini-photos">
         ${ph3 ? `<div class="mini-photo"><img src="${ph3}" alt="Photo 3" /></div>` : ''}
+        ${ph4 ? `<div class="mini-photo"><img src="${ph4}" alt="Photo 4" /></div>` : ''}
       </div>
     </div>
   </div>
