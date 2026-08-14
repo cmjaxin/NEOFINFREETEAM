@@ -153,29 +153,27 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 .left { flex: 0 0 58%; padding: 16px 18px 12px 24px; display: flex; flex-direction: column; gap: 14px; border-right: 1px solid #E4E8EC; overflow: hidden; }
 .section-label { font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: ${CYAN}; margin-bottom: 5px; }
 .desc-text { font-size: 10px; line-height: 1.75; color: #374151; }
-.tca-card {
+.qr-card {
   flex: 1;
-  border: 1px solid #E4E8EC;
-  border-radius: 8px;
+  border: 2px solid ${CYAN};
+  border-radius: 10px;
   overflow: hidden;
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   min-height: 0;
-}
-.tca-header {
-  background: ${NEO};
-  padding: 7px 12px;
-  display: flex; align-items: center; gap: 8px;
+  padding: 18px 16px;
+  background: linear-gradient(160deg, #F0F9FF 0%, #fff 100%);
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
-.tca-header-dot { width: 6px; height: 6px; border-radius: 50%; background: ${CYAN}; flex-shrink: 0; }
-.tca-header-text { font-size: 9px; font-weight: 800; color: #fff; text-transform: uppercase; letter-spacing: 0.1em; }
-.tca-img { flex: 1; overflow: hidden; min-height: 0; }
-.tca-img img { width: 100%; height: 100%; object-fit: contain; object-position: top; display: block; }
-.tca-placeholder {
-  flex: 1; display: flex; align-items: center; justify-content: center;
-  background: #F8FAFC;
-  flex-direction: column; gap: 8px;
-  color: #94A3B8; font-size: 11px; text-align: center; padding: 20px;
+.qr-card img { width: 140px; height: 140px; display: block; border-radius: 6px; }
+.qr-label {
+  margin-top: 10px;
+  font-size: 9.5px; font-weight: 800; color: ${NEO};
+  text-transform: uppercase; letter-spacing: 0.1em;
+  text-align: center; line-height: 1.5;
+}
+.qr-sub {
+  margin-top: 4px;
+  font-size: 8px; color: #64748B; text-align: center; line-height: 1.5;
 }
 
 /* RIGHT COLUMN */
@@ -251,17 +249,10 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
       <p class="desc-text">${desc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
     </div>` : ''}
 
-    <div class="tca-card">
-      <div class="tca-header">
-        <div class="tca-header-dot"></div>
-        <span class="tca-header-text">Total Cost Analysis</span>
-      </div>
-      ${page.tca_screenshot
-        ? `<div class="tca-img"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>`
-        : `<div class="tca-placeholder">
-            <div style="font-size:28px;opacity:0.4">📊</div>
-            <div>Upload a TCA screenshot<br>in the open house editor to show it here</div>
-           </div>`}
+    <div class="qr-card">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.vercel.app/open-house/${page.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
+      <div class="qr-label">Scan to View Special<br>Financing Options</div>
+      <div class="qr-sub">See payment breakdowns, loan scenarios,<br>and connect with your mortgage advisor.</div>
     </div>
   </div>
 
