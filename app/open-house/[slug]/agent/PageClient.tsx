@@ -89,8 +89,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .c-init{width:44px;height:44px;border-radius:50%;background:rgba(91,203,245,0.12);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:18px;font-weight:900;flex-shrink:0}
 .c-info{color:#fff}.c-role{font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${CYAN};margin-bottom:3px}
 .c-name{font-size:14px;font-weight:800;line-height:1.15}.c-detail{font-size:9px;color:rgba(255,255,255,0.55);margin-top:5px;line-height:1.6}
-.footer{height:0.43in;background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:center;justify-content:space-between;padding:0 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.footer-disc{font-size:5px;color:#9CA3AF;line-height:1.4}
+.footer{background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:flex-start;justify-content:space-between;padding:4px 20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.footer-disc{font-size:4px;color:#9CA3AF;line-height:1.25}
 </style></head><body>
 <div class="hero">
   ${hero ? `<img src="${hero}" alt="${p.address}" />` : `<div class="hero-fallback">🏡</div>`}
@@ -196,8 +196,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .c-init{width:42px;height:42px;border-radius:50%;background:rgba(91,203,245,0.12);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:16px;font-weight:900;flex-shrink:0}
 .c-info{color:#fff}.c-role{font-size:7.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${CYAN};margin-bottom:2px}
 .c-name{font-size:13px;font-weight:800;line-height:1.15}.c-detail{font-size:8.5px;color:rgba(255,255,255,0.55);margin-top:4px;line-height:1.6}
-.footer{height:0.43in;background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.footer-disc{font-size:5px;color:#9CA3AF;line-height:1.4}
+.footer{background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:flex-start;justify-content:space-between;padding:4px 18px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.footer-disc{font-size:4px;color:#9CA3AF;line-height:1.25}
 </style></head><body>
 <div class="wrap">
   <div class="main">
@@ -326,8 +326,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .c-init{width:42px;height:42px;border-radius:50%;background:rgba(91,203,245,0.12);border:2px solid rgba(91,203,245,0.35);display:flex;align-items:center;justify-content:center;color:${CYAN};font-size:16px;font-weight:900;flex-shrink:0}
 .c-info{color:#fff}.c-role{font-size:7.5px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${CYAN};margin-bottom:2px}
 .c-name{font-size:13px;font-weight:800;line-height:1.15}.c-detail{font-size:8.5px;color:rgba(255,255,255,0.55);margin-top:4px;line-height:1.6}
-.footer{height:0.43in;background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.footer-disc{font-size:5px;color:#9CA3AF;line-height:1.4}
+.footer{background:#F8FAFC;border-top:2px solid ${CYAN};display:flex;align-items:flex-start;justify-content:space-between;padding:4px 18px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.footer-disc{font-size:4px;color:#9CA3AF;line-height:1.25}
 </style></head><body>
 <div class="page">
   <div class="hero">
@@ -450,7 +450,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .cb-sep{width:1px;background:rgba(91,203,245,0.2);height:44px;flex-shrink:0;margin:0 2px}
 .cb-person-right{display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end}
 .cb-info-right{text-align:right}
-.footer{background:#F8FAFC;border-top:1.5px solid ${CYAN};padding:5px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.footer{background:#F8FAFC;border-top:1.5px solid ${CYAN};padding:4px 18px;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .footer-disc{font-size:4.5px;color:#9CA3AF;line-height:1.45;flex:1}
 </style></head><body>
 <div class="page">

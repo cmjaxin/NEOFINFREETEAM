@@ -187,7 +187,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
   padding: 0 20px;
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
-.footer-disc { font-size: 5px; color: #9CA3AF; line-height: 1.4; }
+.footer-disc { font-size: 4px; color: #9CA3AF; line-height: 1.25; }
 .footer-ehl { font-size: 7px; font-weight: 700; color: #9CA3AF; letter-spacing: 0.05em; }
 </style>
 </head>
