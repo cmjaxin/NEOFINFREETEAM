@@ -887,7 +887,7 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
             </div>
             {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[1, 2, 3, 4, 5].map(n => (
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
                 <button key={n} disabled={pushing} onClick={() => push(n)}
                   style={{ padding: '13px 18px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span>Sign Rider {n}</span>

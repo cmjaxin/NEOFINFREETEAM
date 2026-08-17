@@ -647,7 +647,7 @@ function PageCard({ page, onEdit, slotNum }: { page: SRPage; onEdit: () => void;
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function SignRidersView() {
   const { supabase, profile } = useApp()
-  const [slots, setSlots] = useState<(SRPage | null)[]>([null, null, null, null, null])
+  const [slots, setSlots] = useState<(SRPage | null)[]>([null, null, null, null, null, null, null, null, null, null])
   const [loading, setLoading] = useState(true)
   const [editingPage, setEditingPage] = useState<SRPage | null>(null)
 
@@ -658,7 +658,7 @@ export default function SignRidersView() {
   async function ensureSlots() {
     if (!profile?.id) return
     const prefix = getSlugPrefix(profile.id)
-    const expectedSlugs = [1, 2, 3, 4, 5].map(n => `sr-${prefix}-${n}`)
+    const expectedSlugs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `sr-${prefix}-${n}`)
 
     const { data: existing } = await supabase
       .from('open_house_pages')
@@ -705,7 +705,7 @@ export default function SignRidersView() {
   async function reload() {
     if (!profile?.id) return
     const prefix = getSlugPrefix(profile.id)
-    const expectedSlugs = [1, 2, 3, 4, 5].map(n => `sr-${prefix}-${n}`)
+    const expectedSlugs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `sr-${prefix}-${n}`)
     const { data } = await supabase.from('open_house_pages').select('*').in('slug', expectedSlugs).eq('page_type', 'sign_rider')
     const bySlug: Record<string, SRPage> = {}
     for (const row of data ?? []) bySlug[(row as SRPage).slug] = row as SRPage
