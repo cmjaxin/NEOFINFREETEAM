@@ -935,11 +935,79 @@ html,body{width:1080px;height:1080px;overflow:hidden;background:#fff;-webkit-pri
 </body></html>`
 }
 
+// ─── Standalone QR Sheet ─────────────────────────────────────────────────────
+function qrSheet(p: PageData) {
+  const NEO = '#0A2540', CYAN = '#5BCBF5'
+  const NEO_BIG_LOGO = 'https://mcusercontent.com/9c96a5ca8a7e2af37faf8e124/images/bd54e5cb-afca-6d4e-f6c7-0ad0f6982765.png'
+  const EHL_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Equal_Housing_Lender_logo.svg/240px-Equal_Housing_Lender_logo.svg.png'
+  const qrUrl = encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)
+  const price = p.list_price ? '$' + Math.round(p.list_price).toLocaleString() : ''
+  const location = [p.city, p.state].filter(Boolean).join(', ')
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>QR Code — ${p.address}</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+@page{size:8.5in 11in;margin:0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:8.5in;height:11in;font-family:'Montserrat',sans-serif;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.card{width:5in;border:2px solid #E4E8EC;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(10,37,64,0.08)}
+.top-bar{background:${NEO};padding:20px 28px;display:flex;align-items:center;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.top-bar-label{font-size:10px;font-weight:800;color:${CYAN};text-transform:uppercase;letter-spacing:0.16em;margin-bottom:4px}
+.top-bar-addr{font-size:15px;font-weight:800;color:#fff;line-height:1.2}
+.top-bar-city{font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px}
+.neo-logo{max-height:22px;max-width:90px;object-fit:contain;opacity:0.7}
+.body{padding:36px 28px 28px;display:flex;flex-direction:column;align-items:center;gap:0}
+.eyebrow{font-size:9px;font-weight:800;color:${CYAN};text-transform:uppercase;letter-spacing:0.18em;margin-bottom:14px}
+.qr-img{width:240px;height:240px;display:block;border-radius:10px;box-shadow:0 4px 18px rgba(10,37,64,0.15)}
+.headline{margin-top:20px;font-size:18px;font-weight:900;color:${NEO};text-align:center;line-height:1.3}
+.subline{margin-top:8px;font-size:11px;color:#64748B;text-align:center;line-height:1.6;max-width:3.2in}
+.bullets{margin-top:18px;display:flex;flex-direction:column;gap:8px;align-self:stretch}
+.bullet{display:flex;align-items:center;gap:10px;font-size:11px;color:#374151;font-weight:600}
+.dot{width:7px;height:7px;border-radius:50%;background:${CYAN};flex-shrink:0}
+.price-row{margin-top:20px;padding-top:18px;border-top:1px solid #E4E8EC;align-self:stretch;display:flex;align-items:center;justify-content:space-between}
+.price-val{font-size:26px;font-weight:900;color:${NEO};letter-spacing:-0.01em}
+.price-label{font-size:9px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px}
+.footer{background:#F8FAFC;border-top:1px solid #E4E8EC;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.advisor{font-size:10px;font-weight:700;color:${NEO}}
+.ehl{height:18px;width:auto;object-fit:contain;opacity:0.5}
+.hint{margin-top:24px;font-size:9px;color:#CBD5E1;text-align:center;letter-spacing:0.04em}
+</style></head><body>
+<div class="card">
+  <div class="top-bar">
+    <div>
+      <div class="top-bar-label">Open House</div>
+      <div class="top-bar-addr">${p.address}</div>
+      ${location ? `<div class="top-bar-city">${location}</div>` : ''}
+    </div>
+    <img class="neo-logo" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+  </div>
+  <div class="body">
+    <div class="eyebrow">Scan for Special Financing</div>
+    <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?data=${qrUrl}&size=480x480&margin=3&color=0A2540" alt="QR Code" />
+    <div class="headline">Get Fully Underwritten<br>Approval Today</div>
+    <div class="subline">See payment breakdowns, loan scenarios, and exclusive financing options for this home.</div>
+    <div class="bullets">
+      <div class="bullet"><div class="dot"></div>Payment breakdowns &amp; monthly estimates</div>
+      <div class="bullet"><div class="dot"></div>Loan scenarios tailored to this property</div>
+      <div class="bullet"><div class="dot"></div>Connect directly with your mortgage advisor</div>
+    </div>
+    ${price ? `<div class="price-row"><div><div class="price-label">List Price</div><div class="price-val">${price}</div></div></div>` : ''}
+  </div>
+  <div class="footer">
+    <div class="advisor">${p.advisor_name || 'NEO Home Loans'}${p.advisor_nmls ? ` · NMLS #${p.advisor_nmls}` : ''}</div>
+    <img class="ehl" src="${EHL_LOGO}" alt="Equal Housing Lender" />
+  </div>
+</div>
+<div class="hint">neofinfree.com/open-house/${p.slug}</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
 // ─── Template cards config ────────────────────────────────────────────────────
 const FLYERS = [
   { key: 'standard', label: 'Standard', sub: 'Classic layout with property photos, TCA, and contact bar', icon: '📄', color: '#0A2540', gen: flyerStandard },
   { key: 'showcase', label: 'Showcase', sub: 'Photo-dominant with large hero, minimal text, bold impact', icon: '🖼', color: '#1a1a2e', gen: flyerShowcase },
   { key: 'modern', label: 'Modern Split', sub: 'Details left, full-bleed photo right — clean and editorial', icon: '◧', color: '#1a3a5c', gen: flyerModern },
+  { key: 'qrsheet', label: 'QR Code Sheet', sub: 'Standalone printable QR card — cut out and place at the open house', icon: '⬛', color: '#0e7490', gen: qrSheet },
   { key: 'bold', label: 'Bold Dark', sub: 'All-dark design with framed hero photo and cyan accents', icon: '🌙', color: '#080F1A', gen: flyerBold },
 ]
 
