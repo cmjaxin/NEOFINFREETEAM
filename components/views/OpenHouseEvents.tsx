@@ -809,10 +809,94 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
   )
 }
 
+// ─── Push to Sign Rider Modal ─────────────────────────────────────────────────
+function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () => void }) {
+  const { supabase, profile } = useApp()
+  const [pushing, setPushing] = useState(false)
+  const [done, setDone] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  function getSlugPrefix(uid: string) { return uid.replace(/-/g, '').slice(0, 8) }
+
+  async function push(slotNum: number) {
+    if (!profile?.id) return
+    setPushing(true); setMsg('')
+    const prefix = getSlugPrefix(profile.id)
+    const slug = `sr-${prefix}-${slotNum}`
+    const payload = {
+      address: page.address,
+      city: page.city,
+      state: page.state,
+      zip: page.zip,
+      beds: page.beds,
+      baths: page.baths,
+      sqft: page.sqft,
+      list_price: page.list_price,
+      description: page.description,
+      photos: page.photos,
+      lot_size: page.lot_size,
+      year_built: page.year_built,
+      tca_url: page.tca_url,
+      tca_screenshot: page.tca_screenshot,
+    }
+    // Upsert: update if exists, insert if not
+    const { data: existing } = await supabase.from('open_house_pages').select('id').eq('slug', slug).eq('page_type', 'sign_rider').single()
+    if (existing?.id) {
+      const { error } = await supabase.from('open_house_pages').update(payload).eq('id', existing.id)
+      if (error) { setMsg('Failed: ' + error.message); setPushing(false); return }
+    } else {
+      const { error } = await supabase.from('open_house_pages').insert({
+        ...payload, slug, page_type: 'sign_rider', status: 'active', created_by: profile.id,
+        advisor_name: profile.full_name || '', advisor_title: profile.title || '',
+        advisor_email: profile.email || '', advisor_phone: profile.phone || '',
+        advisor_nmls: profile.nmls || '', advisor_photo: profile.headshot_url || '',
+      })
+      if (error) { setMsg('Failed: ' + error.message); setPushing(false); return }
+    }
+    setDone(true); setPushing(false)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,0.6)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'relative', background: '#fff', borderRadius: 18, width: '100%', maxWidth: 380, padding: 28, boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: C.muted }}>×</button>
+        {done ? (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 8 }}>Sign Rider Updated!</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Property info has been pushed to your sign rider page.</div>
+            <button onClick={onClose} style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, padding: '10px 24px', cursor: 'pointer' }}>Done</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Push to Sign Rider</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 4 }}>Select a sign rider slot</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.5 }}>
+              Property info from <strong>{page.address}</strong> will be copied to the selected sign rider.
+            </div>
+            {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[1, 2, 3, 4, 5].map(n => (
+                <button key={n} disabled={pushing} onClick={() => push(n)}
+                  style={{ padding: '13px 18px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Sign Rider {n}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>Push →</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Page Card ────────────────────────────────────────────────────────────────
 function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => void; onDelete: () => void }) {
   const url = `/open-house/${page.slug}`
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showPushToSR, setShowPushToSR] = useState(false)
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {page.photos && page.photos.length > 0 ? (
@@ -883,6 +967,10 @@ function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => voi
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Edit
             </button>
+            <button onClick={() => setShowPushToSR(true)}
+              style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+              → Sign Rider
+            </button>
             <button onClick={() => setConfirmDelete(true)}
               style={{ padding: '8px 12px', background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
               Delete
@@ -890,6 +978,7 @@ function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => voi
           </div>
         )}
       </div>
+      {showPushToSR && <PushToSignRiderModal page={page} onClose={() => setShowPushToSR(false)} />}
     </div>
   )
 }
