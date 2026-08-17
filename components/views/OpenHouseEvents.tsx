@@ -838,6 +838,19 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
       year_built: page.year_built,
       tca_url: page.tca_url,
       tca_screenshot: page.tca_screenshot,
+      advisor_name: page.advisor_name,
+      advisor_title: page.advisor_title,
+      advisor_email: page.advisor_email,
+      advisor_phone: page.advisor_phone,
+      advisor_nmls: page.advisor_nmls,
+      advisor_photo: page.advisor_photo,
+      partner_name: page.partner_name,
+      partner_title: page.partner_title,
+      partner_email: page.partner_email,
+      partner_phone: page.partner_phone,
+      partner_photo: page.partner_photo,
+      partner_nmls: page.partner_nmls,
+      partner_logo: page.partner_logo,
     }
     // Upsert: update if exists, insert if not
     const { data: existing } = await supabase.from('open_house_pages').select('id').eq('slug', slug).eq('page_type', 'sign_rider').single()
@@ -847,9 +860,6 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
     } else {
       const { error } = await supabase.from('open_house_pages').insert({
         ...payload, slug, page_type: 'sign_rider', status: 'active', created_by: profile.id,
-        advisor_name: profile.full_name || '', advisor_title: profile.title || '',
-        advisor_email: profile.email || '', advisor_phone: profile.phone || '',
-        advisor_nmls: profile.nmls || '', advisor_photo: profile.headshot_url || '',
       })
       if (error) { setMsg('Failed: ' + error.message); setPushing(false); return }
     }
