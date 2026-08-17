@@ -463,7 +463,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Ready to move forward?</div>
                 <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, lineHeight: 1.3 }}>Get Fully Underwritten Approval Today</div>
-                <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Get pre-approved in minutes — no impact to your credit score.</div>
+                <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Get pre-approved in minutes.</div>
               </div>
               <button onClick={() => setShowApply(true)}
                 style={{ background: C.navy, color: '#fff', fontWeight: 800, fontSize: 14, padding: '13px 26px', borderRadius: 10, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
