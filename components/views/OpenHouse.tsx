@@ -784,6 +784,16 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const photoRef = useRef<HTMLInputElement>(null)
+  const [form, setForm] = useState({
+    list_price: listing.list_price ? String(listing.list_price) : '',
+    beds: listing.beds ? String(listing.beds) : '',
+    baths: listing.baths ? String(listing.baths) : '',
+    sqft: listing.sqft ? String(listing.sqft) : '',
+    lot_size: listing.lot_size ?? '',
+    year_built: listing.year_built ? String(listing.year_built) : '',
+    description: listing.description ?? '',
+  })
+  function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
   async function resizeImage(file: File, maxPx = 1800, quality = 0.82): Promise<Blob> {
     return new Promise(resolve => {
@@ -831,13 +841,13 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
       city: listing.city,
       state: listing.state,
       zip: listing.zip,
-      beds: listing.beds,
-      baths: listing.baths,
-      sqft: listing.sqft,
-      list_price: listing.list_price,
-      description: listing.description,
-      lot_size: listing.lot_size,
-      year_built: listing.year_built,
+      beds: form.beds ? Number(form.beds) : null,
+      baths: form.baths ? Number(form.baths) : null,
+      sqft: form.sqft ? Number(form.sqft) : null,
+      list_price: Number(String(form.list_price).replace(/,/g, '')) || null,
+      description: form.description,
+      lot_size: form.lot_size,
+      year_built: form.year_built ? Number(form.year_built) : null,
       photos,
       advisor_name: listing.advisor_name,
       advisor_title: listing.advisor_title,
@@ -852,6 +862,8 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
       partner_photo: listing.partner_photo,
       partner_nmls: listing.partner_nmls,
       partner_logo: listing.partner_logo,
+      tca_url: listing.tca_url,
+      tca_screenshot: listing.tca_screenshot,
     })
     setSaving(false)
     if (error) { setMsg('Failed: ' + error.message); return }
@@ -867,14 +879,31 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
 
         <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Create Open House</div>
         <div style={{ fontSize: 20, fontWeight: 800, color: C.navy, marginBottom: 4 }}>{listing.address}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>All property info, contact details, and partner info will be copied from this listing. Just add your open house photos below.</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>All contact and partner info will be copied from this listing. Edit property details below if needed.</div>
 
-        {/* Prefill summary */}
-        <div style={{ background: C.bg, borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-          {listing.list_price ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Price</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>${Math.round(listing.list_price).toLocaleString()}</div></div> : null}
-          {listing.beds ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Beds</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{listing.beds}</div></div> : null}
-          {listing.baths ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Baths</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{listing.baths}</div></div> : null}
-          {listing.sqft ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Sqft</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{listing.sqft.toLocaleString()}</div></div> : null}
+        {/* Editable property fields */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+          {[
+            { label: 'List Price', key: 'list_price', placeholder: '750,000' },
+            { label: 'Beds', key: 'beds', placeholder: '4' },
+            { label: 'Baths', key: 'baths', placeholder: '2.5' },
+            { label: 'Sq Ft', key: 'sqft', placeholder: '2400' },
+            { label: 'Lot Size', key: 'lot_size', placeholder: '0.25 acres' },
+            { label: 'Year Built', key: 'year_built', placeholder: '2005' },
+          ].map(f => (
+            <div key={f.key} style={{ flex: '1 1 calc(33% - 8px)', minWidth: 110 }}>
+              <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{f.label}</label>
+              <input type="text" inputMode="decimal" value={form[f.key as keyof typeof form]} placeholder={f.placeholder}
+                onChange={e => set(f.key, e.target.value)}
+                style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+          ))}
+        </div>
+        <div style={{ marginBottom: 20 }}>
+          <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Description</label>
+          <textarea value={form.description} placeholder="Describe the property…" rows={3}
+            onChange={e => set('description', e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
         </div>
 
         {/* Photo upload */}
