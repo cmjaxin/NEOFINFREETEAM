@@ -776,9 +776,146 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 }
 
 // ─── Page Card ────────────────────────────────────────────────────────────────
+// ─── Create Open House from Listing Modal ────────────────────────────────────
+function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage; onClose: () => void; onCreated: (slug: string) => void }) {
+  const { supabase, profile } = useApp()
+  const [photos, setPhotos] = useState<string[]>(listing.photos ?? [])
+  const [uploading, setUploading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+  const photoRef = useRef<HTMLInputElement>(null)
+
+  async function resizeImage(file: File, maxPx = 1800, quality = 0.82): Promise<Blob> {
+    return new Promise(resolve => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale)
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        canvas.toBlob(b => resolve(b!), 'image/jpeg', quality)
+        URL.revokeObjectURL(url)
+      }
+      img.src = url
+    })
+  }
+
+  async function handleFiles(files: FileList) {
+    setUploading(true)
+    const uploaded: string[] = []
+    for (const file of Array.from(files)) {
+      const resized = await resizeImage(file)
+      const path = `open-house/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+      const { error } = await supabase.storage.from('splice-clips').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
+      if (!error) {
+        const { data } = supabase.storage.from('splice-clips').getPublicUrl(path)
+        uploaded.push(data.publicUrl)
+      }
+    }
+    setPhotos(prev => [...prev, ...uploaded])
+    setUploading(false)
+  }
+
+  async function create() {
+    if (!profile) return
+    setSaving(true); setMsg('')
+    const slug = 'oh-' + slugify(listing.address + ' ' + listing.city) + '-' + Date.now().toString(36)
+    const { error } = await supabase.from('open_house_pages').insert({
+      slug,
+      page_type: 'open_house',
+      status: 'active',
+      created_by: profile.id,
+      address: listing.address,
+      city: listing.city,
+      state: listing.state,
+      zip: listing.zip,
+      beds: listing.beds,
+      baths: listing.baths,
+      sqft: listing.sqft,
+      list_price: listing.list_price,
+      description: listing.description,
+      lot_size: listing.lot_size,
+      year_built: listing.year_built,
+      photos,
+      advisor_name: listing.advisor_name,
+      advisor_title: listing.advisor_title,
+      advisor_email: listing.advisor_email,
+      advisor_phone: listing.advisor_phone,
+      advisor_nmls: listing.advisor_nmls,
+      advisor_photo: listing.advisor_photo,
+      partner_name: listing.partner_name,
+      partner_title: listing.partner_title,
+      partner_email: listing.partner_email,
+      partner_phone: listing.partner_phone,
+      partner_photo: listing.partner_photo,
+      partner_nmls: listing.partner_nmls,
+      partner_logo: listing.partner_logo,
+    })
+    setSaving(false)
+    if (error) { setMsg('Failed: ' + error.message); return }
+    onCreated(slug)
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,0.65)', backdropFilter: 'blur(4px)' }} />
+      <div style={{ position: 'relative', background: '#fff', borderRadius: 20, width: '100%', maxWidth: 520, padding: 32, boxShadow: '0 24px 60px rgba(0,0,0,0.3)', maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={e => e.stopPropagation()}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 18, background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: C.muted }}>×</button>
+
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Create Open House</div>
+        <div style={{ fontSize: 20, fontWeight: 800, color: C.navy, marginBottom: 4 }}>{listing.address}</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>All property info, contact details, and partner info will be copied from this listing. Just add your open house photos below.</div>
+
+        {/* Prefill summary */}
+        <div style={{ background: C.bg, borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          {listing.list_price ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Price</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>${Math.round(listing.list_price).toLocaleString()}</div></div> : null}
+          {listing.beds ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Beds</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{listing.beds}</div></div> : null}
+          {listing.baths ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Baths</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{listing.baths}</div></div> : null}
+          {listing.sqft ? <div><div style={{ fontSize: 10, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>Sqft</div><div style={{ fontSize: 15, fontWeight: 800, color: C.navy }}>{listing.sqft.toLocaleString()}</div></div> : null}
+        </div>
+
+        {/* Photo upload */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.navy, marginBottom: 10 }}>Photos <span style={{ fontWeight: 400, color: C.muted }}>(add or keep existing)</span></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 10 }}>
+            {photos.map((url, i) => (
+              <div key={i} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', aspectRatio: '4/3', background: C.bg }}>
+                <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                <button onClick={() => setPhotos(p => p.filter((_, j) => j !== i))}
+                  style={{ position: 'absolute', top: 4, right: 4, width: 18, height: 18, background: '#EF4444', border: 'none', borderRadius: '50%', color: '#fff', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+              </div>
+            ))}
+            <button onClick={() => photoRef.current?.click()} disabled={uploading}
+              style={{ aspectRatio: '4/3', background: C.bg, border: `2px dashed ${C.border}`, borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: C.muted, fontSize: 12, fontWeight: 600, gap: 4 }}>
+              <span style={{ fontSize: 22 }}>+</span>
+              {uploading ? 'Uploading…' : 'Add Photos'}
+            </button>
+          </div>
+          <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && handleFiles(e.target.files)} />
+        </div>
+
+        {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '12px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, color: C.dim, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={create} disabled={saving || uploading}
+            style={{ flex: 2, padding: '12px 0', background: C.navy, border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, color: '#fff', cursor: 'pointer' }}>
+            {saving ? 'Creating…' : 'Create Open House →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
   const url = `/listing-presentation/${page.slug}`
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [showCreateOH, setShowCreateOH] = useState(false)
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null)
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {page.photos && page.photos.length > 0 ? (
@@ -836,6 +973,10 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Copy Link
             </button>
+            <button onClick={() => setShowCreateOH(true)}
+              style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+              + Open House
+            </button>
             <button onClick={onEdit}
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Edit
@@ -847,6 +988,35 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
           </div>
         )}
       </div>
+      {showCreateOH && !createdSlug && (
+        <CreateOpenHouseModal
+          listing={page}
+          onClose={() => setShowCreateOH(false)}
+          onCreated={slug => setCreatedSlug(slug)}
+        />
+      )}
+      {createdSlug && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => { setCreatedSlug(null); setShowCreateOH(false) }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,0.65)', backdropFilter: 'blur(4px)' }} />
+          <div style={{ position: 'relative', background: '#fff', borderRadius: 20, width: '100%', maxWidth: 400, padding: 36, boxShadow: '0 24px 60px rgba(0,0,0,0.3)', textAlign: 'center' }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize: 48, marginBottom: 14 }}>🎉</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.navy, marginBottom: 8 }}>Open House Created!</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 24, lineHeight: 1.6 }}>Your open house page is live and ready to share.</div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => { setCreatedSlug(null); setShowCreateOH(false) }}
+                style={{ flex: 1, padding: '12px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, color: C.dim, cursor: 'pointer' }}>
+                Done
+              </button>
+              <a href={`/open-house/${createdSlug}`} target="_blank" rel="noopener noreferrer"
+                style={{ flex: 2, padding: '12px 0', background: C.navy, borderRadius: 10, fontSize: 14, fontWeight: 800, color: '#fff', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                View Open House →
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
