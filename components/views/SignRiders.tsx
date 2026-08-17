@@ -570,9 +570,10 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
 }
 
 // ─── Page Card ────────────────────────────────────────────────────────────────
-function PageCard({ page, onEdit, slotNum }: { page: SRPage; onEdit: () => void; slotNum: number }) {
+function PageCard({ page, onEdit, slotNum, onClear }: { page: SRPage; onEdit: () => void; slotNum: number; onClear: () => void }) {
   const url = `/sign-rider/${page.slug}`
   const [copied, setCopied] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   function copyLink() {
     navigator.clipboard.writeText(window.location.origin + url)
@@ -625,20 +626,40 @@ function PageCard({ page, onEdit, slotNum }: { page: SRPage; onEdit: () => void;
           )}
         </div>
 
-        <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <a href={url} target="_blank" rel="noopener noreferrer"
-            style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
-            View Page
-          </a>
-          <button onClick={copyLink}
-            style={{ padding: '8px 12px', background: copied ? 'rgba(22,163,74,0.1)' : C.bg, border: `1px solid ${copied ? C.green : C.border}`, borderRadius: 8, fontSize: 12, color: copied ? C.green : C.dim, cursor: 'pointer', fontWeight: 600 }}>
-            {copied ? 'Copied!' : 'Copy Link'}
-          </button>
-          <button onClick={onEdit}
-            style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
-            Edit
-          </button>
-        </div>
+        {confirmClear ? (
+          <div style={{ marginTop: 'auto', paddingTop: 14, background: '#FEF2F2', borderRadius: 10, padding: 12, border: '1px solid #FECACA' }}>
+            <div style={{ fontSize: 12, color: '#991B1B', fontWeight: 600, marginBottom: 10 }}>Clear all property info from this slot?</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => { onClear(); setConfirmClear(false) }}
+                style={{ flex: 1, padding: '8px 0', background: '#EF4444', border: 'none', borderRadius: 8, fontSize: 12, color: '#fff', cursor: 'pointer', fontWeight: 700 }}>
+                Yes, Clear
+              </button>
+              <button onClick={() => setConfirmClear(false)}
+                style={{ flex: 1, padding: '8px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a href={url} target="_blank" rel="noopener noreferrer"
+              style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
+              View Page
+            </a>
+            <button onClick={copyLink}
+              style={{ padding: '8px 12px', background: copied ? 'rgba(22,163,74,0.1)' : C.bg, border: `1px solid ${copied ? C.green : C.border}`, borderRadius: 8, fontSize: 12, color: copied ? C.green : C.dim, cursor: 'pointer', fontWeight: 600 }}>
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
+            <button onClick={onEdit}
+              style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
+              Edit
+            </button>
+            <button onClick={() => setConfirmClear(true)}
+              style={{ padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 700 }}>
+              Clear
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -724,7 +745,17 @@ export default function SignRidersView() {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
           {slots.map((p, i) => p ? (
-            <PageCard key={p.id} page={p} slotNum={i + 1} onEdit={() => setEditingPage(p)} />
+            <PageCard key={p.id} page={p} slotNum={i + 1} onEdit={() => setEditingPage(p)} onClear={async () => {
+              await supabase.from('open_house_pages').update({
+                address: `Sign Rider ${i + 1}`, city: '', state: 'UT', zip: '',
+                beds: null, baths: null, sqft: null, list_price: null,
+                description: null, photos: [], lot_size: null, year_built: null,
+                tca_url: null, tca_screenshot: null, loom_url: null, callout_text: null,
+                partner_name: null, partner_title: null, partner_email: null,
+                partner_phone: null, partner_photo: null, partner_nmls: null, partner_logo: null,
+              }).eq('id', p.id)
+              reload()
+            }} />
           ) : (
             <div key={i} style={{ background: C.white, borderRadius: 14, border: `2px dashed ${C.border}`, padding: 32, textAlign: 'center', color: C.muted }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>🪧</div>
