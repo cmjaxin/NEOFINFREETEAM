@@ -71,10 +71,13 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .left{flex:0 0 58%;padding:16px 18px 12px 24px;display:flex;flex-direction:column;gap:14px;border-right:1px solid #E4E8EC;overflow:hidden}
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:10px;line-height:1.75;color:#374151}
-.qr-card{flex:1;border:2px solid ${CYAN};border-radius:10px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:16px;background:linear-gradient(160deg,#F0F9FF 0%,#fff 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.qr-card img{width:130px;height:130px;display:block;border-radius:6px}
-.qr-label{margin-top:9px;font-size:9px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
-.qr-sub{margin-top:3px;font-size:7.5px;color:#64748B;text-align:center;line-height:1.5}
+.qr-card{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:16px 12px;border-top:1px solid #E4E8EC}
+.qr-card img{width:150px;height:150px;display:block;border-radius:6px;box-shadow:0 2px 10px rgba(10,37,64,0.12)}
+.qr-label{margin-top:10px;font-size:9.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
+.qr-sub{margin-top:4px;font-size:7.5px;color:#64748B;text-align:center;line-height:1.5}
+.qr-bullets{margin-top:10px;display:flex;flex-direction:column;gap:5px;align-self:stretch}
+.qr-bullet{display:flex;align-items:center;gap:7px;font-size:8px;color:#374151;font-weight:600}
+.qr-dot{width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0}
 .right{flex:0 0 42%;padding:16px 20px 12px 14px;display:flex;flex-direction:column;gap:10px}
 .photo-slot{flex:1;min-height:0;overflow:hidden;border-radius:8px;border:1px solid #E4E8EC;background:#F1F5F9}
 .photo-slot img{width:100%;height:100%;object-fit:cover;display:block;border-radius:8px}
@@ -109,9 +112,14 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
     <div class="qr-card">
-      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=260x260&margin=2&color=0A2540" alt="QR Code" />
-      <div class="qr-label">Scan to View Special<br>Financing Options</div>
-      <div class="qr-sub">Payment breakdowns, loan scenarios &amp; more.</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=300x300&margin=2&color=0A2540" alt="QR Code" />
+      <div class="qr-label">Scan for Special Financing Options</div>
+      <div class="qr-sub">Exclusive rates &amp; programs for this home.</div>
+      <div class="qr-bullets">
+        <div class="qr-bullet"><div class="qr-dot"></div>Payment breakdowns &amp; monthly estimates</div>
+        <div class="qr-bullet"><div class="qr-dot"></div>Loan scenarios tailored to this property</div>
+        <div class="qr-bullet"><div class="qr-dot"></div>Connect directly with your mortgage advisor</div>
+      </div>
     </div>
   </div>
   <div class="right">
@@ -170,10 +178,13 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .right-body{flex:1;padding:14px 20px 10px;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.75;color:#374151}
-.qr-card2{border:2px solid ${CYAN};border-radius:10px;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:0;padding:14px;background:linear-gradient(160deg,#F0F9FF 0%,#fff 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.qr-card2 img{width:120px;height:120px;display:block;border-radius:6px}
-.qr-label2{margin-top:8px;font-size:8.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
+.qr-card2{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:0;padding:14px 10px;border-top:1px solid #E4E8EC}
+.qr-card2 img{width:140px;height:140px;display:block;border-radius:6px;box-shadow:0 2px 10px rgba(10,37,64,0.12)}
+.qr-label2{margin-top:9px;font-size:8.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
 .qr-sub2{margin-top:3px;font-size:7px;color:#64748B;text-align:center;line-height:1.5}
+.qr-bullets2{margin-top:9px;display:flex;flex-direction:column;gap:5px;align-self:stretch}
+.qr-bullet2{display:flex;align-items:center;gap:6px;font-size:7.5px;color:#374151;font-weight:600}
+.qr-dot2{width:5px;height:5px;border-radius:50%;background:${CYAN};flex-shrink:0}
 .photo-strip{display:flex;gap:4px;height:1.1in;flex-shrink:0}
 .strip-photo{flex:1;overflow:hidden;border-radius:6px;background:#E4E8EC}
 .strip-photo img{width:100%;height:100%;object-fit:cover;display:block}
@@ -214,9 +225,14 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       <div class="right-body">
         ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
         <div class="qr-card2">
-          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=240x240&margin=2&color=0A2540" alt="QR Code" />
-          <div class="qr-label2">Scan to View Special<br>Financing Options</div>
-          <div class="qr-sub2">Payment breakdowns, loan scenarios &amp; more.</div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" />
+          <div class="qr-label2">Scan for Special Financing Options</div>
+          <div class="qr-sub2">Exclusive rates &amp; programs for this home.</div>
+          <div class="qr-bullets2">
+            <div class="qr-bullet2"><div class="qr-dot2"></div>Payment breakdowns &amp; monthly estimates</div>
+            <div class="qr-bullet2"><div class="qr-dot2"></div>Loan scenarios tailored to this property</div>
+            <div class="qr-bullet2"><div class="qr-dot2"></div>Connect directly with your mortgage advisor</div>
+          </div>
         </div>
         <div class="photo-strip">
           <div class="strip-photo">${ph2 ? `<img src="${ph2}" alt="Photo 2" />` : `<div class="strip-empty"></div>`}</div>
@@ -286,8 +302,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .col-desc{flex:0 0 2.75in;padding:14px 14px 12px 22px;display:flex;flex-direction:column;gap:0;overflow:hidden;border-right:1px solid #E4E8EC}
 .sec-label{font-size:7.5px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.85;color:#374151}
-.qr-card3{margin-top:10px;border:2px solid ${CYAN};border-radius:10px;display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(135deg,#EBF8FF 0%,#fff 100%);flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.qr-card3 img{width:64px;height:64px;display:block;border-radius:4px;flex-shrink:0;border:2px solid #fff;box-shadow:0 2px 6px rgba(10,37,64,0.15)}
+.qr-card3{margin-top:10px;border-top:1px solid #E4E8EC;display:flex;flex-direction:row;align-items:center;gap:10px;padding:10px 0 0;flex-shrink:0}
+.qr-card3 img{width:64px;height:64px;display:block;border-radius:4px;flex-shrink:0;box-shadow:0 2px 8px rgba(10,37,64,0.15)}
 .qr-text3{display:flex;flex-direction:column;gap:3px}
 .qr-label3{font-size:9px;font-weight:900;color:${NEO};line-height:1.3}
 .qr-sub3{font-size:7px;color:#475569;line-height:1.5}
@@ -409,8 +425,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .content{flex:1;display:flex;min-height:0;padding:14px 22px 10px;gap:18px;background:#F9FAFB}
 .desc-col{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px}
 .desc-text{font-size:9.5px;line-height:1.78;color:#222}
-.qr-bold{margin-top:auto;border:2px solid ${CYAN};border-radius:9px;display:flex;flex-direction:row;align-items:center;gap:11px;padding:10px 13px;background:#fff;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.qr-bold img{width:62px;height:62px;border-radius:4px;flex-shrink:0;border:2px solid rgba(91,203,245,0.3)}
+.qr-bold{margin-top:auto;border-top:1px solid #D1D5DB;display:flex;flex-direction:row;align-items:center;gap:12px;padding:10px 0 0;flex-shrink:0}
+.qr-bold img{width:62px;height:62px;border-radius:4px;flex-shrink:0;box-shadow:0 2px 8px rgba(10,37,64,0.15)}
 .qr-bold-label{font-size:9px;font-weight:900;color:${CHARCOAL};line-height:1.35}
 .qr-bold-sub{font-size:7px;color:#555;line-height:1.55;margin-top:3px}
 .features-col{flex:0 0 2.5in;display:flex;flex-direction:column;gap:0}
