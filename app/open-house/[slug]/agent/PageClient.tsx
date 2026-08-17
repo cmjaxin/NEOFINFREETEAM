@@ -983,13 +983,7 @@ body{width:8.5in;height:11in;font-family:'Montserrat',sans-serif;background:#fff
   <div class="body">
     <div class="eyebrow">Scan for Special Financing</div>
     <img class="qr-img" src="https://api.qrserver.com/v1/create-qr-code/?data=${qrUrl}&size=480x480&margin=3&color=0A2540" alt="QR Code" />
-    <div class="headline">Get Fully Underwritten<br>Approval Today</div>
     <div class="subline">See payment breakdowns, loan scenarios, and exclusive financing options for this home.</div>
-    <div class="bullets">
-      <div class="bullet"><div class="dot"></div>Payment breakdowns &amp; monthly estimates</div>
-      <div class="bullet"><div class="dot"></div>Loan scenarios tailored to this property</div>
-      <div class="bullet"><div class="dot"></div>Connect directly with your mortgage advisor</div>
-    </div>
     ${price ? `<div class="price-row"><div><div class="price-label">List Price</div><div class="price-val">${price}</div></div></div>` : ''}
   </div>
   <div class="footer">
