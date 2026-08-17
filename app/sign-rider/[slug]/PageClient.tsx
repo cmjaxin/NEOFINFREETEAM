@@ -379,11 +379,11 @@ export default function SignRiderPage({ slug }: { slug: string }) {
             {page.apply_url && (
               <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Ready to move forward?</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 6 }}>Apply Now</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 6 }}>Get Fully Underwritten Approval Today</div>
                 <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Start your mortgage application online in minutes.</div>
                 <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 36px', borderRadius: 10, textDecoration: 'none' }}>
-                  Start My Application →
+                  Get Approved →
                 </a>
               </div>
             )}

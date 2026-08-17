@@ -461,13 +461,13 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
             {/* Apply to Purchase CTA */}
             <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Ready to make an offer?</div>
-                <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, lineHeight: 1.3 }}>Apply to Purchase This Home</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Ready to move forward?</div>
+                <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, lineHeight: 1.3 }}>Get Fully Underwritten Approval Today</div>
                 <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Get pre-approved in minutes — no impact to your credit score.</div>
               </div>
               <button onClick={() => setShowApply(true)}
                 style={{ background: C.navy, color: '#fff', fontWeight: 800, fontSize: 14, padding: '13px 26px', borderRadius: 10, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                Apply to Purchase →
+                Get Approved →
               </button>
             </div>
 
@@ -573,7 +573,7 @@ function ApplyModal({ address, bntouchUserId, onDismiss }: { address: string; bn
         ) : (
           <>
             <div style={{ fontSize: 11, fontWeight: 700, color: C2.accent, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Purchase Application</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: C2.navy, marginBottom: 4 }}>Apply to Purchase This Home</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C2.navy, marginBottom: 4 }}>Get Fully Underwritten Approval Today</div>
             <div style={{ fontSize: 13, color: C2.muted, marginBottom: 24, lineHeight: 1.5 }}>Fill out below and a NEO advisor will reach out to get you started.</div>
             {error && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{error}</div>}
             <form ref={formRef} onSubmit={handleSubmit} action="https://www.bntouchmortgage.net/api/webform/" method="POST" target="bnt_apply_iframe">
