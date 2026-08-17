@@ -432,12 +432,15 @@ export default function OpenHousePage({ slug }: { slug: string }) {
             {/* TCA Embed */}
             {page.tca_url ? (
               <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Total Cost Analysis</div>
-                  <a href={page.tca_url} target="_blank" rel="noopener noreferrer"
-                    style={{ color: C.accent, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                    Open Full Screen ↗
-                  </a>
+                <div style={{ padding: '14px 20px', background: C.navy }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Total Cost Analysis</div>
+                    <a href={page.tca_url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: C.accent, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                      Open Full Screen ↗
+                    </a>
+                  </div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details.</div>
                 </div>
                 <iframe
                   src={page.tca_url}
