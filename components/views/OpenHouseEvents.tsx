@@ -363,12 +363,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     photos: init.photos ?? [] as string[],
     list_price: init.list_price ? String(init.list_price) : '',
     loan_description: (init as OHEPage).loan_description ?? '',
-    callout_text: (init as OHEPage).callout_text ?? '',
     interest_rate: (() => {
       const ct = (init as OHEPage).callout_text ?? ''
       const m = ct.match(/See how a ([\d.]+)%/)
-      return m ? m[1] : ''
+      return m ? m[1] : '4.875'
     })(),
+    callout_text: (init as OHEPage).callout_text ?? 'See how a 4.875% interest rate impacts your payment',
     tca_url: (init as OHEPage).tca_url ?? '',
     tca_screenshot: (init as OHEPage).tca_screenshot ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
