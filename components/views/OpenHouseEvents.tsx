@@ -690,17 +690,6 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
           <section>
             <SectionHead title="Loan Scenario & TCA" sub="Describe the loan scenario for buyers. Add the TCA URL and/or screenshot for the flyer." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Loan Description */}
-              <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Loan Scenario Description</label>
-                <textarea
-                  placeholder="Describe the loan scenario, rate buy-down, payment breakdown…"
-                  value={form.loan_description}
-                  onChange={e => set('loan_description', e.target.value)}
-                  rows={4}
-                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
-                />
-              </div>
               {/* TCA URL */}
               <Field label="TCA Embed URL" name="tca_url" placeholder="https://report.mortgagecoach.com/v2/classic/#…" value={form.tca_url} onChange={set} />
               {/* TCA Screenshot */}
