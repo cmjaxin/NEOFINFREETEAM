@@ -1168,6 +1168,7 @@ export default function AgentPageClient({ slug }: { slug: string }) {
                 accentColor={f.color}
                 onOpen={() => openBlob(f.gen(page))}
                 badge="8.5 × 11 in"
+                previewHtml={f.gen(page).replace('<script>window.onload=function(){window.print()}</script>', '')}
               />
             ))}
           </div>
@@ -1302,10 +1303,15 @@ function Section({ title, sub, icon, children }: { title: string; sub: string; i
   )
 }
 
-function TemplateCard({ icon, label, sub, accentColor, onOpen, badge }: {
-  icon: string; label: string; sub: string; accentColor: string; onOpen: () => void; badge: string
+function TemplateCard({ icon, label, sub, accentColor, onOpen, badge, previewHtml }: {
+  icon: string; label: string; sub: string; accentColor: string; onOpen: () => void; badge: string; previewHtml?: string
 }) {
   const [hover, setHover] = useState(false)
+  // Letter page: 816×1056px at 96dpi. Scale to fit 210px wide card preview.
+  const FLYER_W = 816
+  const PREVIEW_W = 210
+  const PREVIEW_H = 190
+  const scale = PREVIEW_W / FLYER_W
   return (
     <div
       onMouseEnter={() => setHover(true)}
@@ -1320,17 +1326,29 @@ function TemplateCard({ icon, label, sub, accentColor, onOpen, badge }: {
       onClick={onOpen}
     >
       {/* Preview area */}
-      <div style={{
-        height: 120, background: accentColor,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative',
-        transition: 'opacity 0.15s',
-      }}>
-        <span style={{ fontSize: 40, opacity: hover ? 0.6 : 0.9, transition: 'opacity 0.15s' }}>{icon}</span>
+      <div style={{ height: PREVIEW_H, position: 'relative', overflow: 'hidden', background: accentColor }}>
+        {previewHtml ? (
+          <iframe
+            srcDoc={previewHtml}
+            title={`${label} preview`}
+            style={{
+              width: FLYER_W, height: Math.round(PREVIEW_H / scale),
+              border: 'none', pointerEvents: 'none',
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+              display: 'block',
+            }}
+            sandbox="allow-same-origin"
+          />
+        ) : (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 40, opacity: 0.9 }}>{icon}</span>
+          </div>
+        )}
         {hover && (
           <div style={{
             position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'rgba(0,0,0,0.35)',
+            background: 'rgba(0,0,0,0.45)',
           }}>
             <div style={{ background: C.accent, color: C.navy, fontWeight: 800, fontSize: 13, padding: '8px 20px', borderRadius: 8 }}>
               Open &amp; Print
@@ -1339,7 +1357,7 @@ function TemplateCard({ icon, label, sub, accentColor, onOpen, badge }: {
         )}
         <div style={{
           position: 'absolute', top: 8, right: 8,
-          background: 'rgba(0,0,0,0.4)', color: '#fff',
+          background: 'rgba(0,0,0,0.5)', color: '#fff',
           fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
           letterSpacing: '0.05em',
         }}>

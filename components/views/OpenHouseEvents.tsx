@@ -852,44 +852,50 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
   const [pushing, setPushing] = useState(false)
   const [done, setDone] = useState(false)
   const [msg, setMsg] = useState('')
+  const [slotStatus, setSlotStatus] = useState<Record<number, string | null>>({})
+  const [loadingSlots, setLoadingSlots] = useState(true)
+  const [confirmOverride, setConfirmOverride] = useState<number | null>(null)
 
   function getSlugPrefix(uid: string) { return uid.replace(/-/g, '').slice(0, 8) }
 
+  useEffect(() => {
+    if (!profile?.id) return
+    const prefix = getSlugPrefix(profile.id)
+    const slugs = [1,2,3,4,5,6,7,8,9,10].map(n => `sr-${prefix}-${n}`)
+    supabase.from('open_house_pages')
+      .select('slug, address')
+      .in('slug', slugs)
+      .eq('page_type', 'sign_rider')
+      .then(({ data }) => {
+        const map: Record<number, string | null> = {}
+        for (let n = 1; n <= 10; n++) {
+          const slug = `sr-${prefix}-${n}`
+          const found = data?.find(r => r.slug === slug)
+          map[n] = found ? (found.address || 'In use') : null
+        }
+        setSlotStatus(map)
+        setLoadingSlots(false)
+      })
+  }, [profile?.id])
+
   async function push(slotNum: number) {
     if (!profile?.id) return
-    setPushing(true); setMsg('')
+    setPushing(true); setMsg(''); setConfirmOverride(null)
     const prefix = getSlugPrefix(profile.id)
     const slug = `sr-${prefix}-${slotNum}`
     const payload = {
-      address: page.address,
-      city: page.city,
-      state: page.state,
-      zip: page.zip,
-      beds: page.beds,
-      baths: page.baths,
-      sqft: page.sqft,
-      list_price: page.list_price,
-      description: page.description,
-      photos: page.photos,
-      lot_size: page.lot_size,
-      year_built: page.year_built,
-      tca_url: page.tca_url,
-      tca_screenshot: page.tca_screenshot,
-      advisor_name: page.advisor_name,
-      advisor_title: page.advisor_title,
-      advisor_email: page.advisor_email,
-      advisor_phone: page.advisor_phone,
-      advisor_nmls: page.advisor_nmls,
-      advisor_photo: page.advisor_photo,
-      partner_name: page.partner_name,
-      partner_title: page.partner_title,
-      partner_email: page.partner_email,
-      partner_phone: page.partner_phone,
-      partner_photo: page.partner_photo,
-      partner_nmls: page.partner_nmls,
+      address: page.address, city: page.city, state: page.state, zip: page.zip,
+      beds: page.beds, baths: page.baths, sqft: page.sqft, list_price: page.list_price,
+      description: page.description, photos: page.photos, lot_size: page.lot_size,
+      year_built: page.year_built, tca_url: page.tca_url, tca_screenshot: page.tca_screenshot,
+      advisor_name: page.advisor_name, advisor_title: page.advisor_title,
+      advisor_email: page.advisor_email, advisor_phone: page.advisor_phone,
+      advisor_nmls: page.advisor_nmls, advisor_photo: page.advisor_photo,
+      partner_name: page.partner_name, partner_title: page.partner_title,
+      partner_email: page.partner_email, partner_phone: page.partner_phone,
+      partner_photo: page.partner_photo, partner_nmls: page.partner_nmls,
       partner_logo: page.partner_logo,
     }
-    // Upsert: update if exists, insert if not
     const { data: existing } = await supabase.from('open_house_pages').select('id').eq('slug', slug).eq('page_type', 'sign_rider').single()
     if (existing?.id) {
       const { error } = await supabase.from('open_house_pages').update(payload).eq('id', existing.id)
@@ -906,32 +912,71 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,0.6)', backdropFilter: 'blur(4px)' }} />
-      <div style={{ position: 'relative', background: '#fff', borderRadius: 18, width: '100%', maxWidth: 380, padding: 28, boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }} onClick={e => e.stopPropagation()}>
+      <div style={{ position: 'relative', background: '#fff', borderRadius: 18, width: '100%', maxWidth: 420, padding: 28, boxShadow: '0 20px 50px rgba(0,0,0,0.25)', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
         <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: C.muted }}>×</button>
         {done ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 8 }}>Sign Rider Updated!</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 8 }}>Sign Rider Created!</div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Property info has been pushed to your sign rider page.</div>
             <button onClick={onClose} style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 14, padding: '10px 24px', cursor: 'pointer' }}>Done</button>
           </div>
-        ) : (
+        ) : confirmOverride !== null ? (
           <>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Push to Sign Rider</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 4 }}>Select a sign rider slot</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 8 }}>Override Sign Rider {confirmOverride}?</div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 20, lineHeight: 1.5 }}>
-              Property info from <strong>{page.address}</strong> will be copied to the selected sign rider.
+              This slot currently has <strong>{slotStatus[confirmOverride]}</strong>. Pushing will replace it with <strong>{page.address}</strong>.
             </div>
             {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                <button key={n} disabled={pushing} onClick={() => push(n)}
-                  style={{ padding: '13px 18px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 700, color: C.navy, cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Sign Rider {n}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: C.muted }}>Push →</span>
-                </button>
-              ))}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button disabled={pushing} onClick={() => push(confirmOverride)}
+                style={{ flex: 1, padding: '12px 0', background: C.navy, border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+                {pushing ? 'Saving…' : 'Yes, Override'}
+              </button>
+              <button onClick={() => setConfirmOverride(null)}
+                style={{ flex: 1, padding: '12px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, color: C.dim, cursor: 'pointer' }}>
+                Cancel
+              </button>
             </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Create Sign Rider</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.navy, marginBottom: 4 }}>Select a sign rider slot</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 16, lineHeight: 1.5 }}>
+              Property info from <strong>{page.address}</strong> will be pushed to the selected slot.
+            </div>
+            {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 14, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
+            {loadingSlots ? (
+              <div style={{ textAlign: 'center', padding: '20px 0', color: C.muted, fontSize: 13 }}>Loading slots…</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => {
+                  const used = slotStatus[n] != null
+                  return (
+                    <button key={n} disabled={pushing}
+                      onClick={() => used ? setConfirmOverride(n) : push(n)}
+                      style={{
+                        padding: '13px 16px', borderRadius: 10, fontSize: 13, fontWeight: 700,
+                        cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: used ? '#FFF7ED' : C.bg,
+                        border: used ? '1px solid #FED7AA' : `1px solid ${C.border}`,
+                        color: C.navy,
+                      }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 13 }}>Sign Rider {n}</div>
+                        {used && <div style={{ fontSize: 11, color: '#92400E', marginTop: 2 }}>{slotStatus[n]}</div>}
+                      </div>
+                      {used ? (
+                        <span style={{ fontSize: 11, fontWeight: 700, background: '#FED7AA', color: '#92400E', padding: '3px 8px', borderRadius: 6 }}>Override →</span>
+                      ) : (
+                        <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(22,163,74,0.12)', color: '#166534', padding: '3px 8px', borderRadius: 6 }}>Free →</span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -1016,7 +1061,7 @@ function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => voi
             </button>
             <button onClick={() => setShowPushToSR(true)}
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
-              → Sign Rider
+              Create Sign Rider
             </button>
             <button onClick={() => setConfirmDelete(true)}
               style={{ padding: '8px 12px', background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 8, fontSize: 12, color: C.red, cursor: 'pointer', fontWeight: 600 }}>
