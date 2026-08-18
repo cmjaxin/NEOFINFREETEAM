@@ -266,7 +266,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
     </div>
   )
 
-  const hasLoanContent = !!(page.loan_description || page.tca_url)
+  const hasLoanContent = !!page.tca_url
   const TABS: { id: 'overview' | 'loan' | 'contact'; label: string }[] = [
     { id: 'overview', label: 'Property Info' },
     ...(hasLoanContent ? [{ id: 'loan' as const, label: 'Loan Scenarios' }] : []),
@@ -430,16 +430,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         {activeTab === 'loan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
-            {/* Loan Description */}
-            {page.loan_description && (
-              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
-                <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 14 }}>Loan Scenario</div>
-                <div style={{ fontSize: 14, color: C.dim, lineHeight: 1.85, fontStyle: 'italic', whiteSpace: 'pre-wrap', borderLeft: `3px solid ${C.accent}`, paddingLeft: 16 }}>
-                  {page.loan_description}
-                </div>
-              </div>
-            )}
-
             {/* TCA Embed */}
             {page.tca_url ? (
               <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
@@ -463,10 +453,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                   title="Total Cost Analysis"
                   allow="fullscreen"
                 />
-              </div>
-            ) : !page.loan_description ? (
-              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 32, textAlign: 'center', color: C.muted }}>
-                Loan scenario details coming soon.
               </div>
             ) : null}
 
