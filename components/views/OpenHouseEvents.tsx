@@ -895,6 +895,7 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
       partner_email: page.partner_email, partner_phone: page.partner_phone,
       partner_photo: page.partner_photo, partner_nmls: page.partner_nmls,
       partner_logo: page.partner_logo,
+      callout_text: page.callout_text,
     }
     const { data: existing } = await supabase.from('open_house_pages').select('id').eq('slug', slug).eq('page_type', 'sign_rider').single()
     if (existing?.id) {
