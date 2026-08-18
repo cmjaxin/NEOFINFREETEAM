@@ -138,7 +138,7 @@ export default function SignRiderPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!page || leadShown.current) return
-    const t = setTimeout(() => { leadShown.current = true; setShowLead(true) }, 15000)
+    const t = setTimeout(() => { leadShown.current = true; setShowLead(true) }, 10000)
     return () => clearTimeout(t)
   }, [page])
 
