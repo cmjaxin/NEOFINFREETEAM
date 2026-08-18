@@ -1142,14 +1142,24 @@ export default function AgentPageClient({ slug }: { slug: string }) {
                 </div>
               )}
             </div>
-            <a
-              href={`/open-house/${slug}?preview=1`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ background: C.accent, color: C.navy, fontWeight: 700, fontSize: 13, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', whiteSpace: 'nowrap' }}
-            >
-              Preview Page ↗
-            </a>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <a
+                href={`/open-house/${slug}?preview=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', fontWeight: 700, fontSize: 13, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', whiteSpace: 'nowrap', border: '1px solid rgba(255,255,255,0.3)' }}
+              >
+                Preview Ungated ↗
+              </a>
+              <a
+                href={`/open-house/${slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ background: C.accent, color: C.navy, fontWeight: 700, fontSize: 13, padding: '9px 18px', borderRadius: 8, textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                Client Page ↗
+              </a>
+            </div>
           </div>
         </div>
       </header>
