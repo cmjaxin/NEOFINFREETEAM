@@ -240,6 +240,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       setMsg('Address is required.')
       return
     }
+    const filledPhotos = (form.photos as string[]).filter(Boolean)
+    if (filledPhotos.length < 4) {
+      setMsg('Please upload at least 4 photos before saving.')
+      return
+    }
     setSaving(true)
     setMsg('')
     const payload = {
