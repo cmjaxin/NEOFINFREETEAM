@@ -258,7 +258,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
       loom_url: form.loom_url || null,
-      callout_text: form.interest_rate ? `See how a ${form.interest_rate}% interest rate impacts your payment` : (form.callout_text || null),
+      callout_text: form.callout_text || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
       advisor_email: form.advisor_email,
@@ -404,23 +404,38 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
           <section>
             <SectionHead title="Loan Details" sub="Loom video and MortgageCoach TCA shown to buyers on the Loan Details tab." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Interest Rate Callout */}
+              {/* Callout Banner */}
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Interest Rate</label>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Shown as a bold callout at the top of the sign rider page.</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Callout Banner</label>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Shown as a bold banner at the top of the sign rider page and in the lead popup. Customize below or use the rate quick-fill.</div>
+                {/* Rate quick-fill */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Rate quick-fill:</span>
                   <input
                     type="text" inputMode="decimal" placeholder="4.875"
                     value={form.interest_rate}
-                    onChange={e => set('interest_rate', e.target.value)}
-                    style={{ width: 100, padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
+                    onChange={e => {
+                      const rate = e.target.value
+                      set('interest_rate', rate)
+                      if (rate) set('callout_text', `See how a ${rate}% interest rate impacts your payment`)
+                      else set('callout_text', '')
+                    }}
+                    style={{ width: 80, padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
                   />
                   <span style={{ fontSize: 13, color: C.muted }}>%</span>
                 </div>
-                {form.interest_rate && (
+                {/* Editable callout text */}
+                <textarea
+                  placeholder="e.g. See how a 4.875% interest rate impacts your payment"
+                  value={form.callout_text}
+                  onChange={e => set('callout_text', e.target.value)}
+                  rows={2}
+                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical', marginBottom: 10 }}
+                />
+                {form.callout_text && (
                   <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', borderRadius: 10, padding: '20px 18px', textAlign: 'center' }}>
                     <div style={{ fontSize: 26, marginBottom: 8 }}>📣</div>
-                    <div style={{ fontSize: 16, color: '#fff', fontWeight: 900, lineHeight: 1.3 }}>See how a {form.interest_rate}% interest rate impacts your payment</div>
+                    <div style={{ fontSize: 16, color: '#fff', fontWeight: 900, lineHeight: 1.3 }}>{form.callout_text}</div>
                   </div>
                 )}
               </div>
