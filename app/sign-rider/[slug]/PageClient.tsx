@@ -443,6 +443,7 @@ export default function SignRiderPage({ slug }: { slug: string }) {
           address={`Sign Rider ${slug.match(/(\d+)$/)?.[1] ?? ''}`}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
+          callout={page.callout_text}
         />
       )}
 

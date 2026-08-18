@@ -5,9 +5,10 @@ interface Props {
   address: string
   bntouchUserId: string | null
   onDismiss: () => void
+  callout?: string | null
 }
 
-export default function LeadCaptureModal({ address, bntouchUserId, onDismiss }: Props) {
+export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, callout }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -88,6 +89,14 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss }: 
             Enter your info to unlock the full listing presentation including rate scenarios and cost analysis.
           </div>
         </div>
+
+        {/* Callout banner */}
+        {callout && (
+          <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '18px 32px', textAlign: 'center' }}>
+            <div style={{ fontSize: 26, marginBottom: 6 }}>📣</div>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', lineHeight: 1.25 }}>{callout}</div>
+          </div>
+        )}
 
         {/* Body */}
         <div style={{ padding: '28px 32px 32px' }}>
