@@ -180,6 +180,15 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         </div>
       </header>
 
+      {page.callout_text && (
+        <div style={{ background: 'linear-gradient(135deg, #0A2540 0%, #0e3a6e 100%)', padding: '0 20px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px 0', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 28, flexShrink: 0 }}>📣</span>
+            <div style={{ fontSize: 20, fontWeight: 900, color: '#fff', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{page.callout_text}</div>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 60px' }}>
 
         {/* Photos */}
@@ -301,14 +310,6 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         {/* Loan Details Tab */}
         {activeTab === 'loan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-
-            {/* Callout Box */}
-            {page.callout_text && (
-              <div style={{ background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <div style={{ fontSize: 24, flexShrink: 0, marginTop: 2 }}>📣</div>
-                <div style={{ fontSize: 15, color: '#fff', lineHeight: 1.6, fontWeight: 500 }}>{page.callout_text}</div>
-              </div>
-            )}
 
             {/* Loom Video — only shown if a valid Loom URL is set */}
             {loomId && (

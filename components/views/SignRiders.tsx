@@ -114,6 +114,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
     tca_screenshot: (init as SRPage).tca_screenshot ?? '',
     loom_url: (init as SRPage).loom_url ?? '',
     callout_text: (init as SRPage).callout_text ?? '',
+    interest_rate: (() => {
+      const ct = (init as SRPage).callout_text ?? ''
+      const m = ct.match(/See how a ([\d.]+)%/)
+      return m ? m[1] : '4.875'
+    })(),
     advisor_name: init.advisor_name || profile?.full_name || '',
     advisor_title: init.advisor_title || profile?.title || '',
     advisor_email: init.advisor_email || profile?.email || '',
@@ -253,7 +258,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
       loom_url: form.loom_url || null,
-      callout_text: form.callout_text || null,
+      callout_text: form.interest_rate ? `See how a ${form.interest_rate}% interest rate impacts your payment` : (form.callout_text || null),
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
       advisor_email: form.advisor_email,
@@ -399,17 +404,25 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
           <section>
             <SectionHead title="Loan Details" sub="Loom video and MortgageCoach TCA shown to buyers on the Loan Details tab." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Callout Box */}
+              {/* Interest Rate Callout */}
               <div>
-                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Custom Callout Box</label>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Shown above the Loom video on the public page. Great for property highlights, open house times, or a quick note to buyers.</div>
-                <textarea
-                  placeholder="e.g. 🏡 Open House this Sunday 1–4pm! Rate buydown available. Ask us about 0% down options."
-                  value={form.callout_text}
-                  onChange={e => set('callout_text', e.target.value)}
-                  rows={3}
-                  style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
-                />
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Interest Rate</label>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Shown as a bold callout at the top of the sign rider page.</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                  <input
+                    type="text" inputMode="decimal" placeholder="4.875"
+                    value={form.interest_rate}
+                    onChange={e => set('interest_rate', e.target.value)}
+                    style={{ width: 100, padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
+                  />
+                  <span style={{ fontSize: 13, color: C.muted }}>%</span>
+                </div>
+                {form.interest_rate && (
+                  <div style={{ background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 22, flexShrink: 0 }}>📣</span>
+                    <div style={{ fontSize: 15, color: '#fff', fontWeight: 700, lineHeight: 1.4 }}>See how a {form.interest_rate}% interest rate impacts your payment</div>
+                  </div>
+                )}
               </div>
               <Field
                 label="Loom Video URL"
