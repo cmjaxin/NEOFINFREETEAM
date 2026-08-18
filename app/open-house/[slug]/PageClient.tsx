@@ -375,8 +375,8 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                 </div>
               </div>
             </div>
-            {(page.schedule_url || page.advisor_phone) && (
-              <a href={page.schedule_url || `tel:${page.advisor_phone}`} target={page.schedule_url ? '_blank' : undefined} rel="noopener noreferrer"
+            {page.schedule_url && (
+              <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'block', marginTop: 14, textAlign: 'center', background: C.accent, color: C.navy, fontWeight: 700, fontSize: 13, padding: '10px 0', borderRadius: 9, textDecoration: 'none' }}>
                 Schedule a Time to Talk →
               </a>
@@ -440,7 +440,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                       Open Full Screen ↗
                     </a>
                   </div>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details.</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <svg width="14" height="16" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: 1 }}><path d="M5 20L20 7L35 20V40H26V29H14V40H5V20Z" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" fill="none"/><line x1="14" y1="25" x2="26" y2="25" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/><line x1="14" y1="30" x2="26" y2="30" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/></svg>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details.</div>
+                  </div>
                 </div>
                 <iframe
                   src={page.tca_url}
@@ -478,20 +481,22 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                   </div>
                 ))}
               </div>
-              {page.schedule_url ? (
+              {page.schedule_url && (
                 <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none' }}>
                   Schedule a Free Consultation →
                 </a>
-              ) : page.advisor_phone ? (
-                <a href={`tel:${page.advisor_phone}`}
-                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none' }}>
-                  Call to Schedule →
-                </a>
-              ) : null}
+              )}
             </div>
           </div>
         )}
+      </div>
+
+      {/* Legal Disclaimer Footer */}
+      <div style={{ background: '#F1F5F9', borderTop: '1px solid #E4E8EC', padding: '20px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 9, color: '#94A3B8', lineHeight: 1.7 }}>
+          Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details. © 2026 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License # 02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Better BMC operates under the name Better Mortgage Corporation in New York. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access. Better Real Estate, LLC dba BRE, Better Home Services, BRE Services, LLC and Better Real Estate, and operating in the State of California through its wholly owned subsidiary Better Real Estate California Inc., is a licensed real estate brokerage and maintains its corporate headquarters at 325-41 Chestnut Street, Suite 826, Philadelphia, PA 19106. Better Real Estate, LLC provides access to real estate brokerage services via its nationwide network of partner brokerages and real estate agents. Equal Housing Opportunity. All rights reserved. New York State Housing and Anti-Discrimination Notice. New York Standard Operating Procedures. Texas Real Estate Commission: Information About Brokerage Services | Consumer Protection Notice. Better Settlement Services, LLC. 325-41 Chestnut Street, Suite 803, Philadelphia, PA 19106. Homeowners insurance policies are offered through Better Cover, LLC, a Pennsylvania Resident Producer Agency. License #881593. 325-41 Chestnut Street, Suite 807, Philadelphia, PA 19106. Better Inspect, LLC maintains its corporate headquarters at 325-41 Chestnut Street, Suite 846, Philadelphia, PA 19106. Better Mortgage Corporation, Better Real Estate, LLC, Better Settlement Services, LLC, Better Cover, LLC, Better Connect, and Better Inspect, LLC are separate operating subsidiaries of Better Home &amp; Finance Holding Company. Each company is a separate legal entity operated and managed through its own management and governance structure as required by its state of incorporation, and applicable and legal and regulatory requirements. Products not available in all states. Any unauthorized use of any proprietary or intellectual property is strictly prohibited. All trademarks, service marks, trade names, logos, icons, and domain names are proprietary to Better Home &amp; Finance Holding Company. Licensed by the Department of Financial Protection and Innovation under the California Residential Mortgage Lending Act.
+        </div>
       </div>
 
       <style>{`

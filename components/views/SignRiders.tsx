@@ -418,9 +418,9 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
                   <span style={{ fontSize: 13, color: C.muted }}>%</span>
                 </div>
                 {form.interest_rate && (
-                  <div style={{ background: 'linear-gradient(135deg, #0A2540, #1a4a7c)', borderRadius: 10, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{ fontSize: 22, flexShrink: 0 }}>📣</span>
-                    <div style={{ fontSize: 15, color: '#fff', fontWeight: 700, lineHeight: 1.4 }}>See how a {form.interest_rate}% interest rate impacts your payment</div>
+                  <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', borderRadius: 10, padding: '20px 18px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 26, marginBottom: 8 }}>📣</div>
+                    <div style={{ fontSize: 16, color: '#fff', fontWeight: 900, lineHeight: 1.3 }}>See how a {form.interest_rate}% interest rate impacts your payment</div>
                   </div>
                 )}
               </div>
