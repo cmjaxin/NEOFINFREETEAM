@@ -33,6 +33,7 @@ interface OHEPage {
   tca_url: string
   tca_screenshot: string
   loan_description: string
+  callout_text: string | null
   page_type: string
 }
 
@@ -362,6 +363,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     photos: init.photos ?? [] as string[],
     list_price: init.list_price ? String(init.list_price) : '',
     loan_description: (init as OHEPage).loan_description ?? '',
+    callout_text: (init as OHEPage).callout_text ?? '',
+    interest_rate: (() => {
+      const ct = (init as OHEPage).callout_text ?? ''
+      const m = ct.match(/See how a ([\d.]+)%/)
+      return m ? m[1] : ''
+    })(),
     tca_url: (init as OHEPage).tca_url ?? '',
     tca_screenshot: (init as OHEPage).tca_screenshot ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
@@ -501,6 +508,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
       photos: form.photos,
       list_price: Number(String(form.list_price).replace(/,/g, '')) || 0,
       loan_description: form.loan_description || null,
+      callout_text: form.callout_text || null,
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
       advisor_name: form.advisor_name,
@@ -641,6 +649,41 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
               </button>
             </div>
             <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
+          </section>
+
+          {/* Callout Banner */}
+          <section>
+            <SectionHead title="Callout Banner" sub="Shown as a bold banner at the top of the open house page and in the lead popup." />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>Rate quick-fill:</span>
+                <input
+                  type="text" inputMode="decimal" placeholder="4.875"
+                  value={form.interest_rate}
+                  onChange={e => {
+                    const rate = e.target.value
+                    set('interest_rate', rate)
+                    if (rate) set('callout_text', `See how a ${rate}% interest rate impacts your payment`)
+                    else set('callout_text', '')
+                  }}
+                  style={{ width: 80, padding: '7px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white }}
+                />
+                <span style={{ fontSize: 13, color: C.muted }}>%</span>
+              </div>
+              <textarea
+                placeholder="e.g. See how a 4.875% interest rate impacts your payment"
+                value={form.callout_text}
+                onChange={e => set('callout_text', e.target.value)}
+                rows={2}
+                style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, outline: 'none', background: C.white, resize: 'vertical' }}
+              />
+              {form.callout_text && (
+                <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', borderRadius: 10, padding: '20px 18px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 26, marginBottom: 8 }}>📣</div>
+                  <div style={{ fontSize: 16, color: '#fff', fontWeight: 900, lineHeight: 1.3 }}>{form.callout_text}</div>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Loan Scenario + TCA */}

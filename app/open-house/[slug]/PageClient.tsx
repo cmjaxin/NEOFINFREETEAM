@@ -183,6 +183,7 @@ interface PageData {
   partner_name: string; partner_title: string; partner_email: string
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string | null; tca_screenshot: string | null
+  callout_text: string | null
   schedule_url: string | null
   bntouch_user_id: string | null
 }
@@ -219,7 +220,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
           partner_photo: '', partner_nmls: '', partner_logo: '',
-          tca_url: null, tca_screenshot: null, schedule_url: null, loan_description: null, bntouch_user_id: null,
+          tca_url: null, tca_screenshot: null, callout_text: null, schedule_url: null, loan_description: null, bntouch_user_id: null,
           ...row,
         } as PageData
 
@@ -279,6 +280,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           address={page.address + (page.city ? ', ' + page.city : '')}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
+          callout={page.callout_text}
         />
       )}
       {/* Header */}
@@ -296,6 +298,15 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           </div>
         </div>
       </header>
+
+      {page.callout_text && (
+        <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '28px 20px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 10 }}>📣</div>
+            <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.02em' }}>{page.callout_text}</div>
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 60px' }}>
 
