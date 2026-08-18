@@ -670,7 +670,7 @@ function PageCard({ page, onEdit, slotNum, onClear }: { page: SRPage; onEdit: ()
           </div>
         ) : (
           <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href={url} target="_blank" rel="noopener noreferrer"
+            <a href={`${url}?preview=1`} target="_blank" rel="noopener noreferrer"
               style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
               View Page
             </a>

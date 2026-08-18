@@ -200,6 +200,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1') return
     try { if (sessionStorage.getItem('lp_lead_captured')) return } catch {}
     leadTimerRef.current = setTimeout(() => setShowLead(true), 10000)
     return () => { if (leadTimerRef.current) clearTimeout(leadTimerRef.current) }

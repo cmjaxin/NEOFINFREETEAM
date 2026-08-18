@@ -138,6 +138,7 @@ export default function SignRiderPage({ slug }: { slug: string }) {
 
   useEffect(() => {
     if (!page || leadShown.current) return
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1') return
     const t = setTimeout(() => { leadShown.current = true; setShowLead(true) }, 10000)
     return () => clearTimeout(t)
   }, [page])
