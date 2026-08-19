@@ -61,27 +61,24 @@ export default function SettingsModal() {
 
   async function save() {
     setError(''); setSaved(false)
-    try {
-      await supabase.from('profiles').update({
-        full_name: form.name.trim(),
-        title: form.title.trim(),
-        email: form.email.trim(),
-        nmls: form.nmls.trim(),
-        phone: form.phone.trim(),
-        headshot_url: form.headshot_url,
-        schedule_url: form.schedule_url.trim() || null,
-        apply_url: form.apply_url.trim() || null,
-        bntouch_user_id: form.bntouch_user_id.trim() || null,
-      }).eq('id', profile!.id)
-      if (form.password) {
-        const { error: pwErr } = await supabase.auth.updateUser({ password: form.password })
-        if (pwErr) { setError(pwErr.message); return }
-      }
-      await reload()
-      setSaved(true)
-    } catch (e: any) {
-      setError(e.message ?? 'Something went wrong')
+    const { error: updateErr } = await supabase.from('profiles').update({
+      full_name: form.name.trim(),
+      title: form.title.trim(),
+      email: form.email.trim(),
+      nmls: form.nmls.trim(),
+      phone: form.phone.trim(),
+      headshot_url: form.headshot_url,
+      schedule_url: form.schedule_url.trim() || null,
+      apply_url: form.apply_url.trim() || null,
+      bntouch_user_id: form.bntouch_user_id.trim() || null,
+    }).eq('id', profile!.id)
+    if (updateErr) { setError(updateErr.message); return }
+    if (form.password) {
+      const { error: pwErr } = await supabase.auth.updateUser({ password: form.password })
+      if (pwErr) { setError(pwErr.message); return }
     }
+    await reload()
+    setSaved(true)
   }
 
   async function toggleFeature(id: string, field: string, current: boolean) {

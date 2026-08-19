@@ -107,14 +107,9 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         } as PageData
 
         const fetchExtras = async () => {
-          let profileRes = row.created_by
-            ? await sb.from('profiles').select('schedule_url, apply_url, bntouch_user_id').eq('id', row.created_by).single()
+          const profileRes = row.created_by
+            ? await sb.from('profiles').select('*').eq('id', row.created_by).single()
             : { data: null, error: null }
-          if (profileRes.error) {
-            profileRes = row.created_by
-              ? await sb.from('profiles').select('schedule_url, bntouch_user_id').eq('id', row.created_by).single()
-              : { data: null, error: null }
-          }
           const partnerRes = pageData.partner_name
             ? await sb.from('marketing_partners').select('logo_url, name')
             : { data: null }

@@ -229,7 +229,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
-              ? sb.from('profiles').select('schedule_url, apply_url, bntouch_user_id').eq('id', row.created_by).single()
+              ? sb.from('profiles').select('*').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
