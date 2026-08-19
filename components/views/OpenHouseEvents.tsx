@@ -530,6 +530,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
       partner_photo: showPartner ? form.partner_photo : '',
       partner_logo: showPartner ? form.partner_logo : '',
       page_type: 'open_house',
+      schedule_url: (profile as any)?.schedule_url ?? null,
+      apply_url: (profile as any)?.apply_url ?? null,
       updated_at: new Date().toISOString(),
     }
 
@@ -896,6 +898,8 @@ function PushToSignRiderModal({ page, onClose }: { page: OHEPage; onClose: () =>
       partner_photo: page.partner_photo, partner_nmls: page.partner_nmls,
       partner_logo: page.partner_logo,
       callout_text: page.callout_text,
+      schedule_url: page.schedule_url,
+      apply_url: page.apply_url,
     }
     const { data: existing } = await supabase.from('open_house_pages').select('id').eq('slug', slug).eq('page_type', 'sign_rider').single()
     if (existing?.id) {

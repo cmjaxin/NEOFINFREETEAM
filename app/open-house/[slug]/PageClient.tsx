@@ -229,17 +229,16 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
-              ? sb.from('profiles').select('*').eq('id', row.created_by).single()
+              ? sb.from('profiles').select('bntouch_user_id').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
           ])
-          const profileData = profileRes.data as { schedule_url?: string; apply_url?: string; bntouch_user_id?: string } | null
-          const scheduleUrl = profileData?.schedule_url ?? null
-          const applyUrl = profileData?.apply_url ?? null
+          const profileData = profileRes.data as { bntouch_user_id?: string } | null
           const bntouchUserId = profileData?.bntouch_user_id ?? null
-          let finalData = { ...pageData, schedule_url: scheduleUrl, apply_url: applyUrl, bntouch_user_id: bntouchUserId }
+          // schedule_url and apply_url are stored directly on the page row (denormalized at save time)
+          let finalData = { ...pageData, bntouch_user_id: bntouchUserId }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()

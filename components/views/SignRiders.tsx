@@ -278,6 +278,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       partner_photo: showPartner ? form.partner_photo : '',
       partner_logo: showPartner ? form.partner_logo : '',
       page_type: 'sign_rider',
+      schedule_url: (profile as any)?.schedule_url ?? null,
+      apply_url: (profile as any)?.apply_url ?? null,
       updated_at: new Date().toISOString(),
     }
 
