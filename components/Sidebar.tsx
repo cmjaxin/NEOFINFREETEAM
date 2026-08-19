@@ -71,7 +71,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
       <div style={{ fontSize: 10, letterSpacing: '.16em', textTransform: 'uppercase', color: '#6E8199', margin: '12px 0 22px', textAlign: 'center', fontWeight: 600 }}>
         FinFree Division · Team HQ
       </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', flex: 1, marginBottom: 16 }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, overflowY: 'auto', minHeight: 0, flex: 1 }}>
         {navItems.map(({ id, label }) => (
           <button key={id} onClick={() => handleNav(id)} style={navStyle(view === id)}>
             <span style={{ width: 7, height: 7, borderRadius: 2, background: 'currentColor', opacity: .75, flexShrink: 0 }} />
