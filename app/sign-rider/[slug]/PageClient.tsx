@@ -175,8 +175,14 @@ export default function SignRiderPage({ slug }: { slug: string }) {
           {page.partner_logo && (
             <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 52, maxWidth: 180, objectFit: 'contain' }} />
           )}
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginLeft: 'auto' }}>
             <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
+            {page.apply_url && (
+              <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                style={{ background: C.accent, color: C.navy, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                Apply Now →
+              </a>
+            )}
           </div>
         </div>
       </header>

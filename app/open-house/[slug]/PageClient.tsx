@@ -185,6 +185,7 @@ interface PageData {
   tca_url: string | null; tca_screenshot: string | null
   callout_text: string | null
   schedule_url: string | null
+  apply_url: string | null
   bntouch_user_id: string | null
 }
 
@@ -221,23 +222,24 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
           partner_photo: '', partner_nmls: '', partner_logo: '',
-          tca_url: null, tca_screenshot: null, callout_text: null, schedule_url: null, loan_description: null, bntouch_user_id: null,
+          tca_url: null, tca_screenshot: null, callout_text: null, schedule_url: null, apply_url: null, loan_description: null, bntouch_user_id: null,
           ...row,
         } as PageData
 
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
-              ? sb.from('profiles').select('schedule_url, bntouch_user_id').eq('id', row.created_by).single()
+              ? sb.from('profiles').select('schedule_url, apply_url, bntouch_user_id').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
           ])
-          const profileData = profileRes.data as { schedule_url?: string; bntouch_user_id?: string } | null
+          const profileData = profileRes.data as { schedule_url?: string; apply_url?: string; bntouch_user_id?: string } | null
           const scheduleUrl = profileData?.schedule_url ?? null
+          const applyUrl = profileData?.apply_url ?? null
           const bntouchUserId = profileData?.bntouch_user_id ?? null
-          let finalData = { ...pageData, schedule_url: scheduleUrl, bntouch_user_id: bntouchUserId }
+          let finalData = { ...pageData, schedule_url: scheduleUrl, apply_url: applyUrl, bntouch_user_id: bntouchUserId }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
@@ -292,10 +294,12 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           ) : <div />}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
-            <button onClick={() => openFlyer(page)}
-              style={{ background: C.accent, color: C.navy, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              ↓ Download Flyer
-            </button>
+            {page.apply_url && (
+              <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                style={{ background: C.accent, color: C.navy, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                Apply Now →
+              </a>
+            )}
           </div>
         </div>
       </header>
@@ -463,6 +467,17 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         {/* Contact Tab */}
         {activeTab === 'contact' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {page.apply_url && (
+              <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Ready to move forward?</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 6 }}>Get Fully Underwritten Approval Today</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Start your mortgage application online in minutes.</div>
+                <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 36px', borderRadius: 10, textDecoration: 'none' }}>
+                  Get Approved →
+                </a>
+              </div>
+            )}
             <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 20 }}>
