@@ -393,9 +393,16 @@ export default function SignRiderPage({ slug }: { slug: string }) {
 
         {/* Contact Tab */}
         {activeTab === 'contact' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }} />
+        )}
 
-            {/* Apply Now */}
+      </div>
+
+      {/* Always-visible CTAs — Apply Now + Schedule */}
+      {(page.apply_url || page.schedule_url) && (
+        <div style={{ background: C.bg, padding: '0 20px 40px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
             {page.apply_url && (
               <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Ready to move forward?</div>
@@ -408,34 +415,33 @@ export default function SignRiderPage({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Schedule CTA */}
-            <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 20 }}>
-                Schedule a time to talk with {page.advisor_name?.split(' ')[0] || 'your advisor'}
-              </div>
-              <div style={{ display: 'flex', gap: 12, marginBottom: 28, textAlign: 'left', flexWrap: 'wrap' }}>
-                {[
-                  { num: '01', text: 'Get your questions answered about financing this home' },
-                  { num: '02', text: 'Explore loan options and see your real monthly payment' },
-                ].map(r => (
-                  <div key={r.num} style={{ flex: '1 1 200px', background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <div style={{ fontSize: 11, fontWeight: 800, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, marginTop: 1 }}>{r.num}</div>
-                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{r.text}</div>
-                  </div>
-                ))}
-              </div>
-              {page.schedule_url && (
+            {page.schedule_url && (
+              <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 20 }}>
+                  Schedule a time to talk with {page.advisor_name?.split(' ')[0] || 'your advisor'}
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 28, textAlign: 'left', flexWrap: 'wrap' }}>
+                  {[
+                    { num: '01', text: 'Get your questions answered about financing this home' },
+                    { num: '02', text: 'Explore loan options and see your real monthly payment' },
+                  ].map(r => (
+                    <div key={r.num} style={{ flex: '1 1 200px', background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, marginTop: 1 }}>{r.num}</div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{r.text}</div>
+                    </div>
+                  ))}
+                </div>
                 <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none' }}>
                   Schedule a Free Consultation →
                 </a>
-              )}
-            </div>
-          </div>
-        )}
+              </div>
+            )}
 
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Legal Disclaimer Footer */}
       <div style={{ background: '#F1F5F9', borderTop: '1px solid #E4E8EC', padding: '20px' }}>
