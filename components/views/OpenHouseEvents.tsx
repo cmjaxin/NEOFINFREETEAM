@@ -34,6 +34,8 @@ interface OHEPage {
   tca_screenshot: string
   loan_description: string
   callout_text: string | null
+  schedule_url: string | null
+  apply_url: string | null
   page_type: string
 }
 
