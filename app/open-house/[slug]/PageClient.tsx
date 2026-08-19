@@ -248,8 +248,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           }
           setPage(finalData)
         }
-        fetchExtras()
-        setLoading(false)
+        fetchExtras().finally(() => setLoading(false))
       }, (e: unknown) => { setDbError(`Fetch error: ${e}`); setLoading(false) })
   }, [slug])
 
