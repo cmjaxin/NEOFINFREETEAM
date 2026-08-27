@@ -703,9 +703,10 @@ function PageCard({ page, onEdit, slotNum, onClear }: { page: SRPage; onEdit: ()
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function SignRidersView() {
   const { supabase, profile } = useApp()
-  const [slots, setSlots] = useState<(SRPage | null)[]>([null, null, null, null, null, null, null, null, null, null])
+  const [slots, setSlots] = useState<(SRPage | null)[]>(Array(30).fill(null))
   const [loading, setLoading] = useState(true)
   const [editingPage, setEditingPage] = useState<SRPage | null>(null)
+  const [showAll, setShowAll] = useState(false)
 
   function getSlugPrefix(uid: string) {
     return uid.replace(/-/g, '').slice(0, 8)
@@ -714,7 +715,7 @@ export default function SignRidersView() {
   async function ensureSlots() {
     if (!profile?.id) return
     const prefix = getSlugPrefix(profile.id)
-    const expectedSlugs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `sr-${prefix}-${n}`)
+    const expectedSlugs = Array.from({ length: 30 }, (_, i) => `sr-${prefix}-${i + 1}`)
 
     const { data: existing } = await supabase
       .from('open_house_pages')
@@ -729,7 +730,7 @@ export default function SignRidersView() {
     const toCreate = expectedSlugs
       .filter(slug => !bySlug[slug])
       .map((slug) => {
-        const n = Number(slug.slice(-1))
+        const n = Number(slug.split('-').pop())
         return {
           slug,
           address: `Sign Rider ${n}`,
@@ -761,7 +762,7 @@ export default function SignRidersView() {
   async function reload() {
     if (!profile?.id) return
     const prefix = getSlugPrefix(profile.id)
-    const expectedSlugs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `sr-${prefix}-${n}`)
+    const expectedSlugs = Array.from({ length: 30 }, (_, i) => `sr-${prefix}-${i + 1}`)
     const { data } = await supabase.from('open_house_pages').select('*').in('slug', expectedSlugs).eq('page_type', 'sign_rider')
     const bySlug: Record<string, SRPage> = {}
     for (const row of data ?? []) bySlug[(row as SRPage).slug] = row as SRPage
@@ -772,14 +773,22 @@ export default function SignRidersView() {
     <div style={{ padding: '28px 36px', background: C.bg, minHeight: '100vh' }}>
       <div style={{ marginBottom: 28 }}>
         <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Sign Riders</div>
-        <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>5 permanent QR code pages for your yard signs — edit anytime without changing the URL</div>
+        <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>30 permanent QR code pages for your yard signs — edit anytime without changing the URL</div>
       </div>
 
       {loading ? (
         <div style={{ color: C.muted, padding: 32, textAlign: 'center' }}>Setting up your sign rider slots…</div>
-      ) : (
+      ) : (() => {
+        const isUsed = (p: SRPage | null, i: number) =>
+          p && (p.address !== `Sign Rider ${i + 1}` || (p.photos && p.photos.length > 0) || !!p.description)
+        const lastUsedIdx = slots.reduce((acc, p, i) => isUsed(p, i) ? i : acc, -1)
+        const visibleCount = showAll ? 30 : Math.max(lastUsedIdx + 2, 5)
+        const visibleSlots = slots.slice(0, visibleCount)
+        const hiddenUsed = slots.slice(visibleCount).filter((p, i) => isUsed(p, visibleCount + i)).length
+        return (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-          {slots.map((p, i) => p ? (
+          {visibleSlots.map((p, i) => p ? (
             <PageCard key={p.id} page={p} slotNum={i + 1} onEdit={() => setEditingPage(p)} onClear={async () => {
               await supabase.from('open_house_pages').update({
                 address: `Sign Rider ${i + 1}`, city: '', state: 'UT', zip: '',
@@ -799,7 +808,25 @@ export default function SignRidersView() {
             </div>
           ))}
         </div>
-      )}
+        {!showAll && visibleCount < 30 && (
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <button onClick={() => setShowAll(true)}
+              style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 28px', fontSize: 13, fontWeight: 700, color: C.navy, cursor: 'pointer' }}>
+              Show all 30 slots {hiddenUsed > 0 ? `(${hiddenUsed} active hidden)` : ''}
+            </button>
+          </div>
+        )}
+        {showAll && (
+          <div style={{ textAlign: 'center', marginTop: 24 }}>
+            <button onClick={() => setShowAll(false)}
+              style={{ background: 'transparent', border: 'none', fontSize: 13, fontWeight: 600, color: C.muted, cursor: 'pointer', textDecoration: 'underline' }}>
+              Collapse
+            </button>
+          </div>
+        )}
+        </>
+        )
+      })()}
 
       {editingPage && (
         <CreateModal
