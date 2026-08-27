@@ -211,10 +211,13 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
         const dw = (f.rectW || 0.3) * w
         const dh = (f.rectH || 0.2) * h
         const bx = px - dw / 2, by = py - dh / 2
-        const scale = Math.max(dw / img.naturalWidth, dh / img.naturalHeight)
+        const isLogo = f.type === 'partner_logo'
+        const scale = isLogo
+          ? Math.min(dw / img.naturalWidth, dh / img.naturalHeight)
+          : Math.max(dw / img.naturalWidth, dh / img.naturalHeight)
         const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale
-        const ox = (f.panX ?? 0.5) * Math.max(0, iw - dw)
-        const oy = (f.panY ?? 0.5) * Math.max(0, ih - dh)
+        const ox = isLogo ? -(dw - iw) / 2 : (f.panX ?? 0.5) * Math.max(0, iw - dw)
+        const oy = isLogo ? -(dh - ih) / 2 : (f.panY ?? 0.5) * Math.max(0, ih - dh)
         ctx.save()
         ctx.beginPath(); ctx.rect(bx, by, dw, dh); ctx.clip()
         ctx.drawImage(img, bx - ox, by - oy, iw, ih)
@@ -459,7 +462,7 @@ function PartnersTab({ supabase, ownerEmail }: { supabase: any; ownerEmail: stri
             <div style={{ background: '#F9FAFB', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #F3F4F6' }}>
               {p.logo_url
                 // eslint-disable-next-line @next/next/no-img-element
-                ? <img src={p.logo_url} alt="" style={{ maxHeight: 44, maxWidth: '80%', objectFit: 'contain' }} />
+                ? <img src={p.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px 10px', boxSizing: 'border-box' }} />
                 : <div style={{ fontSize: 12, color: '#D1D5DB', fontWeight: 600 }}>No logo</div>
               }
             </div>
@@ -1603,7 +1606,7 @@ function AdminTab({ supabase, onDone, editTemplate }: { supabase: any; onDone: (
             },
           ] as { label: string; desc: string; fields: { type: FieldType; x: number; y: number; fontSize?: number; rectW?: number; rectH?: number }[] }[]).map(preset => (
             <button key={preset.label} onClick={() => addPreset(preset.fields)} title={preset.desc}
-              style={{ width: '100%', background: '#fff', border: '1px solid #D1D5DB', borderRadius: 8, padding: '8px 10px', fontSize: 11, fontWeight: 700, color: '#374151', cursor: 'pointer', marginBottom: 6, textAlign: 'left' }}>
+              style={{ width: '100%', background: '#fff', border: '1px solid #D1D5DB', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 700, color: '#374151', cursor: 'pointer', marginBottom: 3, textAlign: 'left' }}>
               {preset.label}
               <div style={{ fontSize: 9, fontWeight: 400, color: '#9CA3AF', marginTop: 2 }}>{preset.desc}</div>
             </button>
