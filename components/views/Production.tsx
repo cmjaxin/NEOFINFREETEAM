@@ -2196,14 +2196,19 @@ export default function Production() {
             const thisVol = src === 'sg' ? p.ytdVolumeSG : p.ytdVolumeD2C
             const thisFamArr = src === 'sg' ? p.monthlyFamiliesSG : p.monthlyFamiliesD2C
             const thisVolArr = src === 'sg' ? p.monthlyVolumeSG : p.monthlyVolumeD2C
+            // Preserve existing months: only overwrite a month if the new file has data for it
+            const prevSameSrcFam = src === 'sg' ? (next[idx].monthlyFamiliesSG ?? Array(12).fill(0)) : (next[idx].monthlyFamiliesD2C ?? Array(12).fill(0))
+            const prevSameSrcVol = src === 'sg' ? (next[idx].monthlyVolumeSG ?? Array(12).fill(0)) : (next[idx].monthlyVolumeD2C ?? Array(12).fill(0))
+            const mergedFam = thisFamArr.map((v, i) => v > 0 ? v : (prevSameSrcFam[i] ?? 0))
+            const mergedVol = thisVolArr.map((v, i) => v > 0 ? v : (prevSameSrcVol[i] ?? 0))
             next[idx] = {
               ...next[idx],
               ytdFamilies: other + thisFam,
               ytdVolume: otherVol + thisVol,
-              monthlyFamilies: thisFamArr.map((v, i) => v + (otherFamArr[i] ?? 0)),
-              monthlyVolume: thisVolArr.map((v, i) => v + (otherVolArr[i] ?? 0)),
-              ...(src === 'sg' ? { ytdFamiliesSG: p.ytdFamiliesSG, ytdVolumeSG: p.ytdVolumeSG, monthlyFamiliesSG: p.monthlyFamiliesSG, monthlyVolumeSG: p.monthlyVolumeSG } : {}),
-              ...(src === 'd2c' ? { ytdFamiliesD2C: p.ytdFamiliesD2C, ytdVolumeD2C: p.ytdVolumeD2C, monthlyFamiliesD2C: p.monthlyFamiliesD2C, monthlyVolumeD2C: p.monthlyVolumeD2C } : {}),
+              monthlyFamilies: mergedFam.map((v, i) => v + (otherFamArr[i] ?? 0)),
+              monthlyVolume: mergedVol.map((v, i) => v + (otherVolArr[i] ?? 0)),
+              ...(src === 'sg' ? { ytdFamiliesSG: p.ytdFamiliesSG, ytdVolumeSG: p.ytdVolumeSG, monthlyFamiliesSG: mergedFam, monthlyVolumeSG: mergedVol } : {}),
+              ...(src === 'd2c' ? { ytdFamiliesD2C: p.ytdFamiliesD2C, ytdVolumeD2C: p.ytdVolumeD2C, monthlyFamiliesD2C: mergedFam, monthlyVolumeD2C: mergedVol } : {}),
             }
           } else {
             const fam = src === 'sg' ? p.ytdFamiliesSG : p.ytdFamiliesD2C
