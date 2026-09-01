@@ -2380,6 +2380,34 @@ export default function Production() {
         </div>
         {isAdmin && <button
           onClick={async () => {
+            if (!confirm('Restore Jan–Jul from seed data while keeping August intact?')) return
+            setMaData(prev => {
+              const next = prev.map(rec => {
+                const seed = SEED_MA.find(s => nameSimilar(s.name, rec.name))
+                if (!seed) return rec
+                const mergedFam = seed.monthlyFamilies.map((v, i) => i === 7 ? rec.monthlyFamilies[i] : v)
+                const mergedVol = seed.monthlyVolume.map((v, i) => i === 7 ? rec.monthlyVolume[i] : v)
+                const mergedSGFam = seed.monthlyFamiliesSG.map((v, i) => i === 7 ? (rec.monthlyFamiliesSG?.[i] ?? 0) : v)
+                const mergedSGVol = seed.monthlyVolumeSG.map((v, i) => i === 7 ? (rec.monthlyVolumeSG?.[i] ?? 0) : v)
+                return {
+                  ...rec,
+                  monthlyFamilies: mergedFam,
+                  monthlyVolume: mergedVol,
+                  monthlyFamiliesSG: mergedSGFam,
+                  monthlyVolumeSG: mergedSGVol,
+                  ytdFamilies: mergedFam.reduce((a, b) => a + b, 0),
+                  ytdVolume: mergedVol.reduce((a, b) => a + b, 0),
+                }
+              })
+              return next
+            })
+          }}
+          style={{ fontSize: 12, color: '#c06000', background: 'none', border: '1px solid #c06000', borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}
+        >
+          Restore Jan–Jul
+        </button>}
+        {isAdmin && <button
+          onClick={async () => {
             if (!confirm('Reset all production data? This will clear everything and restore seed data.')) return
             setMaData(SEED_MA)
             setWeeklyData(SEED_WEEKLY)
