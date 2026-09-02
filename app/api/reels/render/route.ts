@@ -94,23 +94,24 @@ export async function POST(request: NextRequest) {
     if (clips.length === 0) return NextResponse.json({ error: 'No clips found' }, { status: 400 })
 
     let cursor = 0
-    let totalStoredDuration = 0
     const videoElements: any[] = []
     const captionElements: any[] = []
 
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
-      totalStoredDuration += storedDuration
+      // Add 2s buffer so the clip never gets cut mid-sentence.
+      // Old clips have integer-second durations (timer-based); new ones are precise floats.
+      // Cursor advances by the SAME value so captions stay locked to video.
+      const clipDuration = storedDuration + 2
 
-      // No explicit duration — let Creatomate read the real file duration.
-      // The composition duration below pads by 3s to prevent early cutoff.
       videoElements.push({
         type: 'video',
         track: 1,
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
+        duration: clipDuration,
       })
 
       if (openAiKey && clip.clip_url) {
@@ -122,11 +123,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      cursor += storedDuration
+      cursor += clipDuration
     }
 
-    // Pad total composition so the last clip never gets cut before it finishes.
-    const compositionDuration = totalStoredDuration + 5
+    const compositionDuration = cursor + 1
 
     // Disclaimer image temporarily removed — needs to be hosted in Supabase storage
     // TODO: upload disclaimer bar to splice-clips/assets/ and add URL here
