@@ -111,7 +111,6 @@ export async function POST(request: NextRequest) {
         fit: 'cover',
         volume: '100%',
         trim_start: TRIM_START,
-        duration: storedDuration - TRIM_START,
       })
 
       if (openAiKey && clip.clip_url) {
