@@ -34,16 +34,15 @@ async function transcribeClip(clipUrl: string, apiKey: string): Promise<WhisperW
 
 function buildCaptionElements(words: WhisperWord[], timelineOffset: number, chunkSize = 2): any[] {
   const elements: any[] = []
-  const CAPTION_DELAY = 0.4
   for (let i = 0; i < words.length; i += chunkSize) {
     const group = words.slice(i, i + chunkSize)
     if (!group.length) continue
-    const start = timelineOffset + group[0].start + CAPTION_DELAY
+    const start = timelineOffset + group[0].start
     const nextWordStart = words[i + chunkSize]?.start
     const end = nextWordStart != null
-      ? timelineOffset + nextWordStart - 0.05 + CAPTION_DELAY
-      : timelineOffset + group[group.length - 1].end + 0.3 + CAPTION_DELAY
-    const duration = Math.max(0.4, end - start)
+      ? timelineOffset + nextWordStart - 0.05
+      : timelineOffset + group[group.length - 1].end + 0.5
+    const duration = Math.max(0.3, end - start)
     elements.push({
       type: 'text',
       track: 2,
@@ -95,24 +94,23 @@ export async function POST(request: NextRequest) {
     if (clips.length === 0) return NextResponse.json({ error: 'No clips found' }, { status: 400 })
 
     let cursor = 0
+    let totalStoredDuration = 0
     const videoElements: any[] = []
     const captionElements: any[] = []
 
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
-      // Old clips stored integer elapsed seconds; add buffer so Creatomate doesn't clip speech.
-      // New clips have sub-second precision from the fixed webm metadata — small buffer only.
-      const durationBuffer = Number.isInteger(clip.duration_seconds) ? 1.5 : 0.3
-      const playDuration = storedDuration + durationBuffer
+      totalStoredDuration += storedDuration
 
+      // No explicit duration — let Creatomate read the real file duration.
+      // The composition duration below pads by 3s to prevent early cutoff.
       videoElements.push({
         type: 'video',
         track: 1,
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
-        duration: playDuration,
       })
 
       if (openAiKey && clip.clip_url) {
@@ -124,8 +122,11 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      cursor += playDuration
+      cursor += storedDuration
     }
+
+    // Pad total composition so the last clip never gets cut before it finishes.
+    const compositionDuration = totalStoredDuration + 5
 
     // Disclaimer image temporarily removed — needs to be hosted in Supabase storage
     // TODO: upload disclaimer bar to splice-clips/assets/ and add URL here
@@ -140,6 +141,7 @@ export async function POST(request: NextRequest) {
         {
           type: 'composition',
           track: 1,
+          duration: compositionDuration,
           elements: [
             ...videoElements,
             ...captionElements,
