@@ -1015,10 +1015,30 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
     recorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: mimeType })
       const url = URL.createObjectURL(blob)
-      // capture elapsed at stop time via ref so the closure sees the current value
-      setElapsed(e => { setPendingClip({ blob, url, duration: e }); return e })
-      setSceneSubStep('review-clip')
       if (videoRef.current) videoRef.current.srcObject = null
+      // webm from MediaRecorder has duration=Infinity; seek to end to resolve real duration
+      const probe = document.createElement('video')
+      probe.preload = 'metadata'
+      probe.src = url
+      probe.onloadedmetadata = () => {
+        if (isFinite(probe.duration)) {
+          setPendingClip({ blob, url, duration: probe.duration })
+          setSceneSubStep('review-clip')
+        } else {
+          probe.currentTime = 1e10
+          probe.ontimeupdate = () => {
+            probe.ontimeupdate = null
+            const d = isFinite(probe.duration) ? probe.duration : elapsed
+            probe.src = ''
+            setPendingClip({ blob, url, duration: d })
+            setSceneSubStep('review-clip')
+          }
+        }
+      }
+      probe.onerror = () => {
+        setElapsed(e => { setPendingClip({ blob, url, duration: e }); return e })
+        setSceneSubStep('review-clip')
+      }
     }
     recorder.start(250)
     setSceneSubStep('recording'); setElapsed(0)
