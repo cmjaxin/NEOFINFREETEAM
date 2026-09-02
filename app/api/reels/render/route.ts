@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     })
     if (clips.length === 0) return NextResponse.json({ error: 'No clips found' }, { status: 400 })
 
-    const TRIM_START = 0.3
+    const TRIM_START = 0.05
     let cursor = 0
     const videoElements: any[] = []
     const captionElements: any[] = []
