@@ -101,7 +101,10 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
-
+      // Old clips stored integer elapsed seconds; add buffer so Creatomate doesn't clip speech.
+      // New clips have sub-second precision from the fixed webm metadata — small buffer only.
+      const durationBuffer = Number.isInteger(clip.duration_seconds) ? 1.5 : 0.3
+      const playDuration = storedDuration + durationBuffer
 
       videoElements.push({
         type: 'video',
@@ -109,6 +112,7 @@ export async function POST(request: NextRequest) {
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
+        duration: playDuration,
       })
 
       if (openAiKey && clip.clip_url) {
@@ -120,7 +124,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      cursor += storedDuration
+      cursor += playDuration
     }
 
     // Disclaimer image temporarily removed — needs to be hosted in Supabase storage

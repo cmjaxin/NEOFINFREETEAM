@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useApp } from '@/lib/appContext'
+import fixWebmDuration from 'fix-webm-duration'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -1013,30 +1014,40 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
     recorderRef.current = recorder
     recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
     recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: mimeType })
-      const url = URL.createObjectURL(blob)
+      const rawBlob = new Blob(chunksRef.current, { type: mimeType })
       if (videoRef.current) videoRef.current.srcObject = null
-      // webm from MediaRecorder has duration=Infinity; seek to end to resolve real duration
+      // Probe duration by seeking, then fix the webm container metadata so
+      // Creatomate (and any other renderer) can read the real duration.
+      const probeUrl = URL.createObjectURL(rawBlob)
       const probe = document.createElement('video')
       probe.preload = 'metadata'
-      probe.src = url
-      probe.onloadedmetadata = () => {
-        if (isFinite(probe.duration)) {
-          setPendingClip({ blob, url, duration: probe.duration })
+      probe.src = probeUrl
+      const finish = (duration: number) => {
+        probe.src = ''
+        URL.revokeObjectURL(probeUrl)
+        // Fix webm metadata so the container reports the correct duration
+        fixWebmDuration(rawBlob, duration, (fixedBlob: Blob) => {
+          const url = URL.createObjectURL(fixedBlob)
+          setPendingClip({ blob: fixedBlob, url, duration })
           setSceneSubStep('review-clip')
+        })
+      }
+      probe.onloadedmetadata = () => {
+        if (isFinite(probe.duration) && probe.duration > 0) {
+          finish(probe.duration)
         } else {
           probe.currentTime = 1e10
           probe.ontimeupdate = () => {
             probe.ontimeupdate = null
-            const d = isFinite(probe.duration) ? probe.duration : elapsed
-            probe.src = ''
-            setPendingClip({ blob, url, duration: d })
-            setSceneSubStep('review-clip')
+            finish(isFinite(probe.duration) && probe.duration > 0 ? probe.duration : elapsed)
           }
         }
       }
       probe.onerror = () => {
-        setElapsed(e => { setPendingClip({ blob, url, duration: e }); return e })
+        probe.src = ''
+        URL.revokeObjectURL(probeUrl)
+        const url = URL.createObjectURL(rawBlob)
+        setElapsed(e => { setPendingClip({ blob: rawBlob, url, duration: e }); return e })
         setSceneSubStep('review-clip')
       }
     }
