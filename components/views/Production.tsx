@@ -2113,7 +2113,10 @@ export default function Production() {
         if (row.key === 'ma_data' && Array.isArray(row.data) && (row.data as MARecord[]).length > 0) setMaData(row.data as MARecord[])
         if (row.key === 'weekly_data' && Array.isArray(row.data) && (row.data as WeeklyRow[]).length > 0) setWeeklyData(row.data as WeeklyRow[])
         if (row.key === 'prev_year_data' && Array.isArray(row.data) && (row.data as MARecord[]).length > 0) setPrevYearData(row.data as MARecord[])
-        if (row.key === 'ops_data' && row.data && typeof row.data === 'object') setOpsData(row.data as OPSData)
+        if (row.key === 'ops_data' && row.data && typeof row.data === 'object') {
+          const d = row.data as OPSData
+          if ((d.pe?.length ?? 0) + (d.lca?.length ?? 0) + (d.ir?.length ?? 0) > 0) setOpsData(d)
+        }
       }
       setDataLoaded(true)
     })
@@ -2134,7 +2137,10 @@ export default function Production() {
   useEffect(() => { makeSaver(maTimer, 'ma_data')(maData, dataLoaded) }, [maData, dataLoaded])
   useEffect(() => { makeSaver(weeklyTimer, 'weekly_data')(weeklyData, dataLoaded) }, [weeklyData, dataLoaded])
   useEffect(() => { makeSaver(prevTimer, 'prev_year_data')(prevYearData, dataLoaded) }, [prevYearData, dataLoaded])
-  useEffect(() => { makeSaver(opsTimer, 'ops_data')(opsData, dataLoaded) }, [opsData, dataLoaded])
+  useEffect(() => {
+    if ((opsData.pe?.length ?? 0) + (opsData.lca?.length ?? 0) + (opsData.ir?.length ?? 0) === 0) return
+    makeSaver(opsTimer, 'ops_data')(opsData, dataLoaded)
+  }, [opsData, dataLoaded])
 
   const handlePrevYearUpload = useCallback(async (file: File) => {
     const rows = await readRows(file)
