@@ -1016,38 +1016,10 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       const blob = new Blob(chunksRef.current, { type: mimeType })
       const url = URL.createObjectURL(blob)
       if (videoRef.current) videoRef.current.srcObject = null
-      // Probe the blob to get precise duration (webm from MediaRecorder reports Infinity).
-      // Fall back to elapsed counter if probe fails or hangs.
-      const probeUrl = URL.createObjectURL(blob)
-      const probe = document.createElement('video')
-      probe.preload = 'metadata'
-      // Fallback fires after 3s in case probe never resolves
-      const fallbackTimer = setTimeout(() => {
-        probe.src = ''
-        URL.revokeObjectURL(probeUrl)
-        setPendingClip({ blob, url, duration: elapsed })
-        setSceneSubStep('review-clip')
-      }, 3000)
-      const done = (duration: number) => {
-        clearTimeout(fallbackTimer)
-        probe.src = ''
-        URL.revokeObjectURL(probeUrl)
-        setPendingClip({ blob, url, duration })
-        setSceneSubStep('review-clip')
-      }
-      probe.onloadedmetadata = () => {
-        if (isFinite(probe.duration) && probe.duration > 0) {
-          done(probe.duration)
-        } else {
-          probe.currentTime = 1e10
-          probe.ontimeupdate = () => {
-            probe.ontimeupdate = null
-            done(isFinite(probe.duration) && probe.duration > 0 ? probe.duration : elapsed)
-          }
-        }
-      }
-      probe.onerror = () => done(elapsed)
-      probe.src = probeUrl
+      // Use functional updater to read current elapsed (closure would capture stale value=0).
+      // Render adds a 2s buffer so integer-second precision is fine.
+      setElapsed(e => { setPendingClip({ blob, url, duration: e }); return e })
+      setSceneSubStep('review-clip')
     }
     recorder.start(250)
     setSceneSubStep('recording'); setElapsed(0)
