@@ -100,18 +100,19 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < clips.length; i++) {
       const clip = clips[i]
       const storedDuration = Math.max(0.5, clip.duration_seconds ?? 5)
-      // Add 2s buffer so the clip never gets cut mid-sentence.
-      // Old clips have integer-second durations (timer-based); new ones are precise floats.
-      // Cursor advances by the SAME value so captions stay locked to video.
+      // 2s buffer ensures speech is never cut even for old integer-second recordings.
+      // Explicit `time` pins each clip to our cursor so Creatomate never auto-places
+      // based on actual file duration — which mismatches our cursor and drifts captions.
       const clipDuration = storedDuration + 2
 
       videoElements.push({
         type: 'video',
         track: 1,
+        time: cursor,
+        duration: clipDuration,
         source: clip.clip_url,
         fit: 'cover',
         volume: '100%',
-        duration: clipDuration,
       })
 
       if (openAiKey && clip.clip_url) {
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
       cursor += clipDuration
     }
 
-    const compositionDuration = cursor + 1
+    const compositionDuration = cursor
 
     // Disclaimer image temporarily removed — needs to be hosted in Supabase storage
     // TODO: upload disclaimer bar to splice-clips/assets/ and add URL here
