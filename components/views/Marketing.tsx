@@ -757,6 +757,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const imageUploadRow = (ft: FieldType, currentUrl: string, onUpload: (f: File) => void, uploading = false, circle = false) => {
     if (!usedFields.has(ft)) return null
     const meta = FIELD_META[ft]
+    const inputId = `img-upload-${ft}`
     return (
       <div key={ft} style={{ marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -772,12 +773,23 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
               : <img src={currentUrl} alt="" style={{ height: 44, maxWidth: 100, objectFit: 'contain', borderRadius: 6, border: '1px solid #E5E7EB', flexShrink: 0 }} />
             : <div style={{ width: circle ? 48 : 80, height: 44, borderRadius: circle ? '50%' : 6, background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{circle ? '👤' : '🖼️'}</div>
           }
-          <label style={{ flex: 1, cursor: 'pointer' }}>
-            <div style={{ background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#374151', textAlign: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <input
+              id={inputId}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); e.currentTarget.value = '' }}
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={e => { e.stopPropagation(); document.getElementById(inputId)?.click() }}
+              style={{ width: '100%', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 8, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#374151', textAlign: 'center', cursor: uploading ? 'default' : 'pointer' }}
+            >
               {uploading ? 'Uploading…' : currentUrl ? 'Change' : 'Upload'}
-            </div>
-            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f) }} />
-          </label>
+            </button>
+          </div>
         </div>
       </div>
     )
