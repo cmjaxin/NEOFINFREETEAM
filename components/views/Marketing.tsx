@@ -244,10 +244,10 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     await drawImageWhite(ctx, NEO_LOGO_DATA, w / 2 - topLogoW / 2, (topBarH - topLogoH) / 2, topLogoW, topLogoH)
 
     // "Special Financing Available" eyebrow label
-    ctx.font = `700 ${Math.round(h * 0.019)}px Inter, Arial, sans-serif`
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.font = `800 ${Math.round(h * 0.032)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
-    ctx.fillText('SPECIAL FINANCING AVAILABLE', w / 2, h * 0.175)
+    ctx.fillText('SPECIAL FINANCING AVAILABLE', w / 2, h * 0.178)
     ctx.textAlign = 'left'
 
     // Divider line
@@ -360,7 +360,7 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     }
 
     // Disclaimer text — left portion, narrower when QR is present
-    const disclaimer = 'Example rate scenario for illustration purposes only. Actual rate, APR, monthly payment, and loan terms will vary based on creditworthiness, loan amount, down payment, property type, and other factors. A full loan scenario must be evaluated for each individual borrower. This is not a commitment to lend or an offer of credit. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+    const disclaimer = 'Example rate scenario for illustration purposes only. Rate and APR assume a 30-year fixed-rate mortgage on a primary residence for a well-qualified borrower with strong credit. Loan amount, down payment, loan type, property type, and borrower qualifications will affect actual rate and APR. Monthly payment shown does not include taxes or insurance; actual obligation may be greater. Rate shown reflects terms available as of the date indicated and may not be available to all applicants. A complete loan scenario must be evaluated for each individual borrower. This is not a commitment to lend or an offer of credit. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
     const discFs = Math.round(h * 0.0135)
     ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.42)'
