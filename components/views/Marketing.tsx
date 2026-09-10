@@ -295,69 +295,16 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fillText(aprVal, w / 2, aprPillY + aprPillH * 0.72)
     ctx.textAlign = 'left'
 
-    // QR code block (right side) — rendered before payment row so we know space usage
+    // Payment & date row — always centered
     const hasQr = !!opts.qrUrl
-    const qrSize = Math.round(h * 0.175)
-    const qrX = w - pad - qrSize
-    const qrY = h * 0.63
-
-    if (hasQr) {
-      try {
-        const qrOff = document.createElement('canvas')
-        await QRCode.toCanvas(qrOff, opts.qrUrl!, {
-          width: qrSize, margin: 1,
-          color: { dark: '#000000', light: '#FFFFFF' },
-        })
-        // White rounded card behind QR
-        const cardPad = qrSize * 0.05
-        ctx.fillStyle = '#FFFFFF'
-        const cardR = 10
-        const cx = qrX - cardPad, cy = qrY - cardPad
-        const cw = qrSize + cardPad * 2, ch = qrSize + cardPad * 2
-        ctx.beginPath()
-        ctx.moveTo(cx + cardR, cy)
-        ctx.lineTo(cx + cw - cardR, cy); ctx.arc(cx + cw - cardR, cy + cardR, cardR, -Math.PI / 2, 0)
-        ctx.lineTo(cx + cw, cy + ch - cardR); ctx.arc(cx + cw - cardR, cy + ch - cardR, cardR, 0, Math.PI / 2)
-        ctx.lineTo(cx + cardR, cy + ch); ctx.arc(cx + cardR, cy + ch - cardR, cardR, Math.PI / 2, Math.PI)
-        ctx.lineTo(cx, cy + cardR); ctx.arc(cx + cardR, cy + cardR, cardR, Math.PI, -Math.PI / 2)
-        ctx.closePath(); ctx.fill()
-        ctx.drawImage(qrOff, qrX, qrY, qrSize, qrSize)
-        // "Scan to View Listing" label above QR
-        const ctaFs = Math.round(h * 0.016)
-        ctx.font = `700 ${ctaFs}px Inter, Arial, sans-serif`
-        ctx.fillStyle = '#5BCBF5'
-        ctx.textAlign = 'center'
-        ctx.fillText('SCAN TO VIEW LISTING', qrX + qrSize / 2, qrY - cardPad - ctaFs * 0.4)
-        ctx.textAlign = 'left'
-      } catch (e) { console.warn('QR render failed', e) }
-    }
-
-    // Payment & date rows (left side when QR present, centered otherwise)
     const paymentVal = values.promo_payment ? `Est. ${values.promo_payment} Per Month` : 'Est. payment varies'
     const dateVal = values.promo_date || ''
     const infoFs = Math.round(h * 0.023)
     ctx.font = `400 ${infoFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
-    if (hasQr) {
-      // Left-aligned block, leaving room for QR on right
-      const rightEdge = qrX - pad
-      ctx.textAlign = 'left'
-      ctx.fillText(paymentVal, pad, h * 0.663)
-      if (dateVal) {
-        ctx.font = `400 ${Math.round(h * 0.019)}px Inter, Arial, sans-serif`
-        ctx.fillText(`As of ${dateVal}`, pad, h * 0.663 + infoFs * 1.5)
-      }
-      // Vertical divider between text and QR
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)'
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(rightEdge, h * 0.635); ctx.lineTo(rightEdge, h * 0.685)
-      ctx.stroke()
-    } else {
-      ctx.textAlign = 'center'
-      const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
-      ctx.fillText(infoLine, w / 2, h * 0.663)
-    }
+    ctx.textAlign = 'center'
+    const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
+    ctx.fillText(infoLine, w / 2, h * 0.663)
     ctx.textAlign = 'left'
 
     // Divider before disclaimer
@@ -371,12 +318,53 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fillStyle = 'rgba(0,0,0,0.38)'
     ctx.fillRect(0, h * 0.69, w, h * 0.31)
 
-    // Disclaimer text
+    // QR code — sits in the right side of the disclaimer strip
+    const discStripH = h * 0.21  // 0.69 → 0.90
+    const qrSize = Math.round(Math.min(discStripH * 0.82, w * 0.22))
+    const qrColW = qrSize + pad * 2.5
+    const discTextW = hasQr ? w - pad - qrColW - pad : w - pad * 2
+
+    if (hasQr) {
+      try {
+        const qrOff = document.createElement('canvas')
+        await QRCode.toCanvas(qrOff, opts.qrUrl!, {
+          width: qrSize, margin: 1,
+          color: { dark: '#0A2540', light: '#FFFFFF' },
+        })
+        const qrX = w - pad - qrSize
+        const qrY = h * 0.69 + (discStripH - qrSize) / 2
+
+        // White card behind QR
+        const cardPad = Math.round(qrSize * 0.06)
+        ctx.fillStyle = '#FFFFFF'
+        const cardR = 8
+        const cx = qrX - cardPad, cy = qrY - cardPad
+        const cw = qrSize + cardPad * 2, ch = qrSize + cardPad * 2
+        ctx.beginPath()
+        ctx.moveTo(cx + cardR, cy)
+        ctx.lineTo(cx + cw - cardR, cy); ctx.arc(cx + cw - cardR, cy + cardR, cardR, -Math.PI / 2, 0)
+        ctx.lineTo(cx + cw, cy + ch - cardR); ctx.arc(cx + cw - cardR, cy + ch - cardR, cardR, 0, Math.PI / 2)
+        ctx.lineTo(cx + cardR, cy + ch); ctx.arc(cx + cardR, cy + ch - cardR, cardR, Math.PI / 2, Math.PI)
+        ctx.lineTo(cx, cy + cardR); ctx.arc(cx + cardR, cy + cardR, cardR, Math.PI, -Math.PI / 2)
+        ctx.closePath(); ctx.fill()
+        ctx.drawImage(qrOff, qrX, qrY, qrSize, qrSize)
+
+        // "Scan to Learn More" below QR
+        const ctaFs = Math.round(h * 0.014)
+        ctx.font = `700 ${ctaFs}px Inter, Arial, sans-serif`
+        ctx.fillStyle = '#5BCBF5'
+        ctx.textAlign = 'center'
+        ctx.fillText('Scan to Learn More', qrX + qrSize / 2, qrY + qrSize + cardPad + ctaFs)
+        ctx.textAlign = 'left'
+      } catch (e) { console.warn('QR render failed', e) }
+    }
+
+    // Disclaimer text — left portion, narrower when QR is present
     const disclaimer = 'Example rate scenario for illustration purposes only. Actual rate, APR, monthly payment, and loan terms will vary based on creditworthiness, loan amount, down payment, property type, and other factors. A full loan scenario must be evaluated for each individual borrower. This is not a commitment to lend or an offer of credit. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
     const discFs = Math.round(h * 0.0135)
     ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.42)'
-    wrapText(ctx, disclaimer, pad, h * 0.715, w - pad * 2, discFs * 1.38, 'left')
+    wrapText(ctx, disclaimer, pad, h * 0.715, discTextW, discFs * 1.38, 'left')
 
     // Footer bar
     const footerY = h * 0.9
@@ -773,22 +761,26 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const isBlurTpl = template.pages.some(p => p.blur_bg)
   const qrUrl = selectedRider ? `${typeof window !== 'undefined' ? window.location.origin : ''}/sign-rider/${selectedRider}` : undefined
 
+  const sortRiders = (rows: SROption[]) =>
+    [...rows].sort((a, b) => {
+      const numA = parseInt(a.slug.match(/(\d+)$/)?.[1] ?? '0', 10)
+      const numB = parseInt(b.slug.match(/(\d+)$/)?.[1] ?? '0', 10)
+      return numA - numB
+    })
+
   useEffect(() => {
     if (!isBlurTpl || !profile?.email) return
     supabase.from('open_house_pages')
       .select('id, slug, address, city, state')
       .eq('page_type', 'sign_rider')
       .eq('created_by', emp?.id ?? '')
-      .order('created_at', { ascending: false })
       .then(({ data }: { data: SROption[] | null }) => {
-        if (data?.length) { setSignRiders(data); return }
-        // fallback: match by advisor email stored on page
+        if (data?.length) { setSignRiders(sortRiders(data)); return }
         supabase.from('open_house_pages')
           .select('id, slug, address, city, state')
           .eq('page_type', 'sign_rider')
-          .order('created_at', { ascending: false })
           .limit(50)
-          .then(({ data: all }: { data: SROption[] | null }) => setSignRiders(all ?? []))
+          .then(({ data: all }: { data: SROption[] | null }) => setSignRiders(sortRiders(all ?? [])))
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBlurTpl, profile?.email])
