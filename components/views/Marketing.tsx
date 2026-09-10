@@ -347,15 +347,15 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
         ctx.lineTo(cx + cardR, cy + ch); ctx.arc(cx + cardR, cy + ch - cardR, cardR, Math.PI / 2, Math.PI)
         ctx.lineTo(cx, cy + cardR); ctx.arc(cx + cardR, cy + cardR, cardR, Math.PI, -Math.PI / 2)
         ctx.closePath(); ctx.fill()
-        ctx.drawImage(qrOff, qrX, qrY, qrSize, qrSize)
-
-        // "Scan to Learn More" below QR
+        // "Scan to Learn More" above QR card
         const ctaFs = Math.round(h * 0.014)
         ctx.font = `700 ${ctaFs}px Inter, Arial, sans-serif`
         ctx.fillStyle = '#5BCBF5'
         ctx.textAlign = 'center'
-        ctx.fillText('Scan to Learn More', qrX + qrSize / 2, qrY + qrSize + cardPad + ctaFs)
+        ctx.fillText('Scan to Learn More', qrX + qrSize / 2, qrY - cardPad - ctaFs * 0.3)
         ctx.textAlign = 'left'
+
+        ctx.drawImage(qrOff, qrX, qrY, qrSize, qrSize)
       } catch (e) { console.warn('QR render failed', e) }
     }
 
