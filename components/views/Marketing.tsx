@@ -78,7 +78,7 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   tca_image:            { label: 'TCA Image',         color: '#0F766E', placeholder: '', isRect: true },
   rate:                 { label: 'Interest Rate',     color: '#059669', placeholder: '6.750%' },
   apr:                  { label: 'APR',               color: '#047857', placeholder: '7.124%' },
-  promo_payment:        { label: 'Est. Monthly Payment', color: '#065F46', placeholder: '$2,345/mo' },
+  promo_payment:        { label: 'Monthly Payment Amount', color: '#065F46', placeholder: '$2,345' },
   promo_date:           { label: 'Promotion Date',    color: '#6B7280', placeholder: 'August 2026' },
 }
 
@@ -295,7 +295,7 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.textAlign = 'left'
 
     // Payment & date row
-    const paymentVal = values.promo_payment || 'Est. payment varies'
+    const paymentVal = values.promo_payment ? `Est. ${values.promo_payment} Per Month` : 'Est. payment varies'
     const dateVal = values.promo_date || ''
     ctx.font = `400 ${Math.round(h * 0.021)}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
