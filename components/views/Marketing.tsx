@@ -743,7 +743,7 @@ function PartnersTab({ supabase, ownerEmail }: { supabase: any; ownerEmail: stri
 
 function PersonalizationModal({ template, emp, profile, supabase, partners, onClose }: {
   template: MktTemplate; emp: Employee | undefined
-  profile: { full_name: string; title: string; email: string; nmls?: string; phone?: string; headshot_url?: string } | null
+  profile: { id?: string; full_name: string; title: string; email: string; nmls?: string; phone?: string; headshot_url?: string } | null
   supabase: any; partners: Partner[]; onClose: () => void
 }) {
   const size = CANVAS_SIZES[template.canvas_size] ?? CANVAS_SIZES.custom
@@ -773,14 +773,13 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     supabase.from('open_house_pages')
       .select('id, slug, address, city, state')
       .eq('page_type', 'sign_rider')
-      .eq('created_by', emp?.id ?? '')
+      .eq('created_by', profile?.id ?? '')
       .then(({ data }: { data: SROption[] | null }) => {
-        if (data?.length) { setSignRiders(sortRiders(data)); return }
-        supabase.from('open_house_pages')
-          .select('id, slug, address, city, state')
-          .eq('page_type', 'sign_rider')
-          .limit(50)
-          .then(({ data: all }: { data: SROption[] | null }) => setSignRiders(sortRiders(all ?? [])))
+        // Only show riders with a real address (not auto-placeholder "Sign Rider N")
+        const active = (data ?? []).filter(r =>
+          r.address && !/^Sign Rider \d+$/i.test(r.address.trim())
+        )
+        setSignRiders(sortRiders(active))
       })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBlurTpl, profile?.email])
