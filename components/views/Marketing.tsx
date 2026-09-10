@@ -176,32 +176,24 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   if (line.trim()) drawLine(line.trim())
 }
 
-function drawEqualHousingLogo(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
-  const s = size
-  ctx.save()
-  ctx.strokeStyle = '#ffffff'
-  ctx.fillStyle = '#ffffff'
-  ctx.lineWidth = s * 0.06
-  // House outline
-  ctx.beginPath()
-  ctx.moveTo(x, y + s * 0.45)
-  ctx.lineTo(x + s * 0.5, y)
-  ctx.lineTo(x + s, y + s * 0.45)
-  ctx.lineTo(x + s * 0.85, y + s * 0.45)
-  ctx.lineTo(x + s * 0.85, y + s)
-  ctx.lineTo(x + s * 0.15, y + s)
-  ctx.lineTo(x + s * 0.15, y + s * 0.45)
-  ctx.closePath()
-  ctx.stroke()
-  // Equal sign inside house
-  ctx.lineWidth = s * 0.08
-  ctx.beginPath()
-  ctx.moveTo(x + s * 0.32, y + s * 0.6)
-  ctx.lineTo(x + s * 0.68, y + s * 0.6)
-  ctx.moveTo(x + s * 0.32, y + s * 0.75)
-  ctx.lineTo(x + s * 0.68, y + s * 0.75)
-  ctx.stroke()
-  ctx.restore()
+async function drawImageWhite(ctx: CanvasRenderingContext2D, url: string, x: number, y: number, targetW: number, targetH: number) {
+  try {
+    const img = await loadImage(url)
+    const ratio = img.naturalWidth / img.naturalHeight
+    let dw = targetW, dh = targetH
+    if (targetW / targetH > ratio) { dw = targetH * ratio } else { dh = targetW / ratio }
+    const dx = x + (targetW - dw) / 2
+    const dy = y + (targetH - dh) / 2
+    // Draw to offscreen canvas then tint white via compositing
+    const off = document.createElement('canvas')
+    off.width = Math.round(dw); off.height = Math.round(dh)
+    const octx = off.getContext('2d')!
+    octx.drawImage(img, 0, 0, off.width, off.height)
+    octx.globalCompositeOperation = 'source-in'
+    octx.fillStyle = '#ffffff'
+    octx.fillRect(0, 0, off.width, off.height)
+    ctx.drawImage(off, dx, dy, dw, dh)
+  } catch {}
 }
 
 async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, values: FieldValues, w: number, h: number) {
@@ -218,8 +210,8 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
         const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
         const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale
         const ox = (iw - w) / 2, oy = (ih - h) / 2
-        ctx.filter = 'blur(28px)'
-        ctx.drawImage(img, -ox - 40, -oy - 40, iw + 80, ih + 80)
+        ctx.filter = 'blur(14px)'
+        ctx.drawImage(img, -ox - 20, -oy - 20, iw + 40, ih + 40)
         ctx.filter = 'none'
       } catch {}
     } else {
@@ -235,65 +227,55 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fillStyle = `rgba(0,0,0,${opacity})`
     ctx.fillRect(0, 0, w, h)
 
-    // ── Hardcoded layout for Seller Advantage template ──
+    // ── Hardcoded layout for Seller Advantage / Rate Promo template ──
 
     const pad = w * 0.07
 
-    // Top brand bar
-    ctx.fillStyle = 'rgba(91,203,245,0.18)'
-    ctx.fillRect(0, 0, w, h * 0.09)
-    ctx.font = `700 ${Math.round(h * 0.022)}px Inter, Arial, sans-serif`
-    ctx.fillStyle = '#5BCBF5'
-    ctx.textAlign = 'center'
-    ctx.fillText('NEO HOME LOANS  ·  FINFREE DIVISION', w / 2, h * 0.055)
-    ctx.textAlign = 'left'
+    // Top brand bar with NEO logo
+    const topBarH = h * 0.1
+    ctx.fillStyle = 'rgba(10,37,64,0.75)'
+    ctx.fillRect(0, 0, w, topBarH)
+    const topLogoH = topBarH * 0.5
+    const topLogoW = topLogoH * 3.5
+    await drawImageWhite(ctx, 'https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png', w / 2 - topLogoW / 2, (topBarH - topLogoH) / 2, topLogoW, topLogoH)
 
-    // "SELLER ADVANTAGE" label
-    ctx.font = `700 ${Math.round(h * 0.018)}px Inter, Arial, sans-serif`
+    // "Special Financing Available" eyebrow label
+    ctx.font = `700 ${Math.round(h * 0.019)}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.55)'
-    ctx.letterSpacing = '0.15em'
     ctx.textAlign = 'center'
-    ctx.fillText('SELLER ADVANTAGE', w / 2, h * 0.165)
-    ctx.letterSpacing = '0'
+    ctx.fillText('SPECIAL FINANCING AVAILABLE', w / 2, h * 0.175)
     ctx.textAlign = 'left'
 
     // Divider line
     ctx.strokeStyle = 'rgba(91,203,245,0.5)'
     ctx.lineWidth = 1.5
     ctx.beginPath()
-    ctx.moveTo(pad, h * 0.185); ctx.lineTo(w - pad, h * 0.185)
+    ctx.moveTo(pad, h * 0.192); ctx.lineTo(w - pad, h * 0.192)
     ctx.stroke()
-
-    // "Competitive Rate" subtitle
-    ctx.font = `400 ${Math.round(h * 0.024)}px Inter, Arial, sans-serif`
-    ctx.fillStyle = 'rgba(255,255,255,0.7)'
-    ctx.textAlign = 'center'
-    ctx.fillText('Competitive Listing Rate', w / 2, h * 0.235)
-    ctx.textAlign = 'left'
 
     // Big rate number
     const rateVal = values.rate || '—'
-    ctx.font = `800 ${Math.round(h * 0.145)}px Inter, Arial, sans-serif`
+    ctx.font = `800 ${Math.round(h * 0.155)}px Inter, Arial, sans-serif`
     ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
-    ctx.fillText(rateVal, w / 2, h * 0.44)
+    ctx.fillText(rateVal, w / 2, h * 0.435)
     ctx.textAlign = 'left'
 
     // "Interest Rate" label under rate
     ctx.font = `600 ${Math.round(h * 0.022)}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
     ctx.textAlign = 'center'
-    ctx.fillText('Interest Rate', w / 2, h * 0.485)
+    ctx.fillText('Interest Rate', w / 2, h * 0.478)
     ctx.textAlign = 'left'
 
-    // APR pill background
+    // APR pill
     const aprVal = values.apr ? `APR ${values.apr}` : 'APR —'
     ctx.font = `700 ${Math.round(h * 0.032)}px Inter, Arial, sans-serif`
     const aprMeasure = ctx.measureText(aprVal)
     const aprPillW = aprMeasure.width + h * 0.06
     const aprPillH = h * 0.055
     const aprPillX = w / 2 - aprPillW / 2
-    const aprPillY = h * 0.52
+    const aprPillY = h * 0.51
     ctx.fillStyle = 'rgba(91,203,245,0.2)'
     ctx.beginPath()
     const aprR = aprPillH / 2
@@ -316,29 +298,35 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
     ctx.textAlign = 'center'
     const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
-    ctx.fillText(infoLine, w / 2, h * 0.63)
+    ctx.fillText(infoLine, w / 2, h * 0.62)
     ctx.textAlign = 'left'
 
-    // Divider before bottom
+    // Divider before disclaimer
     ctx.strokeStyle = 'rgba(255,255,255,0.15)'
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(pad, h * 0.66); ctx.lineTo(w - pad, h * 0.66)
+    ctx.moveTo(pad, h * 0.645); ctx.lineTo(w - pad, h * 0.645)
     ctx.stroke()
 
-    // Bottom disclaimer strip background
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'
-    ctx.fillRect(0, h * 0.66, w, h * 0.34)
+    // Bottom disclaimer strip
+    ctx.fillStyle = 'rgba(0,0,0,0.38)'
+    ctx.fillRect(0, h * 0.645, w, h * 0.355)
 
-    // Disclaimer text (wrapped)
-    const disclaimer = '© 2026 Better Home & Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
-    const discFs = Math.round(h * 0.014)
+    // Disclaimer text
+    const disclaimer = 'This pre-approval is a preliminary determination that the borrower(s) qualifies for a mortgage loan under our lending standards and guidelines. It is subject to the verification of all additional information provided by borrower(s). It is also subject to a satisfactory appraisal of the subject property, a satisfactory title search and a final underwriting decision, among other criteria. If final approval is granted for this loan, the terms, loan amount, and conditions may be different than what is described here. This is not a commitment to lend. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+    const discFs = Math.round(h * 0.013)
     ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
-    ctx.fillStyle = 'rgba(255,255,255,0.45)'
-    wrapText(ctx, disclaimer, pad, h * 0.695, w - pad * 2, discFs * 1.4, 'left')
+    ctx.fillStyle = 'rgba(255,255,255,0.42)'
+    wrapText(ctx, disclaimer, pad, h * 0.675, w - pad * 2, discFs * 1.38, 'left')
 
-    // Advisor info bar at very bottom
-    const advisorFs = Math.round(h * 0.018)
+    // Footer bar
+    const footerY = h * 0.9
+    const footerH = h * 0.1
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'
+    ctx.fillRect(0, footerY, w, footerH)
+
+    // Advisor info (center of footer)
+    const advisorFs = Math.round(h * 0.017)
     ctx.font = `700 ${advisorFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.85)'
     const advisorName = values.name || ''
@@ -346,12 +334,13 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     const advisorPhone = values.phone || ''
     const advisorLine = [advisorName, advisorNmls, advisorPhone].filter(Boolean).join('  ·  ')
     ctx.textAlign = 'center'
-    ctx.fillText(advisorLine, w / 2, h * 0.965)
+    ctx.fillText(advisorLine, w / 2, footerY + footerH * 0.52)
     ctx.textAlign = 'left'
 
-    // Equal Housing logo (bottom-left)
-    const logoSize = h * 0.04
-    drawEqualHousingLogo(ctx, pad, h * 0.945, logoSize)
+    // Equal Housing logo (bottom-left, white tinted from URL)
+    const ehlH = footerH * 0.55
+    const ehlW = ehlH * 1.1
+    await drawImageWhite(ctx, 'https://mettlehq.com/wp-content/uploads/2018/06/EHL-Logo.png', pad, footerY + (footerH - ehlH) / 2, ehlW, ehlH)
 
     return
   }
@@ -821,19 +810,13 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
         const blob = await new Promise<Blob>(res => c.toBlob(b => res(b!), 'image/png'))
         files.push(new File([blob], `${baseName}${suffix}.png`, { type: 'image/png' }))
       }
-      // Use native share sheet on mobile (iOS save to Photos/Files)
-      if (navigator.canShare && navigator.canShare({ files })) {
-        await navigator.share({ files, title: template.name })
-      } else {
-        // Desktop fallback — trigger download for each file
-        for (const file of files) {
-          const url = URL.createObjectURL(file)
-          const a = document.createElement('a')
-          a.href = url; a.download = file.name
-          document.body.appendChild(a); a.click(); document.body.removeChild(a)
-          URL.revokeObjectURL(url)
-          if (files.length > 1) await new Promise(r => setTimeout(r, 300))
-        }
+      for (const file of files) {
+        const url = URL.createObjectURL(file)
+        const a = document.createElement('a')
+        a.href = url; a.download = file.name
+        document.body.appendChild(a); a.click(); document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+        if (files.length > 1) await new Promise(r => setTimeout(r, 300))
       }
     } catch (e: any) {
       if (e?.name !== 'AbortError') console.error(e)
