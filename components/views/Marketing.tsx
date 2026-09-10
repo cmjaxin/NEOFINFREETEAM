@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useApp } from '@/lib/appContext'
 import { Employee } from '@/lib/types'
+import QRCode from 'qrcode'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -199,7 +200,7 @@ async function drawImageWhite(ctx: CanvasRenderingContext2D, url: string, x: num
   } catch {}
 }
 
-async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, values: FieldValues, w: number, h: number) {
+async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, values: FieldValues, w: number, h: number, opts: { qrUrl?: string } = {}) {
   canvas.width = w; canvas.height = h
   const ctx = canvas.getContext('2d')!
 
@@ -294,14 +295,69 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fillText(aprVal, w / 2, aprPillY + aprPillH * 0.72)
     ctx.textAlign = 'left'
 
-    // Payment & date row
+    // QR code block (right side) — rendered before payment row so we know space usage
+    const hasQr = !!opts.qrUrl
+    const qrSize = Math.round(h * 0.175)
+    const qrX = w - pad - qrSize
+    const qrY = h * 0.63
+
+    if (hasQr) {
+      try {
+        const qrOff = document.createElement('canvas')
+        await QRCode.toCanvas(qrOff, opts.qrUrl!, {
+          width: qrSize, margin: 1,
+          color: { dark: '#000000', light: '#FFFFFF' },
+        })
+        // White rounded card behind QR
+        const cardPad = qrSize * 0.05
+        ctx.fillStyle = '#FFFFFF'
+        const cardR = 10
+        const cx = qrX - cardPad, cy = qrY - cardPad
+        const cw = qrSize + cardPad * 2, ch = qrSize + cardPad * 2
+        ctx.beginPath()
+        ctx.moveTo(cx + cardR, cy)
+        ctx.lineTo(cx + cw - cardR, cy); ctx.arc(cx + cw - cardR, cy + cardR, cardR, -Math.PI / 2, 0)
+        ctx.lineTo(cx + cw, cy + ch - cardR); ctx.arc(cx + cw - cardR, cy + ch - cardR, cardR, 0, Math.PI / 2)
+        ctx.lineTo(cx + cardR, cy + ch); ctx.arc(cx + cardR, cy + ch - cardR, cardR, Math.PI / 2, Math.PI)
+        ctx.lineTo(cx, cy + cardR); ctx.arc(cx + cardR, cy + cardR, cardR, Math.PI, -Math.PI / 2)
+        ctx.closePath(); ctx.fill()
+        ctx.drawImage(qrOff, qrX, qrY, qrSize, qrSize)
+        // "Scan to View Listing" label above QR
+        const ctaFs = Math.round(h * 0.016)
+        ctx.font = `700 ${ctaFs}px Inter, Arial, sans-serif`
+        ctx.fillStyle = '#5BCBF5'
+        ctx.textAlign = 'center'
+        ctx.fillText('SCAN TO VIEW LISTING', qrX + qrSize / 2, qrY - cardPad - ctaFs * 0.4)
+        ctx.textAlign = 'left'
+      } catch (e) { console.warn('QR render failed', e) }
+    }
+
+    // Payment & date rows (left side when QR present, centered otherwise)
     const paymentVal = values.promo_payment ? `Est. ${values.promo_payment} Per Month` : 'Est. payment varies'
     const dateVal = values.promo_date || ''
-    ctx.font = `400 ${Math.round(h * 0.023)}px Inter, Arial, sans-serif`
+    const infoFs = Math.round(h * 0.023)
+    ctx.font = `400 ${infoFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
-    ctx.textAlign = 'center'
-    const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
-    ctx.fillText(infoLine, w / 2, h * 0.663)
+    if (hasQr) {
+      // Left-aligned block, leaving room for QR on right
+      const rightEdge = qrX - pad
+      ctx.textAlign = 'left'
+      ctx.fillText(paymentVal, pad, h * 0.663)
+      if (dateVal) {
+        ctx.font = `400 ${Math.round(h * 0.019)}px Inter, Arial, sans-serif`
+        ctx.fillText(`As of ${dateVal}`, pad, h * 0.663 + infoFs * 1.5)
+      }
+      // Vertical divider between text and QR
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(rightEdge, h * 0.635); ctx.lineTo(rightEdge, h * 0.685)
+      ctx.stroke()
+    } else {
+      ctx.textAlign = 'center'
+      const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
+      ctx.fillText(infoLine, w / 2, h * 0.663)
+    }
     ctx.textAlign = 'left'
 
     // Divider before disclaimer
@@ -709,6 +765,33 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const [rendering, setRendering] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [headshotUploading, setHeadshotUploading] = useState(false)
+
+  // Sign rider QR CTA (blur_bg templates only)
+  type SROption = { id: string; slug: string; address: string; city: string; state: string }
+  const [signRiders, setSignRiders] = useState<SROption[]>([])
+  const [selectedRider, setSelectedRider] = useState<string>('') // slug
+  const isBlurTpl = template.pages.some(p => p.blur_bg)
+  const qrUrl = selectedRider ? `${typeof window !== 'undefined' ? window.location.origin : ''}/sign-rider/${selectedRider}` : undefined
+
+  useEffect(() => {
+    if (!isBlurTpl || !profile?.email) return
+    supabase.from('open_house_pages')
+      .select('id, slug, address, city, state')
+      .eq('page_type', 'sign_rider')
+      .eq('created_by', emp?.id ?? '')
+      .order('created_at', { ascending: false })
+      .then(({ data }: { data: SROption[] | null }) => {
+        if (data?.length) { setSignRiders(data); return }
+        // fallback: match by advisor email stored on page
+        supabase.from('open_house_pages')
+          .select('id, slug, address, city, state')
+          .eq('page_type', 'sign_rider')
+          .order('created_at', { ascending: false })
+          .limit(50)
+          .then(({ data: all }: { data: SROption[] | null }) => setSignRiders(all ?? []))
+      })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isBlurTpl, profile?.email])
   const [mobileTab, setMobileTab] = useState<'preview' | 'fill'>('fill')
   const [zoom, setZoom] = useState(1)
   function switchToPreview() {
@@ -787,7 +870,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     if (!canvas) return
     const drawW = Math.round(560 * zoom)
     const drawH = Math.round(drawW * (size.h / size.w))
-    renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, drawW, drawH).catch(() => {})
+    renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, drawW, drawH, { qrUrl }).catch(() => {})
   }
 
   function handlePreviewMouseUp() { dragRef.current = null; setGuides([]) }
@@ -806,7 +889,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(renderPreview, 200)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [values, pageIdx, posOverrides, zoom])
+  }, [values, pageIdx, posOverrides, zoom, qrUrl])
 
   async function renderPreview() {
     const canvas = previewRef.current
@@ -814,7 +897,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
     setRendering(true)
     const drawW = Math.round(560 * zoom)
     const drawH = Math.round(drawW * (size.h / size.w))
-    try { await renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, drawW, drawH) } catch {}
+    try { await renderPageToCanvas(canvas, getPageWithOverrides(template.pages[pageIdx]), values, drawW, drawH, { qrUrl }) } catch {}
     setRendering(false)
   }
 
@@ -825,7 +908,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
       const files: File[] = []
       for (let i = 0; i < template.pages.length; i++) {
         const c = document.createElement('canvas')
-        await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h)
+        await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h, { qrUrl })
         const suffix = template.pages.length > 1 ? `_p${i + 1}` : ''
         const blob = await new Promise<Blob>(res => c.toBlob(b => res(b!), 'image/png'))
         files.push(new File([blob], `${baseName}${suffix}.png`, { type: 'image/png' }))
@@ -850,7 +933,7 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
       const images: string[] = []
       for (let i = 0; i < template.pages.length; i++) {
         const c = document.createElement('canvas')
-        await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h)
+        await renderPageToCanvas(c, getPageWithOverrides(template.pages[i]), values, size.w, size.h, { qrUrl })
         images.push(c.toDataURL('image/png'))
       }
       const isLetter = template.canvas_size === 'flyer_letter'
@@ -1153,6 +1236,37 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
                 <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '10px 12px', fontSize: 11.5, color: '#166534', marginTop: 4 }}>
                   <strong>Legal disclaimer</strong> and Equal Housing Lender logo are auto-generated on the graphic.
                 </div>
+
+                {/* Sign rider QR CTA */}
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 16, marginBottom: 16 }} />
+                {sectionHead('Call to Action (Optional)')}
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 6, display: 'block' }}>
+                    Link to Sign Rider
+                  </label>
+                  <select
+                    value={selectedRider}
+                    onChange={e => setSelectedRider(e.target.value)}
+                    style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: 8, padding: '10px 12px', fontSize: 13, background: '#fff', color: selectedRider ? '#111827' : '#9CA3AF' }}
+                  >
+                    <option value="">— No QR code —</option>
+                    {signRiders.map(sr => (
+                      <option key={sr.id} value={sr.slug}>
+                        {sr.address}{sr.city ? `, ${sr.city}` : ''}{sr.state ? ` ${sr.state}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedRider && (
+                    <div style={{ marginTop: 8, background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '8px 12px', fontSize: 11.5, color: '#1E40AF' }}>
+                      QR will link to: <span style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{qrUrl}</span>
+                    </div>
+                  )}
+                  {signRiders.length === 0 && isBlurTpl && (
+                    <div style={{ marginTop: 6, fontSize: 11.5, color: '#9CA3AF' }}>
+                      No sign riders found. Create one in the Sign Riders tab first.
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -1174,6 +1288,24 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
       </div>
     </div>
   )
+}
+
+// ─── Auto-rendered thumbnail for blur_bg templates ────────────────────────────
+
+function BlurBgThumb({ template, profile, emp }: { template: MktTemplate; profile: any; emp: Employee | undefined }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const c = canvasRef.current
+    if (!c) return
+    const sample = initValues(profile, emp)
+    sample.rate = '4.99%'
+    sample.apr = '5.99%'
+    sample.promo_payment = '$2,800'
+    sample.promo_date = '09/09/26'
+    renderPageToCanvas(c, template.pages[0], sample, 480, 480).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
 }
 
 // ─── Library ──────────────────────────────────────────────────────────────────
@@ -1248,7 +1380,9 @@ function LibraryView({ templates, loading, myEmployee, profile, supabase, partne
                   {thumb
                     // eslint-disable-next-line @next/next/no-img-element
                     ? <img src={thumb} alt={t.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .25s', transform: hovered ? 'scale(1.04)' : 'scale(1)' }} />
-                    : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No preview</div>
+                    : t.pages?.[0]?.blur_bg
+                      ? <BlurBgThumb template={t} profile={profile} emp={myEmployee} />
+                      : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}>No preview</div>
                   }
                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(10,37,64,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovered ? 1 : 0, transition: 'opacity .2s' }}>
                     <div style={{ background: '#fff', color: '#0A2540', fontWeight: 800, fontSize: 14, borderRadius: 10, padding: '11px 28px', boxShadow: '0 4px 16px rgba(0,0,0,.3)' }}>Open Template</div>
