@@ -258,27 +258,27 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
 
     // Big rate number
     const rateVal = values.rate || '—'
-    ctx.font = `800 ${Math.round(h * 0.155)}px Inter, Arial, sans-serif`
+    ctx.font = `800 ${Math.round(h * 0.18)}px Inter, Arial, sans-serif`
     ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
-    ctx.fillText(rateVal, w / 2, h * 0.435)
+    ctx.fillText(rateVal, w / 2, h * 0.47)
     ctx.textAlign = 'left'
 
     // "Interest Rate" label under rate
-    ctx.font = `600 ${Math.round(h * 0.022)}px Inter, Arial, sans-serif`
+    ctx.font = `600 ${Math.round(h * 0.026)}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
     ctx.textAlign = 'center'
-    ctx.fillText('Interest Rate', w / 2, h * 0.478)
+    ctx.fillText('Interest Rate', w / 2, h * 0.518)
     ctx.textAlign = 'left'
 
     // APR pill
     const aprVal = values.apr ? `APR ${values.apr}` : 'APR —'
-    ctx.font = `700 ${Math.round(h * 0.032)}px Inter, Arial, sans-serif`
+    ctx.font = `700 ${Math.round(h * 0.036)}px Inter, Arial, sans-serif`
     const aprMeasure = ctx.measureText(aprVal)
     const aprPillW = aprMeasure.width + h * 0.06
-    const aprPillH = h * 0.055
+    const aprPillH = h * 0.062
     const aprPillX = w / 2 - aprPillW / 2
-    const aprPillY = h * 0.51
+    const aprPillY = h * 0.548
     ctx.fillStyle = 'rgba(91,203,245,0.2)'
     ctx.beginPath()
     const aprR = aprPillH / 2
@@ -291,36 +291,36 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fill()
     ctx.fillStyle = '#5BCBF5'
     ctx.textAlign = 'center'
-    ctx.fillText(aprVal, w / 2, aprPillY + aprPillH * 0.71)
+    ctx.fillText(aprVal, w / 2, aprPillY + aprPillH * 0.72)
     ctx.textAlign = 'left'
 
     // Payment & date row
     const paymentVal = values.promo_payment ? `Est. ${values.promo_payment} Per Month` : 'Est. payment varies'
     const dateVal = values.promo_date || ''
-    ctx.font = `400 ${Math.round(h * 0.021)}px Inter, Arial, sans-serif`
+    ctx.font = `400 ${Math.round(h * 0.023)}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
     ctx.textAlign = 'center'
     const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
-    ctx.fillText(infoLine, w / 2, h * 0.62)
+    ctx.fillText(infoLine, w / 2, h * 0.663)
     ctx.textAlign = 'left'
 
     // Divider before disclaimer
     ctx.strokeStyle = 'rgba(255,255,255,0.15)'
     ctx.lineWidth = 1
     ctx.beginPath()
-    ctx.moveTo(pad, h * 0.645); ctx.lineTo(w - pad, h * 0.645)
+    ctx.moveTo(pad, h * 0.69); ctx.lineTo(w - pad, h * 0.69)
     ctx.stroke()
 
     // Bottom disclaimer strip
     ctx.fillStyle = 'rgba(0,0,0,0.38)'
-    ctx.fillRect(0, h * 0.645, w, h * 0.355)
+    ctx.fillRect(0, h * 0.69, w, h * 0.31)
 
     // Disclaimer text
     const disclaimer = 'Example rate scenario for illustration purposes only. Actual rate, APR, monthly payment, and loan terms will vary based on creditworthiness, loan amount, down payment, property type, and other factors. A full loan scenario must be evaluated for each individual borrower. This is not a commitment to lend or an offer of credit. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
-    const discFs = Math.round(h * 0.013)
+    const discFs = Math.round(h * 0.0135)
     ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.42)'
-    wrapText(ctx, disclaimer, pad, h * 0.675, w - pad * 2, discFs * 1.38, 'left')
+    wrapText(ctx, disclaimer, pad, h * 0.715, w - pad * 2, discFs * 1.38, 'left')
 
     // Footer bar
     const footerY = h * 0.9
@@ -328,19 +328,36 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     ctx.fillStyle = 'rgba(0,0,0,0.45)'
     ctx.fillRect(0, footerY, w, footerH)
 
-    // Advisor info (center of footer)
-    const advisorFs = Math.round(h * 0.017)
-    ctx.font = `700 ${advisorFs}px Inter, Arial, sans-serif`
-    ctx.fillStyle = 'rgba(255,255,255,0.85)'
+    // Advisor info — two lines: name + title | NMLS · phone
     const advisorName = values.name || ''
+    const advisorTitle = values.title || ''
     const advisorNmls = values.nmls || ''
     const advisorPhone = values.phone || ''
-    const advisorLine = [advisorName, advisorNmls, advisorPhone].filter(Boolean).join('  ·  ')
-    ctx.textAlign = 'center'
-    ctx.fillText(advisorLine, w / 2, footerY + footerH * 0.52)
-    ctx.textAlign = 'left'
 
-    // Equal Housing logo (bottom-left, white tinted from URL)
+    const nameFs = Math.round(h * 0.018)
+    const subFs = Math.round(h * 0.014)
+    const hasNameTitle = advisorName || advisorTitle
+    const hasSub = advisorNmls || advisorPhone
+
+    if (hasNameTitle && hasSub) {
+      // Two lines
+      ctx.font = `700 ${nameFs}px Inter, Arial, sans-serif`
+      ctx.fillStyle = 'rgba(255,255,255,0.9)'
+      ctx.textAlign = 'center'
+      ctx.fillText([advisorName, advisorTitle].filter(Boolean).join('  ·  '), w / 2, footerY + footerH * 0.4)
+      ctx.font = `400 ${subFs}px Inter, Arial, sans-serif`
+      ctx.fillStyle = 'rgba(255,255,255,0.6)'
+      ctx.fillText([advisorNmls, advisorPhone].filter(Boolean).join('  ·  '), w / 2, footerY + footerH * 0.75)
+      ctx.textAlign = 'left'
+    } else {
+      ctx.font = `700 ${nameFs}px Inter, Arial, sans-serif`
+      ctx.fillStyle = 'rgba(255,255,255,0.85)'
+      ctx.textAlign = 'center'
+      ctx.fillText([advisorName, advisorTitle, advisorNmls, advisorPhone].filter(Boolean).join('  ·  '), w / 2, footerY + footerH * 0.58)
+      ctx.textAlign = 'left'
+    }
+
+    // Equal Housing logo (bottom-left, white tinted)
     const ehlH = footerH * 0.55
     const ehlW = ehlH * 1.1
     await drawImageWhite(ctx, EHL_LOGO_DATA, pad, footerY + (footerH - ehlH) / 2, ehlW, ehlH)
@@ -2076,6 +2093,7 @@ export default function Marketing() {
         { id: 'sa-pay',     type: 'promo_payment',   x: 0.5, y: 0.63, fontSize: 0.021, rectW: 0,  rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#D1D5DB', bold: false, textAlign: 'center' },
         { id: 'sa-date',    type: 'promo_date',      x: 0.5, y: 0.66, fontSize: 0.021, rectW: 0,  rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#D1D5DB', bold: false, textAlign: 'center' },
         { id: 'sa-name',    type: 'name',            x: 0.5, y: 0.965, fontSize: 0.018, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#fff', bold: true,  textAlign: 'center' },
+        { id: 'sa-title',   type: 'title',           x: 0.5, y: 0.965, fontSize: 0.015, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#9CA3AF', bold: false, textAlign: 'center' },
         { id: 'sa-nmls',    type: 'nmls',            x: 0.5, y: 0.965, fontSize: 0.015, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#9CA3AF', bold: false, textAlign: 'center' },
         { id: 'sa-phone',   type: 'phone',           x: 0.5, y: 0.965, fontSize: 0.015, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#9CA3AF', bold: false, textAlign: 'center' },
       ],
