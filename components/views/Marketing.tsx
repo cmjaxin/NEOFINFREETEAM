@@ -33,6 +33,7 @@ type FieldType =
   | 'pa_regarding' | 'pa_date' | 'pa_loan_type' | 'pa_purchase_price' | 'pa_down_payment' | 'pa_loan_amount' | 'pa_occupancy' | 'pa_address'
   | 'testimonial_review' | 'testimonial_name'
   | 'tca_image'
+  | 'rate' | 'apr' | 'promo_payment' | 'promo_date'
 
 interface FieldMeta { label: string; color: string; placeholder: string; isCircle?: boolean; isRect?: boolean; isMultiline?: boolean }
 
@@ -75,6 +76,10 @@ const FIELD_META: Record<FieldType, FieldMeta> = {
   testimonial_review:   { label: 'Review',            color: '#D97706', placeholder: '"Working with this team was an incredible experience. They made the entire process seamless and stress-free from start to finish."', isMultiline: true },
   testimonial_name:     { label: 'Client Name',       color: '#92400E', placeholder: '— John & Jane Smith, Austin TX' },
   tca_image:            { label: 'TCA Image',         color: '#0F766E', placeholder: '', isRect: true },
+  rate:                 { label: 'Interest Rate',     color: '#059669', placeholder: '6.750%' },
+  apr:                  { label: 'APR',               color: '#047857', placeholder: '7.124%' },
+  promo_payment:        { label: 'Est. Monthly Payment', color: '#065F46', placeholder: '$2,345/mo' },
+  promo_date:           { label: 'Promotion Date',    color: '#6B7280', placeholder: 'August 2026' },
 }
 
 const FIELD_GROUPS: Record<string, FieldType[]> = {
@@ -84,6 +89,7 @@ const FIELD_GROUPS: Record<string, FieldType[]> = {
   'Pre-Approval': ['pa_regarding', 'pa_date', 'pa_address', 'pa_loan_type', 'pa_purchase_price', 'pa_down_payment', 'pa_loan_amount', 'pa_occupancy'],
   'Testimonial': ['testimonial_review', 'testimonial_name'],
   'TCA': ['tca_image'],
+  'Rate Promo': ['property_image', 'rate', 'apr', 'promo_payment', 'promo_date'],
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -103,7 +109,7 @@ interface TplField {
   textAlign?: 'left' | 'center' | 'right'
 }
 
-interface TplPage { bg_url: string; fields: TplField[] }
+interface TplPage { bg_url: string; fields: TplField[]; blur_bg?: boolean; overlay_opacity?: number }
 
 interface MktTemplate {
   id: string
@@ -170,9 +176,185 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, x: number, y: num
   if (line.trim()) drawLine(line.trim())
 }
 
+function drawEqualHousingLogo(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  const s = size
+  ctx.save()
+  ctx.strokeStyle = '#ffffff'
+  ctx.fillStyle = '#ffffff'
+  ctx.lineWidth = s * 0.06
+  // House outline
+  ctx.beginPath()
+  ctx.moveTo(x, y + s * 0.45)
+  ctx.lineTo(x + s * 0.5, y)
+  ctx.lineTo(x + s, y + s * 0.45)
+  ctx.lineTo(x + s * 0.85, y + s * 0.45)
+  ctx.lineTo(x + s * 0.85, y + s)
+  ctx.lineTo(x + s * 0.15, y + s)
+  ctx.lineTo(x + s * 0.15, y + s * 0.45)
+  ctx.closePath()
+  ctx.stroke()
+  // Equal sign inside house
+  ctx.lineWidth = s * 0.08
+  ctx.beginPath()
+  ctx.moveTo(x + s * 0.32, y + s * 0.6)
+  ctx.lineTo(x + s * 0.68, y + s * 0.6)
+  ctx.moveTo(x + s * 0.32, y + s * 0.75)
+  ctx.lineTo(x + s * 0.68, y + s * 0.75)
+  ctx.stroke()
+  ctx.restore()
+}
+
 async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, values: FieldValues, w: number, h: number) {
   canvas.width = w; canvas.height = h
   const ctx = canvas.getContext('2d')!
+
+  // Blurred background mode (Seller Advantage / rate promo templates)
+  if (page.blur_bg) {
+    const propImg = values.property_image
+    if (propImg) {
+      try {
+        const img = await loadImage(propImg)
+        // Scale to cover canvas
+        const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
+        const iw = img.naturalWidth * scale, ih = img.naturalHeight * scale
+        const ox = (iw - w) / 2, oy = (ih - h) / 2
+        ctx.filter = 'blur(28px)'
+        ctx.drawImage(img, -ox - 40, -oy - 40, iw + 80, ih + 80)
+        ctx.filter = 'none'
+      } catch {}
+    } else {
+      // Placeholder gradient when no photo uploaded
+      const grad = ctx.createLinearGradient(0, 0, w, h)
+      grad.addColorStop(0, '#0A2540')
+      grad.addColorStop(1, '#1e3a5f')
+      ctx.fillStyle = grad
+      ctx.fillRect(0, 0, w, h)
+    }
+    // Dark overlay
+    const opacity = page.overlay_opacity ?? 0.55
+    ctx.fillStyle = `rgba(0,0,0,${opacity})`
+    ctx.fillRect(0, 0, w, h)
+
+    // ── Hardcoded layout for Seller Advantage template ──
+
+    const pad = w * 0.07
+
+    // Top brand bar
+    ctx.fillStyle = 'rgba(91,203,245,0.18)'
+    ctx.fillRect(0, 0, w, h * 0.09)
+    ctx.font = `700 ${Math.round(h * 0.022)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = '#5BCBF5'
+    ctx.textAlign = 'center'
+    ctx.fillText('NEO HOME LOANS  ·  FINFREE DIVISION', w / 2, h * 0.055)
+    ctx.textAlign = 'left'
+
+    // "SELLER ADVANTAGE" label
+    ctx.font = `700 ${Math.round(h * 0.018)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    ctx.letterSpacing = '0.15em'
+    ctx.textAlign = 'center'
+    ctx.fillText('SELLER ADVANTAGE', w / 2, h * 0.165)
+    ctx.letterSpacing = '0'
+    ctx.textAlign = 'left'
+
+    // Divider line
+    ctx.strokeStyle = 'rgba(91,203,245,0.5)'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(pad, h * 0.185); ctx.lineTo(w - pad, h * 0.185)
+    ctx.stroke()
+
+    // "Competitive Rate" subtitle
+    ctx.font = `400 ${Math.round(h * 0.024)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.7)'
+    ctx.textAlign = 'center'
+    ctx.fillText('Competitive Listing Rate', w / 2, h * 0.235)
+    ctx.textAlign = 'left'
+
+    // Big rate number
+    const rateVal = values.rate || '—'
+    ctx.font = `800 ${Math.round(h * 0.145)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = '#FFFFFF'
+    ctx.textAlign = 'center'
+    ctx.fillText(rateVal, w / 2, h * 0.44)
+    ctx.textAlign = 'left'
+
+    // "Interest Rate" label under rate
+    ctx.font = `600 ${Math.round(h * 0.022)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.textAlign = 'center'
+    ctx.fillText('Interest Rate', w / 2, h * 0.485)
+    ctx.textAlign = 'left'
+
+    // APR pill background
+    const aprVal = values.apr ? `APR ${values.apr}` : 'APR —'
+    ctx.font = `700 ${Math.round(h * 0.032)}px Inter, Arial, sans-serif`
+    const aprMeasure = ctx.measureText(aprVal)
+    const aprPillW = aprMeasure.width + h * 0.06
+    const aprPillH = h * 0.055
+    const aprPillX = w / 2 - aprPillW / 2
+    const aprPillY = h * 0.52
+    ctx.fillStyle = 'rgba(91,203,245,0.2)'
+    ctx.beginPath()
+    const aprR = aprPillH / 2
+    ctx.moveTo(aprPillX + aprR, aprPillY)
+    ctx.lineTo(aprPillX + aprPillW - aprR, aprPillY)
+    ctx.arc(aprPillX + aprPillW - aprR, aprPillY + aprR, aprR, -Math.PI / 2, Math.PI / 2)
+    ctx.lineTo(aprPillX + aprR, aprPillY + aprPillH)
+    ctx.arc(aprPillX + aprR, aprPillY + aprR, aprR, Math.PI / 2, -Math.PI / 2)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = '#5BCBF5'
+    ctx.textAlign = 'center'
+    ctx.fillText(aprVal, w / 2, aprPillY + aprPillH * 0.71)
+    ctx.textAlign = 'left'
+
+    // Payment & date row
+    const paymentVal = values.promo_payment || 'Est. payment varies'
+    const dateVal = values.promo_date || ''
+    ctx.font = `400 ${Math.round(h * 0.021)}px Inter, Arial, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.textAlign = 'center'
+    const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
+    ctx.fillText(infoLine, w / 2, h * 0.63)
+    ctx.textAlign = 'left'
+
+    // Divider before bottom
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(pad, h * 0.66); ctx.lineTo(w - pad, h * 0.66)
+    ctx.stroke()
+
+    // Bottom disclaimer strip background
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'
+    ctx.fillRect(0, h * 0.66, w, h * 0.34)
+
+    // Disclaimer text (wrapped)
+    const disclaimer = '© 2026 Better Home & Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License #02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+    const discFs = Math.round(h * 0.014)
+    ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.45)'
+    wrapText(ctx, disclaimer, pad, h * 0.695, w - pad * 2, discFs * 1.4, 'left')
+
+    // Advisor info bar at very bottom
+    const advisorFs = Math.round(h * 0.018)
+    ctx.font = `700 ${advisorFs}px Inter, Arial, sans-serif`
+    ctx.fillStyle = 'rgba(255,255,255,0.85)'
+    const advisorName = values.name || ''
+    const advisorNmls = values.nmls || ''
+    const advisorPhone = values.phone || ''
+    const advisorLine = [advisorName, advisorNmls, advisorPhone].filter(Boolean).join('  ·  ')
+    ctx.textAlign = 'center'
+    ctx.fillText(advisorLine, w / 2, h * 0.965)
+    ctx.textAlign = 'left'
+
+    // Equal Housing logo (bottom-left)
+    const logoSize = h * 0.04
+    drawEqualHousingLogo(ctx, pad, h * 0.945, logoSize)
+
+    return
+  }
 
   if (page.bg_url) {
     try {
@@ -262,6 +444,7 @@ function initValues(profile: { full_name: string; title: string; email: string; 
     pa_regarding: '', pa_date: '', pa_address: '', pa_loan_type: '', pa_purchase_price: '', pa_down_payment: '', pa_loan_amount: '', pa_occupancy: '',
     testimonial_review: '', testimonial_name: '',
     tca_image: '',
+    rate: '', apr: '', promo_payment: '', promo_date: '',
   }
 }
 
@@ -607,6 +790,8 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
   const hasPropertyFields = ['property_address','property_price','property_beds','property_baths','property_sqft','property_extras','property_header','property_description','property_image','property_image_2','property_image_3','property_image_4','open_house_date','open_house_time'].some(t => usedFields.has(t as FieldType))
   const hasPreApprovalFields = ['pa_regarding','pa_date','pa_address','pa_loan_type','pa_purchase_price','pa_down_payment','pa_loan_amount','pa_occupancy'].some(t => usedFields.has(t as FieldType))
   const hasTestimonialFields = ['testimonial_review','testimonial_name'].some(t => usedFields.has(t as FieldType))
+  const hasRatePromoFields = ['rate','apr','promo_payment','promo_date'].some(t => usedFields.has(t as FieldType))
+  const isBlurBgTemplate = template.pages.some(p => p.blur_bg)
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -951,6 +1136,20 @@ function PersonalizationModal({ template, emp, profile, supabase, partners, onCl
                 <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
                 {sectionHead('TCA')}
                 {imageUploadRow('tca_image', values.tca_image, handleTcaImageFile, false, false)}
+              </>
+            )}
+            {(hasRatePromoFields || isBlurBgTemplate) && (
+              <>
+                <div style={{ borderTop: '1px solid #F3F4F6', marginTop: 4, marginBottom: 16 }} />
+                {sectionHead('Listing Rate Details')}
+                {imageUploadRow('property_image', values.property_image, (f) => handlePropertyImageFile(f, 'property_image'), false, false)}
+                {fieldInput('rate')}
+                {fieldInput('apr')}
+                {fieldInput('promo_payment')}
+                {fieldInput('promo_date')}
+                <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 8, padding: '10px 12px', fontSize: 11.5, color: '#166534', marginTop: 4 }}>
+                  <strong>Legal disclaimer</strong> and Equal Housing Lender logo are auto-generated on the graphic.
+                </div>
               </>
             )}
           </div>
@@ -1873,11 +2072,36 @@ export default function Marketing() {
 
   const myEmployee = employees.find(e => e.work_email?.toLowerCase() === profile?.email?.toLowerCase())
 
+  const SELLER_ADVANTAGE_TEMPLATE: MktTemplate = {
+    id: '__seller_advantage__',
+    name: 'Seller Advantage MLS Listing Rate',
+    category: 'social',
+    canvas_size: 'social_square',
+    thumbnail_url: null,
+    created_at: '2026-01-01T00:00:00Z',
+    pages: [{
+      bg_url: '',
+      blur_bg: true,
+      overlay_opacity: 0.55,
+      fields: [
+        { id: 'sa-prop',    type: 'property_image', x: 0.5, y: 0.5, fontSize: 0.06, rectW: 1.0, rectH: 1.0, panX: 0.5, panY: 0.5, fontColor: '#fff', bold: false },
+        { id: 'sa-rate',    type: 'rate',            x: 0.5, y: 0.42, fontSize: 0.10, rectW: 0,   rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#FFFFFF', bold: true,  textAlign: 'center' },
+        { id: 'sa-apr',     type: 'apr',             x: 0.5, y: 0.56, fontSize: 0.035, rectW: 0,  rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#5BCBF5', bold: true,  textAlign: 'center' },
+        { id: 'sa-pay',     type: 'promo_payment',   x: 0.5, y: 0.63, fontSize: 0.021, rectW: 0,  rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#D1D5DB', bold: false, textAlign: 'center' },
+        { id: 'sa-date',    type: 'promo_date',      x: 0.5, y: 0.66, fontSize: 0.021, rectW: 0,  rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#D1D5DB', bold: false, textAlign: 'center' },
+        { id: 'sa-name',    type: 'name',            x: 0.5, y: 0.965, fontSize: 0.018, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#fff', bold: true,  textAlign: 'center' },
+        { id: 'sa-nmls',    type: 'nmls',            x: 0.5, y: 0.965, fontSize: 0.015, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#9CA3AF', bold: false, textAlign: 'center' },
+        { id: 'sa-phone',   type: 'phone',           x: 0.5, y: 0.965, fontSize: 0.015, rectW: 0, rectH: 0,   panX: 0.5, panY: 0.5, fontColor: '#9CA3AF', bold: false, textAlign: 'center' },
+      ],
+    }],
+  }
+
   const loadTemplates = useCallback(async () => {
     setLoading(true)
     const { data } = await supabase.from('marketing_templates').select('*').order('created_at', { ascending: false })
-    setTemplates(data ?? [])
+    setTemplates([SELLER_ADVANTAGE_TEMPLATE, ...(data ?? [])])
     setLoading(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
   const loadPartners = useCallback(async () => {
