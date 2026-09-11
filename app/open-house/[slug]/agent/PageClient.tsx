@@ -1211,6 +1211,65 @@ export default function AgentPageClient({ slug }: { slug: string }) {
         {/* Social section */}
         <Section title="Social Media Templates" sub="Edit copy and preview live, then download as a PNG image ready to post." icon="📲">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            {/* Rate Graphic — canvas-based, QR auto-links to open house page */}
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ fontSize: 20 }}>💰</span>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: C.navy }}>Special Financing Rate Graphic</div>
+                    <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>1080 × 1080 · Blurred photo background, glowing rate, QR to open house page</div>
+                  </div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, background: C.bg, padding: '3px 10px', borderRadius: 6 }}>1080 × 1080</span>
+              </div>
+              <div style={{ display: 'flex', gap: 0 }}>
+                <div style={{ flex: '0 0 320px', padding: '18px 20px', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rate Details</div>
+                  {([
+                    { key: 'rate', label: 'Interest Rate', placeholder: '6.750%' },
+                    { key: 'apr', label: 'APR', placeholder: '7.125%' },
+                    { key: 'promo_payment', label: 'Monthly Payment', placeholder: '$2,345' },
+                    { key: 'promo_date', label: 'Rate Date', placeholder: 'Jan 1, 2026' },
+                  ] as { key: keyof typeof rateVals; label: string; placeholder: string }[]).map(f => (
+                    <div key={f.key}>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 4, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</label>
+                      <input
+                        type="text" value={rateVals[f.key]} placeholder={f.placeholder}
+                        onChange={e => setRateVals(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', color: C.dim, outline: 'none', boxSizing: 'border-box' as const }}
+                      />
+                    </div>
+                  ))}
+                  <div style={{ fontSize: 11, color: C.muted, background: 'rgba(91,203,245,0.07)', border: '1px solid rgba(91,203,245,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.5 }}>
+                    QR code links buyers directly to this open house page.
+                  </div>
+                  <button
+                    onClick={() => {
+                      const canvas = rateCanvasRef.current
+                      if (!canvas) return
+                      const a = document.createElement('a')
+                      a.href = canvas.toDataURL('image/png')
+                      a.download = `rate-graphic-${slug}.png`
+                      a.click()
+                    }}
+                    style={{ marginTop: 'auto', width: '100%', padding: '11px 0', background: C.navy, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                    ⬇ Download PNG
+                  </button>
+                </div>
+                <div style={{ flex: 1, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: 368 }}>
+                  <div style={{ position: 'relative', width: 320, height: 320, borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', background: '#0A2540', flexShrink: 0 }}>
+                    <canvas ref={rateCanvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+                    {rateRendering && (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,37,64,0.6)', color: '#fff', fontSize: 13 }}>
+                        Rendering…
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {SOCIALS.map(s => {
               const edits = socialEdits[s.key] ?? {}
               const defaultWhere = [page.address, page.city, page.state].filter(Boolean).join(', ')
@@ -1292,66 +1351,6 @@ export default function AgentPageClient({ slug }: { slug: string }) {
               )
             })}
 
-            {/* Rate Graphic — canvas-based, QR auto-links to open house page */}
-            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
-              <div style={{ padding: '16px 22px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ fontSize: 20 }}>💰</span>
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 16, color: C.navy }}>Special Financing Rate Graphic</div>
-                    <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>1080 × 1080 · Blurred photo background, glowing rate, QR to open house page</div>
-                  </div>
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, background: C.bg, padding: '3px 10px', borderRadius: 6 }}>1080 × 1080</span>
-              </div>
-              <div style={{ display: 'flex', gap: 0 }}>
-                {/* Fields */}
-                <div style={{ flex: '0 0 320px', padding: '18px 20px', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rate Details</div>
-                  {([
-                    { key: 'rate', label: 'Interest Rate', placeholder: '6.750%' },
-                    { key: 'apr', label: 'APR', placeholder: '7.125%' },
-                    { key: 'promo_payment', label: 'Monthly Payment', placeholder: '$2,345' },
-                    { key: 'promo_date', label: 'Rate Date', placeholder: 'Jan 1, 2026' },
-                  ] as { key: keyof typeof rateVals; label: string; placeholder: string }[]).map(f => (
-                    <div key={f.key}>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 4, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</label>
-                      <input
-                        type="text" value={rateVals[f.key]} placeholder={f.placeholder}
-                        onChange={e => setRateVals(prev => ({ ...prev, [f.key]: e.target.value }))}
-                        style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', color: C.dim, outline: 'none', boxSizing: 'border-box' as const }}
-                      />
-                    </div>
-                  ))}
-                  <div style={{ fontSize: 11, color: C.muted, background: 'rgba(91,203,245,0.07)', border: '1px solid rgba(91,203,245,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.5 }}>
-                    QR code links buyers directly to this open house page.
-                  </div>
-                  <button
-                    onClick={() => {
-                      const canvas = rateCanvasRef.current
-                      if (!canvas) return
-                      const a = document.createElement('a')
-                      a.href = canvas.toDataURL('image/png')
-                      a.download = `rate-graphic-${slug}.png`
-                      a.click()
-                    }}
-                    style={{ marginTop: 'auto', width: '100%', padding: '11px 0', background: C.navy, color: '#fff', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-                    ⬇ Download PNG
-                  </button>
-                </div>
-                {/* Canvas preview */}
-                <div style={{ flex: 1, background: '#1a1a1a', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, minHeight: 368 }}>
-                  <div style={{ position: 'relative', width: 320, height: 320, borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.5)', background: '#0A2540', flexShrink: 0 }}>
-                    <canvas ref={rateCanvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
-                    {rateRendering && (
-                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,37,64,0.6)', color: '#fff', fontSize: 13 }}>
-                        Rendering…
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </Section>
 
