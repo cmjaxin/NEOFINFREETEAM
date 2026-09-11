@@ -1,7 +1,8 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '@/lib/appContext'
 import { slugify } from '@/lib/openHouseMath'
+import { renderRateGraphic } from '@/lib/rateGraphicCanvas'
 
 interface MarketingPartner {
   id: string; name: string; title: string; company: string
@@ -940,10 +941,142 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
   )
 }
 
+function RateGraphicModal({ page, onClose }: { page: OHPage; onClose: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [values, setValues] = useState({
+    rate: '', apr: '', promo_payment: '', promo_date: '',
+    advisor_name: page.advisor_name ?? '',
+    advisor_title: page.advisor_title ?? '',
+    advisor_nmls: page.advisor_nmls ?? '',
+    advisor_phone: page.advisor_phone ?? '',
+  })
+  const [rendering, setRendering] = useState(false)
+
+  const qrUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/listing-presentation/${page.slug}`
+    : `/listing-presentation/${page.slug}`
+
+  const render = useCallback(async () => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    setRendering(true)
+    try {
+      canvas.width = 1080; canvas.height = 1080
+      await renderRateGraphic(canvas, { ...values, property_image: page.photos?.[0] }, {
+        bgUrl: page.photos?.[0],
+        qrUrl,
+        overlayOpacity: 0.55,
+      })
+    } finally {
+      setRendering(false)
+    }
+  }, [values, page, qrUrl])
+
+  useEffect(() => { render() }, [render])
+
+  function set(k: string, v: string) { setValues(prev => ({ ...prev, [k]: v })) }
+
+  function download() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const a = document.createElement('a')
+    a.href = canvas.toDataURL('image/png')
+    a.download = `rate-graphic-${page.slug}.png`
+    a.click()
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '7px 10px', border: `1px solid ${C.border}`,
+    borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+  }
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 10, fontWeight: 700, color: C.muted,
+    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3,
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: C.white, borderRadius: 16, width: '100%', maxWidth: 900, maxHeight: '92vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 17, color: C.navy }}>Rate Graphic</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{page.address} — QR links to listing page</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.muted }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', gap: 24, padding: 24, flexWrap: 'wrap' }}>
+          {/* Preview */}
+          <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+            <div style={{ position: 'relative', width: 360, height: 360, borderRadius: 12, overflow: 'hidden', background: '#0A2540' }}>
+              <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+              {rendering && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,37,64,0.5)', color: '#fff', fontSize: 13 }}>
+                  Rendering…
+                </div>
+              )}
+            </div>
+            <button onClick={download} style={{ padding: '10px 28px', background: C.navy, border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+              Download PNG
+            </button>
+          </div>
+          {/* Fields */}
+          <div style={{ flex: 1, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={labelStyle}>Interest Rate</label>
+                <input style={inputStyle} value={values.rate} placeholder="6.750%" onChange={e => set('rate', e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>APR</label>
+                <input style={inputStyle} value={values.apr} placeholder="7.125%" onChange={e => set('apr', e.target.value)} />
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={labelStyle}>Monthly Payment</label>
+                <input style={inputStyle} value={values.promo_payment} placeholder="$2,345" onChange={e => set('promo_payment', e.target.value)} />
+              </div>
+              <div>
+                <label style={labelStyle}>Rate Date</label>
+                <input style={inputStyle} value={values.promo_date} placeholder="Jan 1, 2026" onChange={e => set('promo_date', e.target.value)} />
+              </div>
+            </div>
+            <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 12, marginTop: 4 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Advisor Footer</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={labelStyle}>Name</label>
+                  <input style={inputStyle} value={values.advisor_name} onChange={e => set('advisor_name', e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Title</label>
+                  <input style={inputStyle} value={values.advisor_title} onChange={e => set('advisor_title', e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>NMLS</label>
+                  <input style={inputStyle} value={values.advisor_nmls} onChange={e => set('advisor_nmls', e.target.value)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Phone</label>
+                  <input style={inputStyle} value={values.advisor_phone} onChange={e => set('advisor_phone', e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <div style={{ background: 'rgba(91,203,245,0.08)', border: '1px solid rgba(91,203,245,0.3)', borderRadius: 10, padding: '10px 14px', fontSize: 12, color: C.dim }}>
+              <span style={{ fontWeight: 700 }}>QR Code</span> auto-links to the gated listing page for <strong>{page.address}</strong>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
   const url = `/listing-presentation/${page.slug}`
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showCreateOH, setShowCreateOH] = useState(false)
+  const [showRateGraphic, setShowRateGraphic] = useState(false)
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -1006,6 +1139,10 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
               + Open House
             </button>
+            <button onClick={() => setShowRateGraphic(true)}
+              style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+              Rate Graphic
+            </button>
             <button onClick={onEdit}
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Edit
@@ -1024,6 +1161,7 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
           onCreated={slug => setCreatedSlug(slug)}
         />
       )}
+      {showRateGraphic && <RateGraphicModal page={page} onClose={() => setShowRateGraphic(false)} />}
       {createdSlug && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
           onClick={() => { setCreatedSlug(null); setShowCreateOH(false) }}>
