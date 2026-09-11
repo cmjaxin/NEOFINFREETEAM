@@ -383,10 +383,15 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
 
     // Disclaimer text — left portion, narrower when QR is present
     const disclaimer = 'Example rate scenario for illustration purposes only. Rate and APR assume a 30-year fixed-rate mortgage on a primary residence for a well-qualified borrower with strong credit. Loan amount, down payment, loan type, property type, and borrower qualifications will affect actual rate and APR. Monthly payment shown does not include taxes or insurance; actual obligation may be greater. Rate shown reflects terms available as of the date indicated and may not be available to all applicants. A complete loan scenario must be evaluated for each individual borrower. This is not a commitment to lend or an offer of credit. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
-    const discFs = Math.round(h * 0.0135)
+    const discFs = Math.round(h * (hasQr ? 0.011 : 0.0135))
     ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
     ctx.fillStyle = 'rgba(255,255,255,0.42)'
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, h * 0.69, w, h * 0.21) // clip text to disclaimer strip only
+    ctx.clip()
     wrapText(ctx, disclaimer, pad, h * 0.715, discTextW, discFs * 1.38, 'left')
+    ctx.restore()
 
     // Footer bar
     const footerY = h * 0.9
