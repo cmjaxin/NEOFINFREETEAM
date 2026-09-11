@@ -243,36 +243,55 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     const topLogoW = topLogoH * 3.5
     await drawImageWhite(ctx, NEO_LOGO_DATA, w / 2 - topLogoW / 2, (topBarH - topLogoH) / 2, topLogoW, topLogoH)
 
-    // "Special Financing Available" eyebrow label
+    // "Special Financing Available" eyebrow label — teal with subtle glow
+    ctx.save()
+    ctx.shadowColor = '#5BCBF5'
+    ctx.shadowBlur = 18
     ctx.font = `800 ${Math.round(h * 0.032)}px Inter, Arial, sans-serif`
-    ctx.fillStyle = '#FFFFFF'
+    ctx.fillStyle = '#5BCBF5'
     ctx.textAlign = 'center'
     ctx.fillText('SPECIAL FINANCING AVAILABLE', w / 2, h * 0.178)
+    ctx.restore()
     ctx.textAlign = 'left'
 
-    // Divider line
-    ctx.strokeStyle = 'rgba(91,203,245,0.5)'
-    ctx.lineWidth = 1.5
+    // Divider line — bright teal
+    ctx.strokeStyle = '#5BCBF5'
+    ctx.lineWidth = 2
+    ctx.shadowColor = 'rgba(91,203,245,0.6)'
+    ctx.shadowBlur = 6
     ctx.beginPath()
     ctx.moveTo(pad, h * 0.192); ctx.lineTo(w - pad, h * 0.192)
     ctx.stroke()
+    ctx.shadowBlur = 0
 
-    // Big rate number
+    // Subtle radial glow behind rate number
+    const glowGrad = ctx.createRadialGradient(w / 2, h * 0.40, 0, w / 2, h * 0.40, w * 0.45)
+    glowGrad.addColorStop(0, 'rgba(91,203,245,0.12)')
+    glowGrad.addColorStop(1, 'rgba(91,203,245,0)')
+    ctx.fillStyle = glowGrad
+    ctx.fillRect(0, h * 0.20, w, h * 0.40)
+
+    // Big rate number — white with NEO blue glow
     const rateVal = values.rate || '—'
+    ctx.save()
+    ctx.shadowColor = '#5BCBF5'
+    ctx.shadowBlur = 55
     ctx.font = `800 ${Math.round(h * 0.18)}px Inter, Arial, sans-serif`
     ctx.fillStyle = '#FFFFFF'
     ctx.textAlign = 'center'
     ctx.fillText(rateVal, w / 2, h * 0.47)
+    ctx.fillText(rateVal, w / 2, h * 0.47) // double-draw to intensify glow
+    ctx.restore()
     ctx.textAlign = 'left'
 
-    // "Interest Rate" label under rate
+    // "Interest Rate" label under rate — bright teal
     ctx.font = `600 ${Math.round(h * 0.026)}px Inter, Arial, sans-serif`
-    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.fillStyle = '#5BCBF5'
     ctx.textAlign = 'center'
     ctx.fillText('Interest Rate', w / 2, h * 0.518)
     ctx.textAlign = 'left'
 
-    // APR pill
+    // APR pill — stronger border + fill
     const aprVal = values.apr ? `APR ${values.apr}` : 'APR —'
     ctx.font = `700 ${Math.round(h * 0.036)}px Inter, Arial, sans-serif`
     const aprMeasure = ctx.measureText(aprVal)
@@ -280,16 +299,19 @@ async function renderPageToCanvas(canvas: HTMLCanvasElement, page: TplPage, valu
     const aprPillH = h * 0.062
     const aprPillX = w / 2 - aprPillW / 2
     const aprPillY = h * 0.548
-    ctx.fillStyle = 'rgba(91,203,245,0.2)'
-    ctx.beginPath()
     const aprR = aprPillH / 2
+    ctx.beginPath()
     ctx.moveTo(aprPillX + aprR, aprPillY)
     ctx.lineTo(aprPillX + aprPillW - aprR, aprPillY)
     ctx.arc(aprPillX + aprPillW - aprR, aprPillY + aprR, aprR, -Math.PI / 2, Math.PI / 2)
     ctx.lineTo(aprPillX + aprR, aprPillY + aprPillH)
     ctx.arc(aprPillX + aprR, aprPillY + aprR, aprR, Math.PI / 2, -Math.PI / 2)
     ctx.closePath()
+    ctx.fillStyle = 'rgba(91,203,245,0.18)'
     ctx.fill()
+    ctx.strokeStyle = 'rgba(91,203,245,0.7)'
+    ctx.lineWidth = 1.5
+    ctx.stroke()
     ctx.fillStyle = '#5BCBF5'
     ctx.textAlign = 'center'
     ctx.fillText(aprVal, w / 2, aprPillY + aprPillH * 0.72)
