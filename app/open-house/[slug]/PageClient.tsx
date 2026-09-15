@@ -229,16 +229,17 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         const fetchExtras = async () => {
           const [profileRes, partnerRes] = await Promise.all([
             row.created_by
-              ? sb.from('profiles').select('bntouch_user_id').eq('id', row.created_by).single()
+              ? sb.from('profiles').select('bntouch_user_id, schedule_url, apply_url').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
           ])
-          const profileData = profileRes.data as { bntouch_user_id?: string } | null
+          const profileData = profileRes.data as { bntouch_user_id?: string; schedule_url?: string; apply_url?: string } | null
           const bntouchUserId = profileData?.bntouch_user_id ?? null
-          // schedule_url and apply_url are stored directly on the page row (denormalized at save time)
-          let finalData = { ...pageData, bntouch_user_id: bntouchUserId }
+          const scheduleUrl = profileData?.schedule_url ?? pageData.schedule_url ?? null
+          const applyUrl = profileData?.apply_url ?? pageData.apply_url ?? null
+          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()

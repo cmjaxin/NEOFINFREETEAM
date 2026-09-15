@@ -108,15 +108,16 @@ export default function SignRiderPage({ slug }: { slug: string }) {
 
         const fetchExtras = async () => {
           const profileRes = row.created_by
-            ? await sb.from('profiles').select('bntouch_user_id').eq('id', row.created_by).single()
+            ? await sb.from('profiles').select('bntouch_user_id, schedule_url, apply_url').eq('id', row.created_by).single()
             : { data: null, error: null }
           const partnerRes = pageData.partner_name
             ? await sb.from('marketing_partners').select('logo_url, name')
             : { data: null }
-          const profileData = profileRes.data as { bntouch_user_id?: string } | null
+          const profileData = profileRes.data as { bntouch_user_id?: string; schedule_url?: string; apply_url?: string } | null
           const bntouchUserId = profileData?.bntouch_user_id ?? null
-          // schedule_url and apply_url are stored directly on the page row (denormalized at save time)
-          let finalData = { ...pageData, bntouch_user_id: bntouchUserId }
+          const scheduleUrl = profileData?.schedule_url ?? pageData.schedule_url ?? null
+          const applyUrl = profileData?.apply_url ?? pageData.apply_url ?? null
+          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
