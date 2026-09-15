@@ -30,13 +30,25 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
     setError('')
     setSubmitting(true)
     try {
-      const res = await fetch('/api/bntouch-lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, phone, userId: bntouchUserId || '10543', address }),
+      const params = new URLSearchParams({
+        name_1: name,
+        email,
+        phone_cell: phone,
+        added_source: address,
+        RETURNTIMEOUT: '10',
+        USERID: bntouchUserId || '10543',
+        GROUPID: '1',
+        SEQUENCEID: '1',
+        WEBFORMID: '5524',
+        PROCESSTYPE: 'mortgage',
+        UTMDATA: '',
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Submission failed')
+      await fetch('https://www.bntouchmortgage.net/api/webform/', {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      })
       setSubmitted(true)
     } catch (err: any) {
       setError('Something went wrong. Please try again.')
