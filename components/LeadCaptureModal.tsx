@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 
 interface Props {
   address: string
@@ -15,8 +15,6 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-  const formRef = useRef<HTMLFormElement>(null)
 
   function validate() {
     if (!name.trim()) return 'Please enter your name.'
@@ -25,26 +23,33 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
     return ''
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const err = validate()
     if (err) { setError(err); return }
     setError('')
     setSubmitting(true)
-    // Submit via hidden iframe to avoid page redirect
-    if (formRef.current) formRef.current.submit()
-    setTimeout(() => {
+    try {
+      const res = await fetch('/api/bntouch-lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, userId: bntouchUserId || '10543', address }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Submission failed')
       setSubmitted(true)
+    } catch (err: any) {
+      setError('Something went wrong. Please try again.')
+      console.error('Lead submit error:', err)
+    } finally {
       setSubmitting(false)
-    }, 1200)
+    }
   }
 
   function handleDone() {
     try { sessionStorage.setItem('lp_lead_captured', '1') } catch {}
     onDismiss()
   }
-
-  const userId = bntouchUserId || '10543'
 
   return (
     <div style={{
@@ -102,32 +107,7 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
         <div style={{ padding: '28px 32px 32px' }}>
           {!submitted ? (
             <>
-              {/* Hidden iframe for form submission */}
-              <iframe
-                ref={iframeRef}
-                name="bnt_iframe"
-                style={{ display: 'none' }}
-                title="BNTouch Submit"
-              />
-
-              <form
-                ref={formRef}
-                name="bntWebForm"
-                id="bntWebForm"
-                method="post"
-                action="https://www.bntouchmortgage.net/api/webform/"
-                target="bnt_iframe"
-                onSubmit={handleSubmit}
-              >
-                {/* Hidden BNTouch fields */}
-                <input type="hidden" name="added_source" value={address} />
-                <input type="hidden" name="RETURNTIMEOUT" value="10" />
-                <input type="hidden" name="USERID" value={userId} />
-                <input type="hidden" name="GROUPID" value="1" />
-                <input type="hidden" name="SEQUENCEID" value="1" />
-                <input type="hidden" name="WEBFORMID" value="5524" />
-                <input type="hidden" name="PROCESSTYPE" value="mortgage" />
-                <input type="hidden" name="UTMDATA" id="WEBFORMUTM" value="" />
+              <form onSubmit={handleSubmit}>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <Field label="Full Name" required>
