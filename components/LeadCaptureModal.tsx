@@ -3,12 +3,13 @@ import { useState, useRef } from 'react'
 
 interface Props {
   address: string
+  advisorName?: string | null
   bntouchUserId: string | null
   onDismiss: () => void
   callout?: string | null
 }
 
-export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, callout }: Props) {
+export default function LeadCaptureModal({ address, advisorName, bntouchUserId, onDismiss, callout }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -104,7 +105,7 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
                 target="bnt_iframe"
                 onSubmit={handleSubmit}
               >
-                <input type="hidden" name="added_source" value={address} />
+                <input type="hidden" name="added_source" value={`${advisorName ? advisorName + ' — ' : ''}${address}`} />
                 <input type="hidden" name="RETURNTIMEOUT" value="10" />
                 <input type="hidden" name="USERID" value={bntouchUserId || '10543'} />
                 <input type="hidden" name="GROUPID" value="1" />
@@ -170,6 +171,9 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
                   {submitting ? 'Sending…' : 'View Full Presentation →'}
                 </button>
 
+                <div style={{ marginTop: 8, fontSize: 10, color: '#CBD5E1', textAlign: 'center' }}>
+                  LO: {bntouchUserId || '10543 (fallback)'}
+                </div>
                 <div style={{ marginTop: 12, fontSize: 10.5, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.5 }}>
                   By submitting you agree to be contacted by NEO Home Loans.
                   Message &amp; data rates may apply.

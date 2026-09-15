@@ -280,6 +280,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
       {showLead && (
         <LeadCaptureModal
           address={page.address + (page.city ? ', ' + page.city : '')}
+          advisorName={page.advisor_name}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
           callout={page.callout_text}
