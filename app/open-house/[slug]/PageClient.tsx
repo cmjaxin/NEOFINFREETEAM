@@ -236,7 +236,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
               : Promise.resolve({ data: null }),
           ])
           const profileData = profileRes.data as { bntouch_user_id?: string; schedule_url?: string; apply_url?: string } | null
-          const bntouchUserId = profileData?.bntouch_user_id ?? null
+          const bntouchUserId = profileData?.bntouch_user_id ?? pageData.bntouch_user_id ?? null
           const scheduleUrl = profileData?.schedule_url ?? pageData.schedule_url ?? null
           const applyUrl = profileData?.apply_url ?? pageData.apply_url ?? null
           let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl }
