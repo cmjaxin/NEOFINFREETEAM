@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 
 interface Props {
   address: string
@@ -15,6 +15,8 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
 
   function validate() {
     if (!name.trim()) return 'Please enter your name.'
@@ -23,39 +25,14 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
     return ''
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const err = validate()
     if (err) { setError(err); return }
     setError('')
     setSubmitting(true)
-    try {
-      const params = new URLSearchParams({
-        name_1: name,
-        email,
-        phone_cell: phone,
-        added_source: address,
-        RETURNTIMEOUT: '10',
-        USERID: bntouchUserId || '10543',
-        GROUPID: '1',
-        SEQUENCEID: '1',
-        WEBFORMID: '5524',
-        PROCESSTYPE: 'mortgage',
-        UTMDATA: '',
-      })
-      await fetch('https://www.bntouchmortgage.net/api/webform/', {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-      })
-      setSubmitted(true)
-    } catch (err: any) {
-      setError('Something went wrong. Please try again.')
-      console.error('Lead submit error:', err)
-    } finally {
-      setSubmitting(false)
-    }
+    if (formRef.current) formRef.current.submit()
+    setTimeout(() => { setSubmitted(true); setSubmitting(false) }, 1200)
   }
 
   function handleDone() {
@@ -119,7 +96,22 @@ export default function LeadCaptureModal({ address, bntouchUserId, onDismiss, ca
         <div style={{ padding: '28px 32px 32px' }}>
           {!submitted ? (
             <>
-              <form onSubmit={handleSubmit}>
+              <iframe ref={iframeRef} name="bnt_iframe" style={{ display: 'none' }} title="BNTouch Submit" />
+              <form
+                ref={formRef}
+                method="post"
+                action="https://www.bntouchmortgage.net/api/webform/"
+                target="bnt_iframe"
+                onSubmit={handleSubmit}
+              >
+                <input type="hidden" name="added_source" value={address} />
+                <input type="hidden" name="RETURNTIMEOUT" value="10" />
+                <input type="hidden" name="USERID" value={bntouchUserId || '10543'} />
+                <input type="hidden" name="GROUPID" value="1" />
+                <input type="hidden" name="SEQUENCEID" value="1" />
+                <input type="hidden" name="WEBFORMID" value="5524" />
+                <input type="hidden" name="PROCESSTYPE" value="mortgage" />
+                <input type="hidden" name="UTMDATA" value="" />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <Field label="Full Name" required>

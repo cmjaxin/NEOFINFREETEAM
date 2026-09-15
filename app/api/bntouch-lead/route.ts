@@ -25,7 +25,14 @@ export async function POST(request: NextRequest) {
 
     const res = await fetch('https://www.bntouchmortgage.net/api/webform/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': `https://www.neofinfree.com${request.headers.get('x-original-path') ?? '/'}`,
+        'Origin': 'https://www.neofinfree.com',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
       body: params.toString(),
     })
 
