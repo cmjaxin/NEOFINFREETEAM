@@ -158,11 +158,13 @@ export default function SettingsModal() {
           <Input value={form.apply_url} onChange={set('apply_url')} placeholder="https://apply.neohomeloans.com/…" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Apply Now" button on your sign rider pages.</div>
         </div>
-        <div style={{ marginTop: 6 }}>
-          <Label>BNTouch User ID</Label>
-          <Input value={form.bntouch_user_id} onChange={set('bntouch_user_id')} placeholder="e.g. 10543" />
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Your BNTouch user ID — powers the lead capture form on your listing pages.</div>
-        </div>
+        {profile?.role === 'admin' && (
+          <div style={{ marginTop: 6 }}>
+            <Label>BNTouch User ID</Label>
+            <Input value={form.bntouch_user_id} onChange={set('bntouch_user_id')} placeholder="e.g. 10543" />
+            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Admin only — powers the lead capture form on listing pages.</div>
+          </div>
+        )}
 
         {error && <div style={{ fontSize: 13, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>{error}</div>}
         {saved && <div style={{ fontSize: 13, color: '#2E7D57', background: '#F0F7F3', border: '1px solid #D6E8DE', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>Saved — your info will pre-fill on your next template.</div>}
