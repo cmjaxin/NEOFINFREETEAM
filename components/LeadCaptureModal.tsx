@@ -172,7 +172,7 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
                 </button>
 
                 <div style={{ marginTop: 8, fontSize: 10, color: '#CBD5E1', textAlign: 'center' }}>
-                  LO: {bntouchUserId || '10543 (fallback)'}
+                  {bntouchUserId || '10543'}
                 </div>
                 <div style={{ marginTop: 12, fontSize: 10.5, color: '#9CA3AF', textAlign: 'center', lineHeight: 1.5 }}>
                   By submitting you agree to be contacted by NEO Home Loans.
