@@ -73,8 +73,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:10px;line-height:1.75;color:#374151}
 .tca-card{flex:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-height:0;padding:12px 14px;border-top:1px solid #E4E8EC}
-.tca-header{font-size:10px;font-weight:900;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px}
-.tca-sub{font-size:8px;color:#64748B;margin-bottom:8px;line-height:1.4}
+.tca-header{font-size:12px;font-weight:900;color:${CYAN};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+.tca-sub{font-size:9.5px;color:#64748B;margin-bottom:8px;line-height:1.4}
 .tca-card img{width:100%;max-height:100%;object-fit:contain;display:block;border-radius:4px;box-shadow:0 2px 10px rgba(10,37,64,0.1)}
 .qr-card{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:16px 12px;border-top:1px solid #E4E8EC}
 .qr-card img{width:150px;height:150px;display:block;border-radius:6px;box-shadow:0 2px 10px rgba(10,37,64,0.12)}
@@ -182,8 +182,8 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.75;color:#374151}
 .tca-card2{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;flex:1;min-height:0;padding:12px 14px;border-top:1px solid #E4E8EC}
-.tca-header2{font-size:9.5px;font-weight:900;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px}
-.tca-sub2{font-size:7.5px;color:#64748B;margin-bottom:8px;line-height:1.4}
+.tca-header2{font-size:11px;font-weight:900;color:${CYAN};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:4px}
+.tca-sub2{font-size:9px;color:#64748B;margin-bottom:8px;line-height:1.4}
 .tca-card2 img{width:100%;max-height:100%;object-fit:contain;display:block;border-radius:4px;box-shadow:0 2px 8px rgba(10,37,64,0.1)}
 .qr-card2{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:0;padding:14px 10px;border-top:1px solid #E4E8EC}
 .qr-card2 img{width:140px;height:140px;display:block;border-radius:6px;box-shadow:0 2px 10px rgba(10,37,64,0.12)}
