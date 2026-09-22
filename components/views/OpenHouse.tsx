@@ -1131,10 +1131,6 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
               style={{ padding: '8px 12px', background: C.accent, border: 'none', borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
               Print Flyer
             </button>
-            <button onClick={() => { navigator.clipboard.writeText(window.location.origin + url) }}
-              style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
-              Copy Link
-            </button>
             <button onClick={() => setShowCreateOH(true)}
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
               + Open House

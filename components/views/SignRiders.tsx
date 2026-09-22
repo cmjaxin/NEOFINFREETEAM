@@ -681,10 +681,6 @@ function PageCard({ page, onEdit, slotNum, onClear }: { page: SRPage; onEdit: ()
               style={{ flex: 1, padding: '8px 0', background: C.navy, borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, textAlign: 'center', textDecoration: 'none' }}>
               View Page
             </a>
-            <button onClick={copyLink}
-              style={{ padding: '8px 12px', background: copied ? 'rgba(22,163,74,0.1)' : C.bg, border: `1px solid ${copied ? C.green : C.border}`, borderRadius: 8, fontSize: 12, color: copied ? C.green : C.dim, cursor: 'pointer', fontWeight: 600 }}>
-              {copied ? 'Copied!' : 'Copy Link'}
-            </button>
             <button onClick={onEdit}
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
               Edit
