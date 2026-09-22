@@ -982,6 +982,243 @@ body{width:8.5in;height:11in;font-family:'Montserrat',sans-serif;background:#fff
 </body></html>`
 }
 
+// ─── FLYER 5: Seller Advantage Program Handout (2-page) ───────────────────────
+function flyerSellerAdvantage(p: PageData) {
+  const NEO = C.navy; const CYAN = C.accent
+  const advisorNmls = p.advisor_nmls ? `NMLS# ${p.advisor_nmls}` : ''
+  const price = Number(p.list_price) > 0 ? fmtPrice(p.list_price) : '$500,000'
+  const scheduleUrl = (p as any).schedule_url ?? ''
+  const qrUrl = scheduleUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(scheduleUrl)}&size=200x200&margin=2&color=0A2540`
+    : `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=200x200&margin=2&color=0A2540`
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Seller Advantage — ${p.address || 'Handout'}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+@page{size:letter portrait;margin:0}
+@media print{.page{page-break-after:always}.page:last-child{page-break-after:avoid}}
+html,body{width:8.5in;font-family:'Arial',Helvetica,sans-serif;background:#fff;color:#1a1a1a}
+.page{width:8.5in;min-height:11in;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Header ── */
+.sa-header{display:flex;align-items:center;gap:14px;padding:14px 32px;border-bottom:3px solid ${CYAN}}
+.sa-header .partner-logo{max-height:44px;max-width:180px;object-fit:contain}
+.sa-header .logo-sep{font-size:18px;color:#CBD5E1;font-weight:300;flex-shrink:0}
+.sa-header .neo-logo{max-height:28px;max-width:110px;object-fit:contain}
+
+/* ── Hero ── */
+.sa-hero{position:relative;height:2.1in;background:${NEO};overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sa-hero img{width:100%;height:100%;object-fit:cover;display:block;opacity:0.45}
+.sa-hero-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(10,37,64,0.88) 0%,rgba(10,37,64,0.55) 100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sa-hero-content{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:24px 32px}
+.sa-hero-eyebrow{font-size:10px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:${CYAN};margin-bottom:8px}
+.sa-hero-title{font-size:42px;font-weight:900;color:#fff;line-height:1;letter-spacing:-0.01em}
+.sa-hero-title em{color:${CYAN};font-style:normal}
+.sa-hero-sub{font-size:12px;color:rgba(255,255,255,0.65);margin-top:8px;font-style:italic}
+
+/* ── Body ── */
+.sa-body{flex:1;padding:22px 32px 16px;display:flex;flex-direction:column;gap:16px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.section-head{font-size:9.5px;font-weight:900;color:${CYAN};text-transform:uppercase;letter-spacing:0.14em;margin-bottom:5px}
+.body-text{font-size:9.5px;line-height:1.75;color:#374151}
+
+/* ── Builder cards ── */
+.builder-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.builder-card{border:1px solid #E4E8EC;border-radius:6px;padding:10px 12px}
+.builder-card .b-label{font-size:7px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${CYAN};margin-bottom:4px}
+.builder-card .b-rate{font-size:22px;font-weight:900;color:${NEO};letter-spacing:-0.01em;margin-bottom:4px}
+.builder-card .b-desc{font-size:7.5px;color:#64748B;line-height:1.5}
+.builder-card-wide{grid-column:span 2}
+
+/* ── Page 2 body ── */
+.p2-body{flex:1;padding:22px 32px 16px;display:flex;flex-direction:column;gap:14px}
+
+/* ── Loan table ── */
+.table-section{margin-top:4px}
+.table-intro{font-size:9.5px;color:#374151;margin-bottom:10px;line-height:1.6}
+.tca-wrapper{border:1px solid #E4E8EC;border-radius:6px;overflow:hidden;margin-top:2px}
+.tca-wrapper img{width:100%;display:block;object-fit:contain}
+.tca-placeholder{border:1px solid #E4E8EC;border-radius:6px;overflow:hidden}
+.tca-placeholder table{width:100%;border-collapse:collapse;font-size:8.5px}
+.tca-placeholder th{background:${NEO};color:#fff;font-size:7.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:7px 10px;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.tca-placeholder th:first-child{text-align:left}
+.tca-placeholder td{padding:5px 10px;border-bottom:1px solid #F1F5F9;color:#374151;text-align:center}
+.tca-placeholder td:first-child{text-align:left;font-weight:600;color:${NEO}}
+.tca-placeholder tr:nth-child(even) td{background:#F8FAFC}
+.tca-placeholder .highlight td{font-weight:900;font-size:9px}
+.tca-placeholder .highlight-rate td:nth-child(2){color:#DC2626}
+.tca-placeholder .highlight-rate td:nth-child(3){color:${CYAN}}
+.tca-placeholder .highlight-rate td:nth-child(4){color:${CYAN}}
+.tca-placeholder .savings td:nth-child(3),.tca-placeholder .savings td:nth-child(4){color:#16A34A;font-weight:800}
+
+/* ── Italic callouts ── */
+.italic-block{border-left:3px solid ${CYAN};padding:10px 16px;display:flex;flex-direction:column;gap:7px;background:#F8FAFC;border-radius:0 6px 6px 0}
+.italic-line{font-size:10px;font-style:italic;color:#1E3A5F;line-height:1.4}
+
+/* ── CTA footer ── */
+.cta-row{display:flex;align-items:flex-start;gap:20px;padding:14px 0 0;border-top:2px solid ${CYAN}}
+.cta-qr{width:72px;height:72px;flex-shrink:0;border-radius:6px;border:1px solid #E4E8EC;padding:3px;background:#fff}
+.cta-qr img{width:100%;height:100%;display:block}
+.cta-text{flex:1}
+.cta-name{font-size:13px;font-weight:900;color:${NEO};margin-bottom:3px}
+.cta-schedule{font-size:9px;color:${CYAN};font-weight:700;margin-bottom:6px}
+.cta-detail{font-size:9px;color:#64748B;line-height:1.6}
+
+/* ── Disclaimer ── */
+.sa-footer{padding:8px 32px 10px;border-top:1px solid #E4E8EC}
+.disc{font-size:5px;color:#9CA3AF;line-height:1.4}
+</style></head><body>
+
+<!-- ═══════════════════ PAGE 1 ═══════════════════ -->
+<div class="page">
+  <div class="sa-header">
+    ${p.partner_logo ? `<img class="partner-logo" src="${p.partner_logo}" alt="${p.partner_name}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /><span class="logo-sep">×</span>` : ''}
+    <img class="neo-logo" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+  </div>
+
+  <div class="sa-hero">
+    ${(p.photos ?? [])[0] ? `<img src="${(p.photos ?? [])[0]}" alt="Home" />` : ''}
+    <div class="sa-hero-overlay"></div>
+    <div class="sa-hero-content">
+      <div class="sa-hero-eyebrow">A NEO Home Loans Strategy</div>
+      <div class="sa-hero-title"><em>Seller</em> Advantage</div>
+      ${p.address ? `<div class="sa-hero-sub">${p.address}${p.city ? ', ' + p.city : ''}</div>` : ''}
+    </div>
+  </div>
+
+  <div class="sa-body">
+    <div class="two-col">
+      <div>
+        <div class="section-head">Affordability, Not Price</div>
+        <p class="body-text">At today's rates, the buyer pool doesn't shrink because homes cost too much. It shrinks because the monthly payment doesn't pencil. A buyer who could comfortably afford your listing at 5% is priced out entirely at 6.5%+, before they ever see the address.</p>
+      </div>
+      <div>
+        <div class="section-head">Builders Solved This First</div>
+        <p class="body-text">Builders rebuilt their marketing around that single filter. They stopped leading with square footage and price. They started leading with a rate, because that's the number that actually decides whether a buyer can say yes.</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-head">What Builders Are Marketing Right Now</div>
+      <p class="body-text" style="margin-bottom:10px">Live promotions from builders active in Utah markets today. None lead with a discounted price. Every one leads with a number that makes the payment work.</p>
+      <div class="builder-grid">
+        <div class="builder-card">
+          <div class="b-label">Edge Homes</div>
+          <div class="b-rate">1.99%</div>
+          <div class="b-desc">Interest rate incentive on homes that complete and close within a set window, paired with a no-cost refinance guarantee if rates drop further.</div>
+        </div>
+        <div class="builder-card">
+          <div class="b-label">McArthur Homes</div>
+          <div class="b-rate">4.75%</div>
+          <div class="b-desc">Marketed directly against the market average of 6.5%, quantified for the buyer as "$352/month savings" on a specific community.</div>
+        </div>
+        <div class="builder-card">
+          <div class="b-label">Bach Homes</div>
+          <div class="b-rate">4.99%</div>
+          <div class="b-desc">"End of Summer Savings" campaign, positioned against buyers "still reading about high rates" as a permanent fixed-rate offer.</div>
+        </div>
+        <div class="builder-card">
+          <div class="b-label">Visionary Homes</div>
+          <div class="b-rate">4.99%</div>
+          <div class="b-desc">"Built Around What Matters" leads with "save $450/month," not a price, on select quick move-in inventory.</div>
+        </div>
+        <div class="builder-card builder-card-wide">
+          <div class="b-label">David Weekley Homes</div>
+          <div class="b-rate">2.99%–4.99%</div>
+          <div class="b-desc">"Summer Savings Event" advertising a starting rate as low as 2.99% (6.275% APR) on select ARM financing, stacked with move-in package incentives, the same payment-first pitch on a different lever.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-head">Where Does the Money Come From?</div>
+        <p class="body-text">Not from cutting price. Builders protect their price and their comps, and redirect incentive dollars into buying down the buyer's rate instead. A resale seller who cuts price to move a slow listing does the opposite. It drags the number every future buyer and appraiser compares the neighborhood against.</p>
+      </div>
+      <div>
+        <div class="section-head">The Seller Advantage Program</div>
+        <p class="body-text">A seller-funded credit that buys down the buyer's rate, temporarily or for the life of the loan, advertised on the listing the same way a builder advertises a community.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ PAGE 2 ═══════════════════ -->
+<div class="page">
+  <div class="sa-header">
+    ${p.partner_logo ? `<img class="partner-logo" src="${p.partner_logo}" alt="${p.partner_name}" style="-webkit-print-color-adjust:exact;print-color-adjust:exact;" /><span class="logo-sep">×</span>` : ''}
+    <img class="neo-logo" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+  </div>
+
+  <div class="p2-body">
+    <div class="two-col">
+      <div>
+        <div class="section-head">More Eyeballs</div>
+        <p class="body-text">A below-market rate is scroll-stopping, sharable ad copy, giving buyers a reason to click your listing instead of scrolling past it.</p>
+        <div class="section-head" style="margin-top:12px">Faster Sale, Stronger Price</div>
+        <p class="body-text">Buyers compare payment, not sticker price. More qualified buyers touring sooner means less time on market and less pressure to negotiate price down later.</p>
+      </div>
+      <div>
+        <div class="section-head">A Wider Buyer Pool</div>
+        <p class="body-text">Lowering the payment re-qualifies buyers who were priced out at market rate, without changing your asking price at all.</p>
+        <div class="section-head" style="margin-top:12px">Answers the Builder Down the Street</div>
+        <p class="body-text">Buyers cross-shopping your listing against new construction are already comparing rates. Now you can meet that pitch head-on instead of losing them to it.</p>
+      </div>
+    </div>
+
+    <div class="table-section">
+      <div class="section-head">See It in Action</div>
+      <p class="table-intro">A static example on a ${price} purchase: the same buyer, three ways to finance it.</p>
+      ${p.tca_screenshot
+        ? `<div class="tca-wrapper"><img src="${p.tca_screenshot}" alt="Loan Scenario" /></div>`
+        : `<div class="tca-placeholder"><table>
+        <thead><tr><th></th><th>Market Rate</th><th>Seller Advantage<br>30 YR Fixed FHA</th><th>Seller Advantage<br>5 YR FHA ARM</th></tr></thead>
+        <tbody>
+          <tr><td>Purchase Price</td><td>${price}</td><td>${price}</td><td>${price}</td></tr>
+          <tr><td>Down Payment</td><td>3.5%</td><td>3.5%</td><td>3.5%</td></tr>
+          <tr class="highlight highlight-rate"><td>Interest Rate</td><td>6.375%</td><td>5.490%</td><td>4.750%</td></tr>
+          <tr><td>APR</td><td>*7.141%</td><td>*6.244%</td><td>*5.495%</td></tr>
+          <tr><td>Term</td><td>360 mos</td><td>360 mos</td><td>360 mos</td></tr>
+          <tr class="highlight"><td>Est. Payment</td><td>**$3,574</td><td>**$3,394</td><td>**$3,164</td></tr>
+          <tr><td>Cash to Close</td><td>~$25,591</td><td>~$26,115</td><td>~$26,115</td></tr>
+          <tr class="savings"><td>Monthly Savings</td><td>$0</td><td>~$180</td><td>~$410</td></tr>
+          <tr class="savings"><td>Savings (120 mos)</td><td>$0</td><td>~$35,015</td><td>~$71,964</td></tr>
+        </tbody>
+      </table></div>`
+      }
+    </div>
+
+    <div class="italic-block">
+      <div class="italic-line">Why have builders pivoted to selling a rate and a payment instead of a price?</div>
+      <div class="italic-line">Where are the incentive dollars funding that buydown actually coming from?</div>
+      <div class="italic-line">What happens to your next listing when it uses that same strategy?</div>
+      <div class="italic-line">Are you willing to do something different to solve today's #1 real estate problem?</div>
+    </div>
+
+    <p class="body-text">Talk with ${p.advisor_name ? p.advisor_name.split(' ')[0] : 'your'} about structuring a Seller Advantage offer on your next listing.</p>
+
+    <div class="cta-row">
+      <div class="cta-qr"><img src="${qrUrl}" alt="QR" /></div>
+      <div class="cta-text">
+        ${scheduleUrl ? `<div class="cta-schedule">Schedule Your Financial Transition Plan</div>` : ''}
+        <div class="cta-name">${p.advisor_name || 'Your NEO Mortgage Advisor'}</div>
+        <div class="cta-detail">
+          ${p.advisor_title ? p.advisor_title + ', NEO Home Loans<br>' : 'Mortgage Advisor, NEO Home Loans<br>'}
+          ${advisorNmls ? advisorNmls + '<br>' : ''}
+          ${[p.advisor_phone, p.advisor_email].filter(Boolean).join(' · ')}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sa-footer">
+    <p class="disc">Illustrative example only, based on a ${price} purchase price. *APR and **payment estimates exclude taxes and insurance. Actual rate, payment, and closing costs vary by borrower, property, and market conditions at application; not a commitment to lend. ARM payment may adjust after the initial period. Builder promotions shown reflect publicly advertised Utah offers as of ${new Date().getFullYear()}, for illustration only; terms are set by each builder and subject to change. Equal Housing Lender. ${advisorNmls}</p>
+  </div>
+</div>
+
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+}
+
 // ─── Template cards config ────────────────────────────────────────────────────
 const FLYERS = [
   { key: 'standard', label: 'Standard', sub: 'Classic layout with property photos, TCA, and contact bar', icon: '📄', color: '#0A2540', gen: flyerStandard },
@@ -989,6 +1226,7 @@ const FLYERS = [
   { key: 'modern', label: 'Modern Split', sub: 'Details left, full-bleed photo right — clean and editorial', icon: '◧', color: '#1a3a5c', gen: flyerModern },
   { key: 'qrsheet', label: 'QR Code Sheet', sub: 'Standalone printable QR card — cut out and place at the open house', icon: '⬛', color: '#0e7490', gen: qrSheet },
   { key: 'bold', label: 'Bold Dark', sub: 'All-dark design with framed hero photo and cyan accents', icon: '🌙', color: '#080F1A', gen: flyerBold },
+  { key: 'selleradvantage', label: 'Seller Advantage', sub: '2-page program handout — auto-filled with your info and TCA scenario', icon: '🏷', color: '#0A2540', gen: flyerSellerAdvantage },
 ]
 
 const SOCIALS = [
