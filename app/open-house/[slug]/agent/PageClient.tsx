@@ -1062,7 +1062,9 @@ table.ct{width:100%;border-collapse:collapse;font-size:11.5px}
 
 /* contact row */
 .contact-row{display:flex;align-items:flex-start;gap:16px;flex-shrink:0;padding-bottom:12px}
-.contact-qr{width:76px;height:76px;flex-shrink:0}
+.contact-photo{width:72px;height:72px;flex-shrink:0;border-radius:50%;object-fit:cover;border:2px solid #E5E7EB}
+.contact-init{width:72px;height:72px;flex-shrink:0;border-radius:50%;background:#0A2540;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.contact-qr{width:72px;height:72px;flex-shrink:0}
 .contact-qr img{width:100%;height:100%;display:block}
 .contact-info{flex:1}
 .contact-sched{font-size:12.5px;font-weight:800;color:#111;line-height:1.3;margin-bottom:3px}
@@ -1213,7 +1215,8 @@ table.ct{width:100%;border-collapse:collapse;font-size:11.5px}
     <p class="talk-line">Talk with ${p.partner_name ? 'your ' + p.partner_name + ' lending partner' : 'your lending partner'} about structuring a Seller Advantage offer on your next listing.</p>
 
     <div class="contact-row">
-      <div class="contact-qr"><img src="${qrUrl}" alt="QR" /></div>
+      ${p.advisor_photo ? `<img class="contact-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="contact-init">${(p.advisor_name?.[0] ?? 'N').toUpperCase()}</div>`}
+      ${scheduleUrl ? `<div class="contact-qr"><img src="${qrUrl}" alt="QR" /></div>` : ''}
       <div class="contact-info">
         ${scheduleUrl
           ? `<div class="contact-sched">Schedule your Financial Transition Plan with ${p.advisor_name || 'your advisor'}</div><div class="contact-url">${scheduleUrl.replace(/^https?:\/\//, '')}</div>`
