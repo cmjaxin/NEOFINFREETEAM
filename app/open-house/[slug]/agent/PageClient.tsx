@@ -119,7 +119,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
     ${p.tca_screenshot
-      ? `<div class="tca-card"><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /><div class="tca-label">MortgageCoach Total Cost Analysis</div></div>`
+      ? `<div class="tca-card"><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
       : `<div class="qr-card"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=300x300&margin=2&color=0A2540" alt="QR Code" /><div class="qr-label">Scan for Special Financing Options</div><div class="qr-sub">Exclusive rates &amp; programs for this home.</div><div class="qr-bullets"><div class="qr-bullet"><div class="qr-dot"></div>Payment breakdowns &amp; monthly estimates</div><div class="qr-bullet"><div class="qr-dot"></div>Loan scenarios tailored to this property</div><div class="qr-bullet"><div class="qr-dot"></div>Connect directly with your mortgage advisor</div></div></div>`
     }
   </div>
@@ -233,7 +233,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       <div class="right-body">
         ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
         ${p.tca_screenshot
-          ? `<div class="tca-card2"><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /><div class="tca-label2">MortgageCoach Total Cost Analysis</div></div>`
+          ? `<div class="tca-card2"><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
           : `<div class="qr-card2"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" /><div class="qr-label2">Scan for Special Financing Options</div><div class="qr-sub2">Exclusive rates &amp; programs for this home.</div><div class="qr-bullets2"><div class="qr-bullet2"><div class="qr-dot2"></div>Payment breakdowns &amp; monthly estimates</div><div class="qr-bullet2"><div class="qr-dot2"></div>Loan scenarios tailored to this property</div><div class="qr-bullet2"><div class="qr-dot2"></div>Connect directly with your mortgage advisor</div></div></div>`
         }
         <div class="photo-strip">
