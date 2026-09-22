@@ -1053,9 +1053,12 @@ html,body{width:8.5in;font-family:'Arial',Helvetica,sans-serif;background:#fff;c
 .italic-line{font-size:11px;font-style:italic;color:#1E3A5F;line-height:1.35}
 
 /* ── CTA ── */
-.cta-row{display:flex;align-items:flex-start;gap:16px;padding:10px 0 0;border-top:2px solid ${CYAN};flex-shrink:0}
-.cta-qr{width:68px;height:68px;flex-shrink:0;border-radius:5px;border:1px solid #E4E8EC;padding:2px;background:#fff}
+.cta-row{display:flex;align-items:center;gap:14px;padding:10px 0 0;border-top:2px solid ${CYAN};flex-shrink:0}
+.cta-photo{width:64px;height:64px;flex-shrink:0;border-radius:50%;object-fit:cover;border:2px solid ${CYAN}}
+.cta-init{width:64px;height:64px;flex-shrink:0;border-radius:50%;background:${NEO};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.cta-qr{width:64px;height:64px;flex-shrink:0;border-radius:5px;border:1px solid #E4E8EC;padding:2px;background:#fff}
 .cta-qr img{width:100%;height:100%;display:block}
+.cta-neo{max-height:22px;width:auto;flex-shrink:0;margin-left:auto}
 .cta-name{font-size:14px;font-weight:900;color:${NEO};margin-bottom:2px}
 .cta-schedule{font-size:10px;color:${CYAN};font-weight:700;margin-bottom:4px}
 .cta-detail{font-size:10px;color:#64748B;line-height:1.55}
@@ -1193,12 +1196,14 @@ html,body{width:8.5in;font-family:'Arial',Helvetica,sans-serif;background:#fff;c
     <p class="body-text">Talk with ${p.advisor_name ? p.advisor_name.split(' ')[0] : 'your advisor'} about structuring a Seller Advantage offer on your next listing.</p>
 
     <div class="cta-row">
-      <div class="cta-qr"><img src="${qrUrl}" alt="QR" /></div>
-      <div>
+      ${p.advisor_photo ? `<img class="cta-photo" src="${p.advisor_photo}" alt="${p.advisor_name}" />` : `<div class="cta-init">${(p.advisor_name?.[0] ?? 'N').toUpperCase()}</div>`}
+      ${scheduleUrl ? `<div class="cta-qr"><img src="${qrUrl}" alt="QR" /></div>` : ''}
+      <div style="flex:1">
         ${scheduleUrl ? `<div class="cta-schedule">Schedule Your Financial Transition Plan</div>` : ''}
         <div class="cta-name">${p.advisor_name || 'Your NEO Mortgage Advisor'}</div>
         <div class="cta-detail">${[p.advisor_title ? p.advisor_title + ' · NEO Home Loans' : 'Mortgage Advisor · NEO Home Loans', advisorNmls, [p.advisor_phone, p.advisor_email].filter(Boolean).join(' · ')].filter(Boolean).join('<br>')}</div>
       </div>
+      <img class="cta-neo" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" style="-webkit-print-color-adjust:exact;print-color-adjust:exact" />
     </div>
   </div>
 
