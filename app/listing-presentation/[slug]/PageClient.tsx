@@ -430,7 +430,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
               ↓ Download Flyer
             </button>
             <button onClick={() => openSellerAdvantage(page)}
-              style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              style={{ background: '#fff', color: C.navy, border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
               🏷 Seller Advantage Handout
             </button>
           </div>
