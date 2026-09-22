@@ -559,6 +559,14 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
         {activeTab === 'tca' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
+            {/* Handout Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => openSellerAdvantage(page)}
+                style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 20px', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                🏷 Print Seller Advantage Handout
+              </button>
+            </div>
+
             {/* PDF Presentation */}
             {SELLER_ADVANTAGE_PDF_URL && (
               <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
