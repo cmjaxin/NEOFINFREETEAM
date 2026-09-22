@@ -72,9 +72,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .left{flex:0 0 58%;padding:16px 18px 12px 24px;display:flex;flex-direction:column;gap:14px;border-right:1px solid #E4E8EC;overflow:hidden}
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:10px;line-height:1.75;color:#374151}
-.tca-card{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:12px;border-top:1px solid #E4E8EC}
+.tca-card{flex:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;min-height:0;padding:12px 14px;border-top:1px solid #E4E8EC}
+.tca-header{font-size:10px;font-weight:900;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px}
+.tca-sub{font-size:8px;color:#64748B;margin-bottom:8px;line-height:1.4}
 .tca-card img{width:100%;max-height:100%;object-fit:contain;display:block;border-radius:4px;box-shadow:0 2px 10px rgba(10,37,64,0.1)}
-.tca-label{margin-top:8px;font-size:8px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center}
 .qr-card{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding:16px 12px;border-top:1px solid #E4E8EC}
 .qr-card img{width:150px;height:150px;display:block;border-radius:6px;box-shadow:0 2px 10px rgba(10,37,64,0.12)}
 .qr-label{margin-top:10px;font-size:9.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
@@ -119,7 +120,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
     ${p.tca_screenshot
-      ? `<div class="tca-card"><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
+      ? `<div class="tca-card"><div class="tca-header">Financing Options For This Home</div><div class="tca-sub">Same ${price ? price : 'list price'} home. Three ways to structure the financing.</div><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
       : `<div class="qr-card"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=300x300&margin=2&color=0A2540" alt="QR Code" /><div class="qr-label">Scan for Special Financing Options</div><div class="qr-sub">Exclusive rates &amp; programs for this home.</div><div class="qr-bullets"><div class="qr-bullet"><div class="qr-dot"></div>Payment breakdowns &amp; monthly estimates</div><div class="qr-bullet"><div class="qr-dot"></div>Loan scenarios tailored to this property</div><div class="qr-bullet"><div class="qr-dot"></div>Connect directly with your mortgage advisor</div></div></div>`
     }
   </div>
@@ -180,9 +181,10 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 .right-body{flex:1;padding:14px 20px 10px;display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0}
 .section-label{font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.14em;color:${CYAN};margin-bottom:5px}
 .desc-text{font-size:9.5px;line-height:1.75;color:#374151}
-.tca-card2{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:0;padding:12px 10px;border-top:1px solid #E4E8EC}
+.tca-card2{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;flex:1;min-height:0;padding:12px 14px;border-top:1px solid #E4E8EC}
+.tca-header2{font-size:9.5px;font-weight:900;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px}
+.tca-sub2{font-size:7.5px;color:#64748B;margin-bottom:8px;line-height:1.4}
 .tca-card2 img{width:100%;max-height:100%;object-fit:contain;display:block;border-radius:4px;box-shadow:0 2px 8px rgba(10,37,64,0.1)}
-.tca-label2{margin-top:7px;font-size:7.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center}
 .qr-card2{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;min-height:0;padding:14px 10px;border-top:1px solid #E4E8EC}
 .qr-card2 img{width:140px;height:140px;display:block;border-radius:6px;box-shadow:0 2px 10px rgba(10,37,64,0.12)}
 .qr-label2{margin-top:9px;font-size:8.5px;font-weight:800;color:${NEO};text-transform:uppercase;letter-spacing:0.1em;text-align:center;line-height:1.5}
@@ -233,7 +235,7 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
       <div class="right-body">
         ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
         ${p.tca_screenshot
-          ? `<div class="tca-card2"><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
+          ? `<div class="tca-card2"><div class="tca-header2">Financing Options For This Home</div><div class="tca-sub2">Same ${price ? price : 'list price'} home. Three ways to structure the financing.</div><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
           : `<div class="qr-card2"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=280x280&margin=2&color=0A2540" alt="QR Code" /><div class="qr-label2">Scan for Special Financing Options</div><div class="qr-sub2">Exclusive rates &amp; programs for this home.</div><div class="qr-bullets2"><div class="qr-bullet2"><div class="qr-dot2"></div>Payment breakdowns &amp; monthly estimates</div><div class="qr-bullet2"><div class="qr-dot2"></div>Loan scenarios tailored to this property</div><div class="qr-bullet2"><div class="qr-dot2"></div>Connect directly with your mortgage advisor</div></div></div>`
         }
         <div class="photo-strip">
