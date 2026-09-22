@@ -1046,10 +1046,6 @@ function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => voi
           </div>
         ) : (
           <div style={{ marginTop: 'auto', paddingTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button onClick={() => openFlyer(page)}
-              style={{ padding: '8px 12px', background: C.accent, border: 'none', borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
-              Print Flyer
-            </button>
             <a href={`${url}/agent`} target="_blank" rel="noopener noreferrer"
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.1)', border: `1px solid rgba(91,203,245,0.3)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700, textDecoration: 'none' }}>
               Agent Hub ↗
