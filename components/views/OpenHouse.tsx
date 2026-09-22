@@ -295,9 +295,8 @@ function openSellerAdvantage(page: OHPage) {
   const NEO_BIG_LOGO = 'https://8blocks.s3-us-west-1.amazonaws.com/neo/images/logo-big.jpg'
   const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
   const price = Number(page.list_price) > 0 ? '$' + Math.round(page.list_price).toLocaleString() : '$500,000'
-  const scheduleUrl = page.schedule_url ?? ''
-  const qrTarget = scheduleUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/listing/${page.slug}`
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrTarget)}&size=300x300&margin=2`
+  const scheduleUrl = ''
+  const qrUrl = ''
   const ACCENT = '#0A2540'
   const DISC = `Illustrative example only, based on a ${price} purchase price. *APR and **payment estimates exclude taxes and insurance. Actual rate, payment, and closing costs vary by borrower, property, and market conditions at application; not a commitment to lend. ARM payment may adjust after the initial period. Builder promotions shown reflect publicly advertised Utah offers, for illustration only; terms are set by each builder and subject to change. This information is provided for educational and informational purposes only and should not be considered financial, legal, tax, or investment advice. Loan programs, rates, terms, and eligibility requirements are subject to change and may vary based on individual circumstances. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation provides home loans; Better Real Estate, LLC (CA License # 02164055) provides real estate services; Better Cover, LLC sells insurance products; Better Settlement Services provides title insurance; Better Inspect, LLC provides home inspection services. Home lending products offered by Better Mortgage Corporation. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Not available in all states. Equal Housing Lender. www.nmlsconsumeraccess.org`
 
