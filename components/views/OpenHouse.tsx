@@ -290,6 +290,153 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
   setTimeout(() => URL.revokeObjectURL(url), 60000)
 }
 
+// ─── Seller Advantage Handout ─────────────────────────────────────────────────
+function openSellerAdvantage(page: OHPage) {
+  const NEO_BIG_LOGO = 'https://8blocks.s3-us-west-1.amazonaws.com/neo/images/logo-big.jpg'
+  const advisorNmls = page.advisor_nmls ? `NMLS# ${page.advisor_nmls}` : ''
+  const price = Number(page.list_price) > 0 ? '$' + Math.round(page.list_price).toLocaleString() : '$500,000'
+  const scheduleUrl = page.schedule_url ?? ''
+  const qrTarget = scheduleUrl || `${typeof window !== 'undefined' ? window.location.origin : ''}/listing/${page.slug}`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrTarget)}&size=300x300&margin=2`
+  const ACCENT = '#0A2540'
+  const DISC = `Illustrative example only, based on a ${price} purchase price. *APR and **payment estimates exclude taxes and insurance. Actual rate, payment, and closing costs vary by borrower, property, and market conditions at application; not a commitment to lend. ARM payment may adjust after the initial period. Builder promotions shown reflect publicly advertised Utah offers, for illustration only; terms are set by each builder and subject to change. This information is provided for educational and informational purposes only and should not be considered financial, legal, tax, or investment advice. Loan programs, rates, terms, and eligibility requirements are subject to change and may vary based on individual circumstances. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation provides home loans; Better Real Estate, LLC (CA License # 02164055) provides real estate services; Better Cover, LLC sells insurance products; Better Settlement Services provides title insurance; Better Inspect, LLC provides home inspection services. Home lending products offered by Better Mortgage Corporation. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Not available in all states. Equal Housing Lender. www.nmlsconsumeraccess.org`
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Seller Advantage — ${page.address || 'Handout'}</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+@page{size:letter portrait;margin:0}
+@media print{.page{page-break-after:always}.page:last-child{page-break-after:avoid}}
+html,body{width:8.5in;font-family:'Arial',Helvetica,sans-serif;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:8.5in;height:11in;display:flex;flex-direction:column;overflow:hidden}
+.logo-bar{display:flex;align-items:center;gap:12px;padding:12px 36px 10px;flex-shrink:0;border-bottom:1px solid #E5E7EB}
+.lb-partner{max-height:44px;max-width:180px;object-fit:contain}
+.lb-sep{font-size:18px;color:#bbb;font-weight:200;padding:0 2px}
+.lb-neo{max-height:32px;width:auto;object-fit:contain}
+.photo-block{position:relative;height:2.75in;flex-shrink:0;overflow:hidden;background:#B0C4D8}
+.photo-block img{width:100%;height:100%;object-fit:cover;display:block}
+.title-box{position:absolute;bottom:0;left:0;background:rgba(255,255,255,0.93);padding:14px 24px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.title-text{font-size:38px;font-weight:900;color:#111;line-height:1;letter-spacing:-0.01em}
+.title-text em{font-style:italic;font-weight:300}
+.p1-body{flex:1;display:flex;flex-direction:column;padding:18px 36px 0;min-height:0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-bottom:16px}
+.sec-head{font-size:9.5px;font-weight:900;letter-spacing:0.13em;text-transform:uppercase;color:${ACCENT};margin-bottom:6px}
+.body-p{font-size:11px;line-height:1.72;color:#1a1a1a}
+.bg-top{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.bg-bot{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:16px}
+.bc{background:#F3F4F6;border-radius:4px;padding:12px 14px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.bc-brand{font-size:8px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:${ACCENT};margin-bottom:5px}
+.bc-rate{font-size:28px;font-weight:900;color:#111;line-height:1;margin-bottom:7px;letter-spacing:-0.01em}
+.bc-desc{font-size:9.5px;line-height:1.62;color:#444}
+.two-col-grow{display:grid;grid-template-columns:1fr 1fr;gap:28px;flex:1;align-content:start;padding-bottom:12px}
+.p2-body{flex:1;display:flex;flex-direction:column;padding:18px 36px 0;min-height:0}
+.benefits-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 32px;margin-bottom:16px}
+.ben-block .sec-head{margin-bottom:5px}
+.tca-sec{flex:1;display:flex;flex-direction:column;min-height:0;margin-bottom:14px}
+.tca-sec .sec-head{margin-bottom:5px;flex-shrink:0}
+.tca-sec .body-p{margin-bottom:10px;flex-shrink:0}
+.tca-img-wrap{flex:1;min-height:0;overflow:hidden;border:1px solid #E5E7EB;border-radius:4px;display:flex;align-items:center}
+.tca-img-wrap img{width:100%;height:100%;object-fit:contain;display:block}
+.tca-tbl-wrap{flex:1;min-height:0;overflow:hidden;border:1px solid #E5E7EB;border-radius:4px}
+table.ct{width:100%;border-collapse:collapse;font-size:11.5px}
+.ct thead{border-bottom:2px solid #D1D5DB}
+.ct th{font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#6B7280;padding:9px 14px;text-align:center;vertical-align:bottom}
+.ct th:first-child{text-align:left;width:32%}
+.ct td{padding:8px 14px;border-bottom:1px solid #E5E7EB;color:#111;text-align:center;vertical-align:middle}
+.ct td:first-child{text-align:left;color:#374151}
+.ct .r-rate td{font-weight:700;color:#B91C1C}.ct .r-rate td:first-child{font-weight:400;color:#374151}
+.ct .r-pay td{font-weight:800;color:#B91C1C;font-size:12.5px}.ct .r-pay td:first-child{font-weight:400;color:#374151;font-size:11.5px}
+.ct .r-save td{color:#B91C1C;font-weight:700}.ct .r-save td:first-child{font-weight:400;color:#374151}
+.q-block{border-left:3px solid #0A2540;padding-left:14px;display:flex;flex-direction:column;gap:8px;margin-bottom:14px;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.q-line{font-size:11px;font-style:italic;color:#111;line-height:1.45}
+.talk-line{font-size:11px;color:#1a1a1a;line-height:1.55;margin-bottom:12px;flex-shrink:0}
+.contact-row{display:flex;align-items:flex-start;gap:16px;flex-shrink:0;padding-bottom:12px}
+.contact-photo{width:72px;height:72px;flex-shrink:0;border-radius:50%;object-fit:cover;border:2px solid #E5E7EB}
+.contact-init{width:72px;height:72px;flex-shrink:0;border-radius:50%;background:#0A2540;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.contact-qr{width:72px;height:72px;flex-shrink:0}
+.contact-qr img{width:100%;height:100%;display:block}
+.contact-info{flex:1}
+.contact-sched{font-size:12.5px;font-weight:800;color:#111;line-height:1.3;margin-bottom:3px}
+.contact-url{font-size:11px;color:#1D4ED8;margin-bottom:6px}
+.contact-detail{font-size:11px;color:#374151;line-height:1.65}
+.disc-row{border-top:1px solid #E5E7EB;padding:6px 0 8px;flex-shrink:0}
+.disc{font-size:5.5px;color:#9CA3AF;line-height:1.5}
+</style></head><body>
+<div class="page">
+  <div class="logo-bar">
+    ${page.partner_logo ? `<img class="lb-partner" src="${page.partner_logo}" alt="${page.partner_name}" /><span class="lb-sep">×</span>` : ''}
+    <img class="lb-neo" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+  </div>
+  <div class="photo-block">
+    ${(page.photos ?? [])[0] ? `<img src="${(page.photos ?? [])[0]}" alt="Home" />` : ''}
+    <div class="title-box"><div class="title-text"><em>Seller</em> Advantage</div></div>
+  </div>
+  <div class="p1-body">
+    <div class="two-col">
+      <div><div class="sec-head">Affordability, Not Price</div><p class="body-p">At today's rates, the buyer pool doesn't shrink because homes cost too much. It shrinks because the monthly payment doesn't pencil. A buyer who qualifies at 5% is gone at 6.5%+ before they ever see the address.</p></div>
+      <div><div class="sec-head">Builders Solved This First</div><p class="body-p">Builders rebuilt their marketing around that single filter. They stopped leading with square footage and price. They started leading with a rate, because that's the number that actually decides whether a buyer can say yes.</p></div>
+    </div>
+    <div style="margin-bottom:10px"><div class="sec-head">What Builders Are Marketing Right Now</div><p class="body-p">Live promotions from builders active in Utah markets today. None lead with a discounted price. Every one leads with a number that makes the payment work.</p></div>
+    <div class="bg-top">
+      <div class="bc"><div class="bc-brand">Edge Homes</div><div class="bc-rate">1.99%</div><div class="bc-desc">Interest rate incentive on homes that complete and close within a set window, paired with a no-cost refinance guarantee if rates drop further.</div></div>
+      <div class="bc"><div class="bc-brand">McArthur Homes</div><div class="bc-rate">4.75%</div><div class="bc-desc">Marketed directly against the market average of 6.5%, quantified for the buyer as "$352/month savings" on a specific community.</div></div>
+      <div class="bc"><div class="bc-brand">Bach Homes</div><div class="bc-rate">4.99%</div><div class="bc-desc">"End of Summer Savings" campaign, positioned against buyers "still reading about high rates" as a permanent fixed-rate offer.</div></div>
+    </div>
+    <div class="bg-bot">
+      <div class="bc"><div class="bc-brand">Visionary Homes</div><div class="bc-rate">4.99%</div><div class="bc-desc">"Built Around What Matters" leads with "save $450/month," not a price, on select quick move-in inventory.</div></div>
+      <div class="bc"><div class="bc-brand">David Weekley Homes</div><div class="bc-rate">2.99%–4.99%</div><div class="bc-desc">"Summer Savings Event" advertising a starting rate as low as 2.99% (6.275% APR) on select ARM financing, stacked with move-in package incentives.</div></div>
+    </div>
+    <div class="two-col-grow">
+      <div><div class="sec-head">Where Does the Money Come From?</div><p class="body-p">Not from cutting price. Builders protect their price and their comps, and redirect incentive dollars into buying down the buyer's rate instead. A resale seller who cuts price to move a slow listing does the opposite. It drags the number every future buyer and appraiser compares the neighborhood against.</p></div>
+      <div><div class="sec-head">The Seller Advantage Program</div><p class="body-p">A seller-funded credit that buys down the buyer's rate, temporarily or for the life of the loan, advertised on the listing the same way a builder advertises a community.</p></div>
+    </div>
+  </div>
+</div>
+<div class="page">
+  <div class="logo-bar">
+    ${page.partner_logo ? `<img class="lb-partner" src="${page.partner_logo}" alt="${page.partner_name}" /><span class="lb-sep">×</span>` : ''}
+    <img class="lb-neo" src="${NEO_BIG_LOGO}" alt="NEO Home Loans" />
+  </div>
+  <div class="p2-body">
+    <div class="benefits-grid">
+      <div class="ben-block"><div class="sec-head">More Eyeballs</div><p class="body-p">A below-market rate is scroll-stopping, sharable ad copy, giving buyers a reason to click your listing instead of scrolling past it.</p></div>
+      <div class="ben-block"><div class="sec-head">A Wider Buyer Pool</div><p class="body-p">Lowering the payment re-qualifies buyers who were priced out at market rate, without changing your asking price at all.</p></div>
+      <div class="ben-block"><div class="sec-head">Faster Sale, Stronger Price</div><p class="body-p">Buyers compare payment, not sticker price. More qualified buyers touring sooner means less time on market and less pressure to negotiate price down later.</p></div>
+      <div class="ben-block"><div class="sec-head">Answers the Builder Down the Street</div><p class="body-p">Buyers cross-shopping your listing against new construction are already comparing rates. Now you can meet that pitch head-on instead of losing them to it.</p></div>
+    </div>
+    <div class="tca-sec">
+      <div class="sec-head">See It in Action</div>
+      <p class="body-p">A static example on a ${price} purchase: the same buyer, three ways to finance it.</p>
+      ${page.tca_screenshot
+        ? `<div class="tca-img-wrap"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>`
+        : `<div class="tca-tbl-wrap"><table class="ct"><thead><tr><th></th><th>Market Rate</th><th>Seller Advantage<br>30 YR Fixed FHA</th><th>Seller Advantage<br>5 YR FHA ARM</th></tr></thead><tbody><tr><td>Purchase Price</td><td>$500,000</td><td>$515,000</td><td>$515,000</td></tr><tr><td>Down Payment</td><td>$17,500</td><td>$18,025</td><td>$18,025</td></tr><tr><td>Loan Amount</td><td>$490,943</td><td>$505,672</td><td>$505,672</td></tr><tr class="r-rate"><td>Interest Rate</td><td>6.375%</td><td>5.490%</td><td>4.750%</td></tr><tr><td>APR</td><td>*7.141%</td><td>*6.244%</td><td>*5.495%</td></tr><tr><td>Term (mos)</td><td>360</td><td>360</td><td>360</td></tr><tr class="r-pay"><td>Payment</td><td>**$3,574.52</td><td>**$3,394.78</td><td>**$3,164.42</td></tr><tr><td>Cash to Close</td><td>$25,590.75</td><td>$26,115.06</td><td>$26,115.06</td></tr><tr class="r-save"><td>Monthly Savings</td><td>$0.00</td><td>$179.74</td><td>$410.10</td></tr><tr><td>Savings (120 mos)</td><td>$0</td><td>$35,015</td><td>$71,964</td></tr><tr><td>Freedom Pt 1</td><td>30.00 yrs</td><td>30.00 yrs</td><td>30.00 yrs</td></tr></tbody></table></div>`
+      }
+    </div>
+    <div class="q-block">
+      <div class="q-line">Why have builders pivoted to selling a rate and a payment instead of a price?</div>
+      <div class="q-line">Where are the incentive dollars funding that buydown actually coming from?</div>
+      <div class="q-line">What happens to your next listing when it uses that same strategy?</div>
+      <div class="q-line">Are you willing to do something different to solve today's #1 real estate problem?</div>
+    </div>
+    <p class="talk-line">Talk with ${page.partner_name ? 'your ' + page.partner_name + ' lending partner' : 'your lending partner'} about structuring a Seller Advantage offer on your next listing.</p>
+    <div class="contact-row">
+      ${page.advisor_photo ? `<img class="contact-photo" src="${page.advisor_photo}" alt="${page.advisor_name}" />` : `<div class="contact-init">${(page.advisor_name?.[0] ?? 'N').toUpperCase()}</div>`}
+      ${scheduleUrl ? `<div class="contact-qr"><img src="${qrUrl}" alt="QR" /></div>` : ''}
+      <div class="contact-info">
+        ${scheduleUrl ? `<div class="contact-sched">Schedule your Financial Transition Plan with ${page.advisor_name || 'your advisor'}</div><div class="contact-url">${scheduleUrl.replace(/^https?:\/\//, '')}</div>` : `<div class="contact-sched">${page.advisor_name || 'Your NEO Mortgage Advisor'}</div>`}
+        <div class="contact-detail">${page.advisor_name ? `${page.advisor_name}, ${page.advisor_title || 'Mortgage Advisor'}${advisorNmls ? ', ' + advisorNmls : ''}` : (page.advisor_title || 'Mortgage Advisor')}<br>${[page.advisor_phone, page.advisor_email].filter(Boolean).join(' · ')}</div>
+      </div>
+    </div>
+    <div class="disc-row"><p class="disc">${DISC}</p></div>
+  </div>
+</div>
+<script>window.onload=function(){window.print()}</script>
+</body></html>`
+
+  const blob = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  window.open(url, '_blank')
+  setTimeout(() => URL.revokeObjectURL(url), 60000)
+}
+
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
 function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
@@ -1138,6 +1285,10 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
             <button onClick={() => setShowRateGraphic(true)}
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
               Rate Graphic
+            </button>
+            <button onClick={() => openSellerAdvantage(page)}
+              style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+              🏷 SA Handout
             </button>
             <button onClick={onEdit}
               style={{ padding: '8px 12px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 12, color: C.dim, cursor: 'pointer', fontWeight: 600 }}>
