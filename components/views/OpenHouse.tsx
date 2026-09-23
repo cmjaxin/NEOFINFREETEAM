@@ -28,6 +28,21 @@ interface OHPage {
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string
   tca_screenshot: string
+  seller_contribution: number | null
+  seller_contribution_pct: number | null
+  rate_scenarios: RateScenario[] | null
+}
+
+interface RateScenario {
+  label: string
+  down_pct: number
+  market_rate: number
+  buydown_rate: number
+  market_payment: number
+  buydown_payment: number
+  loan_type: string
+  term_years: number
+  apr: number
 }
 
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
@@ -500,6 +515,9 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     partner_nmls: (init as OHPage).partner_nmls ?? '',
     partner_photo: (init as OHPage).partner_photo ?? '',
     partner_logo: (init as OHPage).partner_logo ?? '',
+    seller_contribution: (init as OHPage).seller_contribution ?? 0,
+    seller_contribution_pct: (init as OHPage).seller_contribution_pct ?? 0,
+    rate_scenarios: (init as OHPage).rate_scenarios ?? null,
   })
   const [showPartner, setShowPartner] = useState(!!(init as OHPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
@@ -594,7 +612,24 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     const { error } = await supabase.storage.from('splice-clips').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
     if (!error) {
       const { data } = supabase.storage.from('splice-clips').getPublicUrl(path)
-      set('tca_screenshot', data.publicUrl)
+      const publicUrl = data.publicUrl
+      set('tca_screenshot', publicUrl)
+      // Auto-extract rate data from the TCA screenshot
+      try {
+        const res = await fetch('/api/extract-tca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ screenshot_url: publicUrl })
+        })
+        if (res.ok) {
+          const extracted = await res.json()
+          if (extracted.scenarios?.length) {
+            set('rate_scenarios', extracted.scenarios)
+            set('seller_contribution', extracted.seller_contribution ?? 0)
+            set('seller_contribution_pct', extracted.seller_contribution_pct ?? 0)
+          }
+        }
+      } catch { /* extraction is best-effort */ }
     }
     setTcaUploading(false)
   }
@@ -639,6 +674,9 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       partner_nmls: showPartner ? form.partner_nmls : '',
       partner_photo: showPartner ? form.partner_photo : '',
       partner_logo: showPartner ? form.partner_logo : '',
+      seller_contribution: form.seller_contribution || null,
+      seller_contribution_pct: form.seller_contribution_pct || null,
+      rate_scenarios: form.rate_scenarios || null,
       page_type: 'listing',
       updated_at: new Date().toISOString(),
     }

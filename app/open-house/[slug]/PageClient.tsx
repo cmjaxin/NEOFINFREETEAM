@@ -183,6 +183,12 @@ interface PageData {
   partner_name: string; partner_title: string; partner_email: string
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string | null; tca_screenshot: string | null
+  seller_contribution: number | null
+  seller_contribution_pct: number | null
+  rate_scenarios: Array<{
+    label: string; down_pct: number; market_rate: number; buydown_rate: number
+    market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number
+  }> | null
   callout_text: string | null
   schedule_url: string | null
   apply_url: string | null
@@ -434,6 +440,56 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         {/* Loan Scenarios Tab */}
         {activeTab === 'loan' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+            {/* Auto-extracted Rate Cards */}
+            {page.rate_scenarios && page.rate_scenarios.length > 0 && (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                {page.seller_contribution ? (
+                  <div style={{ background: C.navy, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />
+                    <div style={{ color: '#fff', fontSize: 13, lineHeight: 1.5 }}>
+                      <strong>Seller-Paid Rate Reduction</strong> — the seller is contributing{' '}
+                      <strong>${page.seller_contribution.toLocaleString()}{page.seller_contribution_pct ? ` (${page.seller_contribution_pct.toFixed(2)}% of the price)` : ''}</strong>{' '}
+                      to buy down your rate. The payments below already include it.
+                    </div>
+                  </div>
+                ) : null}
+                <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                  {page.rate_scenarios.map((s, i) => {
+                    const hasBuydown = s.buydown_rate !== s.market_rate
+                    const savings = s.market_payment - s.buydown_payment
+                    return (
+                      <div key={i} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.navy, marginBottom: 8 }}>{s.label}</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+                          {hasBuydown && (
+                            <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>
+                          )}
+                          <span style={{ fontSize: 22, fontWeight: 900, color: C.navy }}>{s.buydown_rate.toFixed(3)}%</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                          {hasBuydown && (
+                            <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>${s.market_payment.toLocaleString()}</span>
+                          )}
+                          <span style={{ fontSize: 26, fontWeight: 900, color: C.navy }}>${s.buydown_payment.toLocaleString()}<span style={{ fontSize: 13, fontWeight: 600 }}>/mo</span></span>
+                        </div>
+                        {hasBuydown && savings > 0 && (
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Save ${savings.toLocaleString()}/mo</div>
+                        )}
+                        {s.apr > 0 && (
+                          <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>APR {s.apr.toFixed(3)}%</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ padding: '10px 20px', borderTop: `1px solid ${C.border}` }}>
+                  <p style={{ fontSize: 9, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
+                    Rates and payments are estimates, not a commitment to lend. Based on {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} pricing. Actual rate, payment, and costs depend on credit, down payment, and property details at time of application.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* TCA Embed */}
             {page.tca_url ? (
