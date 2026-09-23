@@ -133,7 +133,7 @@ export default function SellerAdvantageLp() {
         <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>Your personal explainer page showing buyers how seller-paid rate reductions work.</div>
         {liveUrl && (
           <a href={liveUrl} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'inline-block', marginTop: 10, fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 14, background: C.navy, color: '#fff', fontWeight: 700, fontSize: 15, padding: '11px 22px', borderRadius: 10, textDecoration: 'none' }}>
             🔗 View Live Page →
           </a>
         )}

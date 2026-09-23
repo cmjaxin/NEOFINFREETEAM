@@ -188,14 +188,14 @@ export default function PageClient({ slug }: { slug: string }) {
                   <div style={{ background: NAVY, padding: '0 24px 28px', borderTop: `1px solid rgba(255,255,255,0.08)` }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden', marginBottom: savings > 0 ? 20 : 0 }}>
                       {[
-                        { label: 'Interest Rate', value: fmtRate(s.rate), big: true },
-                        { label: 'APR', value: fmtRate(s.apr), big: false },
-                        { label: 'Monthly Payment', value: fmt(s.payment), big: true },
-                        ...(savings > 0 ? [{ label: 'Monthly Savings', value: fmt(savings), big: true, highlight: true }] : []),
-                      ].map(({ label, value, big, highlight }) => (
+                        { label: 'Interest Rate', value: fmtRate(s.rate), size: 'clamp(28px,5vw,44px)', highlight: false },
+                        { label: 'Monthly Payment', value: fmt(s.payment), size: 'clamp(24px,4vw,36px)', highlight: false },
+                        ...(savings > 0 ? [{ label: 'Monthly Savings', value: fmt(savings), size: 'clamp(22px,4vw,32px)', highlight: true }] : []),
+                        { label: 'APR', value: fmtRate(s.apr), size: '15px', highlight: false },
+                      ].map(({ label, value, size, highlight }) => (
                         <div key={label} style={{ padding: '18px 20px', background: highlight ? 'rgba(91,203,245,0.12)' : NAVY }}>
                           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: highlight ? ACCENT : 'rgba(255,255,255,0.4)', marginBottom: 6 }}>{label}</div>
-                          <div style={{ fontSize: big ? 'clamp(22px,4vw,32px)' : 18, fontWeight: 900, color: highlight ? ACCENT : WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+                          <div style={{ fontSize: size, fontWeight: highlight || size !== '15px' ? 900 : 600, color: highlight ? ACCENT : size === '15px' ? 'rgba(255,255,255,0.45)' : WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
                         </div>
                       ))}
                     </div>
