@@ -266,11 +266,12 @@ export default function PageClient({ slug }: { slug: string }) {
             Seller Advantage Program
           </div>
 
-          <h1 style={{ color: WHITE, fontSize: 'clamp(32px,5.5vw,60px)', fontWeight: 900, margin: '0 0 6px', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
-            The Market Is <span style={{ color: ACCENT }}>Expensive.</span>
+          <h1 style={{ color: WHITE, fontSize: 'clamp(34px,5.5vw,64px)', fontWeight: 900, margin: '0 0 10px', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+            Love the House.<br />
+            <span style={{ color: ACCENT }}>Not the Monthly Payment?</span>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(14px,1.8vw,16px)', margin: '0 auto 20px', maxWidth: 480, lineHeight: 1.6 }}>
-            See how a seller-paid rate reduction can drop your monthly payment by hundreds — without changing the purchase price.
+          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px,1.8vw,17px)', margin: '0 auto 20px', maxWidth: 520, lineHeight: 1.65 }}>
+            A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
           </p>
 
           {page.sales_price > 0 && (
@@ -338,7 +339,7 @@ export default function PageClient({ slug }: { slug: string }) {
           <div style={{ textAlign: 'center', marginTop: 28 }}>
             <a href="#contact"
               style={{ display: 'inline-block', background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 16, padding: '14px 40px', borderRadius: 10, textDecoration: 'none', letterSpacing: '-0.01em', boxShadow: `0 4px 24px ${ACCENT}44` }}>
-              See What I Qualify For →
+              Show Me My Options →
             </a>
           </div>
         </div>
