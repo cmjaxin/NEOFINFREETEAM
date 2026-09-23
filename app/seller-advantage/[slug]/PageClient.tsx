@@ -231,7 +231,8 @@ export default function PageClient({ slug }: { slug: string }) {
   const qd = page.quote_date
     ? new Date(page.quote_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null
-  const disclaimer = `Rates quoted as of ${qd ?? 'the date shown'}. ${page.sales_price ? `Based on a purchase price of ${fmt(page.sales_price)}. ` : ''}${scenarios.map(s => `${s.header}: ${fmtRate(s.rate)} interest rate (${fmtRate(s.apr)} APR), estimated total monthly payment of ${fmt(s.payment)}.`).join(' ')} Payments include estimated P&I, mortgage insurance, taxes and insurance. Rates and programs subject to change. Not a commitment to lend. All loans subject to credit approval. NEO Home Loans is an equal housing lender. Educational purposes only.`
+  const betterDisclaimer = `© 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation provides home loans; Better Real Estate, LLC (CA License # 02164055) provides real estate services; Better Cover, LLC sells insurance products; Better Settlement Services provides title insurance; Better Inspect, LLC provides home inspection services. Home lending products offered by Better Mortgage Corporation. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Not available in all states. Equal Housing Lender. www.nmlsconsumeraccess.org`
+  const disclaimer = `Illustrative example only, rates quoted as of ${qd ?? 'the date shown'}. ${page.sales_price ? `Based on a purchase price of ${fmt(page.sales_price)}. ` : ''}${scenarios.map(s => `${s.header}: ${fmtRate(s.rate)} interest rate (${fmtRate(s.apr)} APR), estimated total monthly payment of ${fmt(s.payment)}.`).join(' ')} Payments include estimated P&I, mortgage insurance, taxes and insurance. Rates and programs subject to change. Not a commitment to lend. All loans subject to credit approval. NEO Home Loans is an equal housing lender. Educational purposes only. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan.`
 
   const ff = `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
 
@@ -369,9 +370,12 @@ export default function PageClient({ slug }: { slug: string }) {
       <ContactSection page={page} />
 
       {/* ── Disclaimer ── */}
-      <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '24px' }}>
+      <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '28px 24px' }}>
         <div style={{ maxWidth: 820, margin: '0 auto', fontSize: 11, color: '#94A3B8', lineHeight: 1.8 }}>
-          <strong style={{ color: '#64748B' }}>Disclaimer: </strong>{disclaimer}
+          <p style={{ margin: '0 0 12px' }}><strong style={{ color: '#64748B' }}>Disclaimer: </strong>{disclaimer}</p>
+          <p style={{ margin: 0 }}>{betterDisclaimer.replace('www.nmlsconsumeraccess.org', '')}
+            <a href="https://www.nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" style={{ color: '#64748B', textDecoration: 'underline' }}>www.nmlsconsumeraccess.org</a>
+          </p>
         </div>
       </div>
     </div>
