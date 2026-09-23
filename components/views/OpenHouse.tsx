@@ -616,20 +616,22 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       set('tca_screenshot', publicUrl)
       // Auto-extract rate data from the TCA screenshot
       try {
+        console.log('[TCA] Extracting rates from', publicUrl)
         const res = await fetch('/api/extract-tca', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ screenshot_url: publicUrl })
         })
-        if (res.ok) {
-          const extracted = await res.json()
-          if (extracted.scenarios?.length) {
-            set('rate_scenarios', extracted.scenarios)
-            set('seller_contribution', extracted.seller_contribution ?? 0)
-            set('seller_contribution_pct', extracted.seller_contribution_pct ?? 0)
-          }
+        const extracted = await res.json()
+        console.log('[TCA] Extraction result:', extracted)
+        if (res.ok && extracted.scenarios?.length) {
+          set('rate_scenarios', extracted.scenarios)
+          set('seller_contribution', extracted.seller_contribution ?? 0)
+          set('seller_contribution_pct', extracted.seller_contribution_pct ?? 0)
+        } else {
+          console.warn('[TCA] No scenarios extracted or error:', extracted)
         }
-      } catch { /* extraction is best-effort */ }
+      } catch (e) { console.error('[TCA] Extraction failed:', e) }
     }
     setTcaUploading(false)
   }
