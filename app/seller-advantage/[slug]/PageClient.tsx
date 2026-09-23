@@ -244,90 +244,103 @@ export default function PageClient({ slug }: { slug: string }) {
   return (
     <div style={{ fontFamily: ff, background: '#F0F4F8', minHeight: '100vh', color: NAVY }}>
 
-      {/* ── Nav ── */}
-      <div style={{ background: WHITE, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 12px rgba(0,0,0,0.08)' }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 32, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-        {page.apply_url && (
-          <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
-            style={{ background: '#0369A1', color: WHITE, fontWeight: 700, fontSize: 14, padding: '9px 22px', borderRadius: 8, textDecoration: 'none' }}>
-            Apply Now
-          </a>
-        )}
-      </div>
+      {/* ── Hero + Cards combined above the fold ── */}
+      <div style={{ background: NAVY, position: 'relative', overflow: 'hidden', paddingBottom: 48 }}>
+        {/* decorative rings */}
+        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 900, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.05)`, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 600, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.08)`, pointerEvents: 'none' }} />
 
-      {/* ── Hero ── */}
-      <div style={{ background: NAVY, padding: 'clamp(48px,8vw,88px) 24px clamp(56px,10vw,120px)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 700, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.07)`, pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.1)`, pointerEvents: 'none' }} />
+        {/* Tight hero text */}
+        <div style={{ textAlign: 'center', padding: '32px 24px 28px', position: 'relative' }}>
+          {/* Apply Now — top right */}
+          {page.apply_url && (
+            <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+              style={{ position: 'absolute', top: 24, right: 24, background: '#0369A1', color: WHITE, fontWeight: 700, fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' }}>
+              Apply Now
+            </a>
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png" alt="NEO Home Loans" style={{ height: 36, objectFit: 'contain', display: 'block', margin: '0 auto 18px' }} />
 
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png" alt="NEO Home Loans" style={{ height: 48, objectFit: 'contain', marginBottom: 28 }} />
-        <div style={{ display: 'inline-block', border: `1px solid rgba(91,203,245,0.4)`, color: ACCENT, fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '5px 16px', borderRadius: 20, marginBottom: 22 }}>
-          Seller Advantage Program
-        </div>
-        <h1 style={{ color: WHITE, fontSize: 'clamp(36px,7vw,80px)', fontWeight: 900, margin: '0 0 12px', lineHeight: 1.05, letterSpacing: '-0.035em' }}>
-          The Market Is<br /><span style={{ color: ACCENT }}>Expensive.</span>
-        </h1>
-        <h2 style={{ color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(20px,3.5vw,36px)', fontWeight: 700, margin: '0 0 32px', letterSpacing: '-0.02em' }}>
-          We Have Solutions.
-        </h2>
-        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(15px,2vw,17px)', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.7 }}>
-          When a seller uses a portion of closing costs to buy down your interest rate, your monthly payment drops — sometimes by hundreds of dollars, every single month.
-        </p>
-        {page.sales_price > 0 && (
-          <div style={{ display: 'inline-flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 24px', marginBottom: 28 }}>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ex: Purchase price <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
-            {qd && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Rates as of <strong style={{ color: WHITE }}>{qd}</strong></span>}
+          <div style={{ display: 'inline-block', border: `1px solid rgba(91,203,245,0.4)`, color: ACCENT, fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '4px 14px', borderRadius: 20, marginBottom: 14 }}>
+            Seller Advantage Program
           </div>
-        )}
-        <div>
-          <a href="#contact"
-            style={{ display: 'inline-block', background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 16, padding: '14px 36px', borderRadius: 10, textDecoration: 'none', letterSpacing: '-0.01em' }}>
-            See What I Qualify For →
-          </a>
-        </div>
-      </div>
 
-      {/* ── Rate Cards ── */}
-      <div style={{ maxWidth: 960, margin: '-40px auto 0', padding: '0 16px 56px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
-          {scenarios.map((s, i) => {
-            const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
-            const annualSavings = savings * 12
-            const isMarket = i === 0
-            const cardAccent = i === 2 ? '#34D399' : ACCENT
-            return (
-              <div key={i} style={{ background: NAVY, borderRadius: 18, padding: '28px 24px', boxShadow: '0 12px 40px rgba(0,0,0,0.22)', position: 'relative', overflow: 'hidden', border: `1.5px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '55'}` }}>
-                <div style={{ position: 'absolute', top: -50, right: -50, width: 180, height: 180, borderRadius: '50%', background: cardAccent, opacity: 0.05 }} />
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: cardAccent, marginBottom: 22 }}>
-                  {s.header}
-                </div>
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Interest Rate</div>
-                  <div style={{ fontSize: 'clamp(48px,8vw,72px)', fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
-                    {fmtRate(s.rate)}
+          <h1 style={{ color: WHITE, fontSize: 'clamp(32px,5.5vw,60px)', fontWeight: 900, margin: '0 0 6px', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+            The Market Is <span style={{ color: ACCENT }}>Expensive.</span>
+          </h1>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 'clamp(14px,1.8vw,16px)', margin: '0 auto 20px', maxWidth: 480, lineHeight: 1.6 }}>
+            See how a seller-paid rate reduction can drop your monthly payment by hundreds — without changing the purchase price.
+          </p>
+
+          {page.sales_price > 0 && (
+            <div style={{ display: 'inline-flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '7px 20px', marginBottom: 20 }}>
+              <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Ex: <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
+              {qd && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Rates as of <strong style={{ color: WHITE }}>{qd}</strong></span>}
+            </div>
+          )}
+        </div>
+
+        {/* Rate cards — inside the navy section so they're above the fold */}
+        <div style={{ maxWidth: 1020, margin: '0 auto', padding: '0 16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+            {scenarios.map((s, i) => {
+              const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
+              const annualSavings = savings * 12
+              const isMarket = i === 0
+              const cardAccent = i === 2 ? '#34D399' : ACCENT
+              return (
+                <div key={i} style={{
+                  background: isMarket ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, rgba(${i===2?'52,211,153':'91,203,245'},0.12) 0%, rgba(10,37,64,0) 100%)`,
+                  borderRadius: 20, padding: '24px 22px',
+                  border: `1.5px solid ${isMarket ? 'rgba(255,255,255,0.1)' : cardAccent + '60'}`,
+                  boxShadow: isMarket ? 'none' : `0 0 40px ${cardAccent}18`,
+                  position: 'relative', overflow: 'hidden',
+                }}>
+                  {/* glow orb */}
+                  <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: cardAccent, opacity: isMarket ? 0.03 : 0.08, filter: 'blur(20px)' }} />
+
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: cardAccent, marginBottom: 14 }}>
+                    {s.header}
                   </div>
-                </div>
-                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Monthly Payment</div>
-                    <div style={{ fontSize: 28, fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
-                  </div>
-                  {!isMarket && savings > 0 && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${cardAccent}18`, border: `1px solid ${cardAccent}44`, borderRadius: 20, padding: '6px 14px', alignSelf: 'flex-start' }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
+
+                  {/* Rate — the hero stat */}
+                  <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>Interest Rate</div>
+                    <div style={{ fontSize: 'clamp(52px,7vw,76px)', fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
+                      {fmtRate(s.rate)}
                     </div>
-                  )}
-                  {!isMarket && annualSavings > 0 && (
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{fmt(annualSavings)}/yr vs. market rate</div>
-                  )}
-                  {isMarket && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Standard market financing</div>}
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>APR {fmtRate(s.apr)}</div>
+                  </div>
+
+                  <div style={{ borderTop: `1px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '22'}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 3 }}>Monthly Payment</div>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
+                    </div>
+
+                    {!isMarket && savings > 0 && (
+                      <div style={{ display: 'inline-flex', alignItems: 'center', background: `${cardAccent}20`, border: `1px solid ${cardAccent}50`, borderRadius: 20, padding: '5px 12px', alignSelf: 'flex-start' }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
+                      </div>
+                    )}
+                    {!isMarket && annualSavings > 0 && (
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{fmt(annualSavings)}/yr vs. market</div>
+                    )}
+                    {isMarket && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>Standard market financing</div>}
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>APR {fmtRate(s.apr)}</div>
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
+
+          {/* CTA below cards */}
+          <div style={{ textAlign: 'center', marginTop: 28 }}>
+            <a href="#contact"
+              style={{ display: 'inline-block', background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 16, padding: '14px 40px', borderRadius: 10, textDecoration: 'none', letterSpacing: '-0.01em', boxShadow: `0 4px 24px ${ACCENT}44` }}>
+              See What I Qualify For →
+            </a>
+          </div>
         </div>
       </div>
 
