@@ -72,7 +72,7 @@ function ContactSection({ page }: { page: PageData }) {
   }
 
   return (
-    <div id="contact" style={{ background: NAVY, padding: '64px 24px' }}>
+    <div id="contact" className="sa-contact-pad" style={{ background: NAVY }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
 
         {/* Section label */}
@@ -155,7 +155,7 @@ function ContactSection({ page }: { page: PageData }) {
                   <label style={labelStyle}>Full Name</label>
                   <input name="name_1" type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="sa-form-grid" style={{ display: 'grid', gap: 12 }}>
                   <div>
                     <label style={labelStyle}>Email</label>
                     <input name="email" type="email" placeholder="jane@email.com" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
@@ -243,42 +243,76 @@ export default function PageClient({ slug }: { slug: string }) {
 
   return (
     <div style={{ fontFamily: ff, background: '#F0F4F8', minHeight: '100vh', color: NAVY }}>
+      <style>{`
+        .sa-hero { padding: 32px 20px 28px; }
+        .sa-apply-btn { position: absolute; top: 20px; right: 20px; }
+        .sa-logo { height: 34px; display: block; margin: 0 auto 16px; object-fit: contain; }
+        .sa-h1 { font-size: clamp(28px, 5.5vw, 64px); }
+        .sa-sub { font-size: 15px; }
+        .sa-price-pill { padding: 10px 20px; gap: 16px; }
+        .sa-price-num { font-size: 20px; }
+        .sa-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; padding: 0 16px; }
+        .sa-card { padding: 22px 20px; border-radius: 18px; }
+        .sa-rate-num { font-size: clamp(52px, 7vw, 76px); }
+        .sa-payment-num { font-size: 26px; }
+        .sa-steps-box { padding: 28px 32px; }
+        .sa-how-grid { gap: 28px; }
+        .sa-form-grid { grid-template-columns: 1fr 1fr; }
+        .sa-contact-pad { padding: 56px 24px; }
+        @media (max-width: 640px) {
+          .sa-hero { padding: 20px 16px 20px; }
+          .sa-apply-btn { position: static; display: block; text-align: center; margin: 0 auto 16px; width: fit-content; }
+          .sa-logo { height: 28px; margin-bottom: 12px; }
+          .sa-h1 { font-size: 30px; line-height: 1.1; }
+          .sa-sub { font-size: 14px; }
+          .sa-price-pill { flex-direction: column; gap: 8px; padding: 12px 16px; }
+          .sa-price-num { font-size: 22px; }
+          .sa-cards { grid-template-columns: 1fr; gap: 10px; padding: 0 12px; }
+          .sa-card { padding: 20px 18px; border-radius: 16px; }
+          .sa-rate-num { font-size: 58px; }
+          .sa-payment-num { font-size: 28px; }
+          .sa-steps-box { padding: 22px 20px; }
+          .sa-how-grid { grid-template-columns: 1fr !important; gap: 16px; }
+          .sa-form-grid { grid-template-columns: 1fr; }
+          .sa-contact-pad { padding: 40px 16px; }
+        }
+      `}</style>
 
       {/* ── Hero + Cards combined above the fold ── */}
-      <div style={{ background: NAVY, position: 'relative', overflow: 'hidden', paddingBottom: 48 }}>
+      <div style={{ background: NAVY, position: 'relative', overflow: 'hidden', paddingBottom: 40 }}>
         {/* decorative rings */}
         <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 900, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.05)`, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: 600, height: 600, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.08)`, pointerEvents: 'none' }} />
 
         {/* Tight hero text */}
-        <div style={{ textAlign: 'center', padding: '32px 24px 28px', position: 'relative' }}>
-          {/* Apply Now — top right */}
+        <div className="sa-hero" style={{ textAlign: 'center', position: 'relative' }}>
+          {/* Apply Now */}
           {page.apply_url && (
-            <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
-              style={{ position: 'absolute', top: 24, right: 24, background: '#0369A1', color: WHITE, fontWeight: 700, fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' }}>
+            <a href={page.apply_url} target="_blank" rel="noopener noreferrer" className="sa-apply-btn"
+              style={{ background: '#0369A1', color: WHITE, fontWeight: 700, fontSize: 13, padding: '8px 18px', borderRadius: 8, textDecoration: 'none' }}>
               Apply Now
             </a>
           )}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png" alt="NEO Home Loans" style={{ height: 36, objectFit: 'contain', display: 'block', margin: '0 auto 18px' }} />
+          <img src="https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png" alt="NEO Home Loans" className="sa-logo" />
 
           <div style={{ display: 'inline-block', border: `1px solid rgba(91,203,245,0.4)`, color: ACCENT, fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '4px 14px', borderRadius: 20, marginBottom: 14 }}>
             Seller Advantage Program
           </div>
 
-          <h1 style={{ color: WHITE, fontSize: 'clamp(34px,5.5vw,64px)', fontWeight: 900, margin: '0 0 10px', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
+          <h1 className="sa-h1" style={{ color: WHITE, fontWeight: 900, margin: '0 0 10px', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
             Love the House.<br />
             <span style={{ color: ACCENT }}>Not the Monthly Payment?</span>
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 'clamp(14px,1.8vw,17px)', margin: '0 auto 20px', maxWidth: 520, lineHeight: 1.65 }}>
+          <p className="sa-sub" style={{ color: 'rgba(255,255,255,0.6)', margin: '0 auto 20px', maxWidth: 520, lineHeight: 1.65 }}>
             A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
           </p>
 
           {page.sales_price > 0 && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 24px', marginBottom: 20 }}>
+            <div className="sa-price-pill" style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, marginBottom: 20 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 3 }}>Ex. Home Price</div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: WHITE, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmt(page.sales_price)}</div>
+                <div className="sa-price-num" style={{ fontWeight: 900, color: WHITE, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmt(page.sales_price)}</div>
               </div>
               {qd && (
                 <>
@@ -294,17 +328,16 @@ export default function PageClient({ slug }: { slug: string }) {
         </div>
 
         {/* Rate cards — inside the navy section so they're above the fold */}
-        <div style={{ maxWidth: 1020, margin: '0 auto', padding: '0 16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+        <div style={{ maxWidth: 1020, margin: '0 auto' }}>
+          <div className="sa-cards">
             {scenarios.map((s, i) => {
               const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
               const annualSavings = savings * 12
               const isMarket = i === 0
               const cardAccent = i === 2 ? '#34D399' : ACCENT
               return (
-                <div key={i} style={{
+                <div key={i} className="sa-card" style={{
                   background: isMarket ? 'rgba(255,255,255,0.05)' : `linear-gradient(135deg, rgba(${i===2?'52,211,153':'91,203,245'},0.12) 0%, rgba(10,37,64,0) 100%)`,
-                  borderRadius: 20, padding: '24px 22px',
                   border: `1.5px solid ${isMarket ? 'rgba(255,255,255,0.1)' : cardAccent + '60'}`,
                   boxShadow: isMarket ? 'none' : `0 0 40px ${cardAccent}18`,
                   position: 'relative', overflow: 'hidden',
@@ -319,7 +352,7 @@ export default function PageClient({ slug }: { slug: string }) {
                   {/* Rate — the hero stat */}
                   <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>Interest Rate</div>
-                    <div style={{ fontSize: 'clamp(52px,7vw,76px)', fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
+                    <div className="sa-rate-num" style={{ fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
                       {fmtRate(s.rate)}
                     </div>
                   </div>
@@ -327,7 +360,7 @@ export default function PageClient({ slug }: { slug: string }) {
                   <div style={{ borderTop: `1px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '22'}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div>
                       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 3 }}>Monthly Payment</div>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
+                      <div className="sa-payment-num" style={{ fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
                     </div>
 
                     {!isMarket && savings > 0 && (
@@ -364,7 +397,7 @@ export default function PageClient({ slug }: { slug: string }) {
             <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: NAVY, margin: 0, letterSpacing: '-0.03em' }}>What Is the Seller Advantage Program?</h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32, marginBottom: 52 }}>
+          <div className="sa-how-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', marginBottom: 52 }}>
             <div style={{ background: '#F8FAFC', borderRadius: 16, padding: '28px 28px', border: '1px solid #E2E8F0' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 18 }}>🏷️</div>
               <h3 style={{ fontSize: 18, fontWeight: 800, color: NAVY, margin: '0 0 10px', letterSpacing: '-0.01em' }}>A Seller-Funded Rate Reduction</h3>
@@ -382,7 +415,7 @@ export default function PageClient({ slug }: { slug: string }) {
           </div>
 
           {/* How the math works */}
-          <div style={{ background: NAVY, borderRadius: 16, padding: '32px 36px' }}>
+          <div className="sa-steps-box" style={{ background: NAVY, borderRadius: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: ACCENT, marginBottom: 16 }}>The Simple Version</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
