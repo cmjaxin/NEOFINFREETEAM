@@ -137,123 +137,65 @@ export default function PageClient({ slug }: { slug: string }) {
         )}
       </div>
 
-      {/* ── Option Accordion ── */}
-      <div style={{ maxWidth: 820, margin: '-1px auto 0', padding: '0 16px 56px' }}>
-        {/* Section label */}
-        <div style={{ textAlign: 'center', padding: '52px 0 36px' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>Your Options</div>
-          <h2 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: NAVY }}>
-            INCENTIVES
-          </h2>
-          <div style={{ width: 72, height: 3, background: ACCENT, borderRadius: 2, margin: '14px auto 0' }} />
-        </div>
-
-        {/* Accordion rows */}
-        <div style={{ border: `1.5px solid #CBD5E1`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(10,37,64,0.08)' }}>
+      {/* ── Rate Cards ── */}
+      <div style={{ maxWidth: 960, margin: '-40px auto 0', padding: '0 16px 56px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
           {scenarios.map((s, i) => {
-            const theme = SCENARIO_THEME[i] ?? SCENARIO_THEME[0]
             const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
             const annualSavings = savings * 12
-            const isOpen = expanded === i
             const isMarket = i === 0
-
+            const cardAccent = i === 0 ? ACCENT : i === 1 ? ACCENT : '#34D399'
             return (
-              <div key={i} style={{ borderBottom: i < scenarios.length - 1 ? `1px solid #E2E8F0` : 'none' }}>
-                {/* Row header */}
-                <button
-                  onClick={() => setExpanded(isOpen ? null : i)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '20px 24px', background: isOpen ? NAVY : WHITE, border: 'none', cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <span style={{
-                      fontWeight: 900, fontSize: 'clamp(18px,3vw,28px)', letterSpacing: '-0.02em',
-                      color: isOpen ? (theme.label === 'rgba(255,255,255,0.5)' ? 'rgba(255,255,255,0.5)' : theme.label) : NAVY,
-                    }}>
-                      + {s.header}
-                    </span>
-                    {!isMarket && savings > 0 && !isOpen && (
-                      <span style={{ background: theme.badge, color: theme.badgeText === 'rgba(255,255,255,0.6)' ? ACCENT : theme.badgeText, fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 12, whiteSpace: 'nowrap', border: `1px solid ${theme.border}33` }}>
-                        Save {fmt(savings)}/mo
-                      </span>
-                    )}
-                  </div>
-                  <span style={{ color: isOpen ? ACCENT : '#94A3B8', fontSize: 20, transition: 'transform 0.2s', transform: isOpen ? 'rotate(45deg)' : 'none' }}>+</span>
-                </button>
+              <div key={i} style={{ background: NAVY, borderRadius: 18, padding: '28px 24px', boxShadow: '0 12px 40px rgba(0,0,0,0.22)', position: 'relative', overflow: 'hidden', border: `1.5px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '55'}` }}>
+                <div style={{ position: 'absolute', top: -50, right: -50, width: 180, height: 180, borderRadius: '50%', background: cardAccent, opacity: 0.05 }} />
 
-                {/* Expanded panel */}
-                {isOpen && (
-                  <div style={{ background: NAVY, padding: '0 24px 28px', borderTop: `1px solid rgba(255,255,255,0.08)` }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden', marginBottom: savings > 0 ? 20 : 0 }}>
-                      {[
-                        { label: 'Interest Rate', value: fmtRate(s.rate), size: 'clamp(28px,5vw,44px)', highlight: false },
-                        { label: 'Monthly Payment', value: fmt(s.payment), size: 'clamp(24px,4vw,36px)', highlight: false },
-                        ...(savings > 0 ? [{ label: 'Monthly Savings', value: fmt(savings), size: 'clamp(22px,4vw,32px)', highlight: true }] : []),
-                        { label: 'APR', value: fmtRate(s.apr), size: '15px', highlight: false },
-                      ].map(({ label, value, size, highlight }) => (
-                        <div key={label} style={{ padding: '18px 20px', background: highlight ? 'rgba(91,203,245,0.12)' : NAVY }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: highlight ? ACCENT : 'rgba(255,255,255,0.4)', marginBottom: 6 }}>{label}</div>
-                          <div style={{ fontSize: size, fontWeight: highlight || size !== '15px' ? 900 : 600, color: highlight ? ACCENT : size === '15px' ? 'rgba(255,255,255,0.45)' : WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
-                        </div>
-                      ))}
+                {/* Header */}
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: cardAccent, marginBottom: 22 }}>
+                  {s.header}
+                </div>
+
+                {/* Rate — hero number */}
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Interest Rate</div>
+                  <div style={{ fontSize: 'clamp(48px,8vw,72px)', fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
+                    {fmtRate(s.rate)}
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* Monthly Payment */}
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Monthly Payment</div>
+                    <div style={{ fontSize: 28, fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
+                  </div>
+
+                  {/* Savings badge */}
+                  {!isMarket && savings > 0 && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${cardAccent}18`, border: `1px solid ${cardAccent}44`, borderRadius: 20, padding: '6px 14px', alignSelf: 'flex-start' }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
                     </div>
+                  )}
 
-                    {savings > 0 && annualSavings > 0 && (
-                      <div style={{ background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.25)`, borderRadius: 10, padding: '12px 18px', fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
-                        That&apos;s <strong style={{ color: ACCENT }}>{fmt(annualSavings)} per year</strong> back in your pocket compared to standard market financing.
-                      </div>
-                    )}
+                  {/* Annual callout */}
+                  {!isMarket && annualSavings > 0 && (
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                      {fmt(annualSavings)}/yr vs. market rate
+                    </div>
+                  )}
 
-                    {isMarket && (
-                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, marginTop: 4 }}>
-                        Standard market rate with no seller concessions — the baseline for comparison.
-                      </div>
-                    )}
+                  {isMarket && (
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Standard market financing</div>
+                  )}
+
+                  {/* APR — small, at bottom */}
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
+                    APR {fmtRate(s.apr)}
                   </div>
-                )}
+                </div>
               </div>
             )
           })}
         </div>
-
-        {/* Compare all at a glance */}
-        {scenarios.length > 1 && (
-          <div style={{ marginTop: 16, background: WHITE, borderRadius: 12, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(10,37,64,0.06)' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94A3B8' }}>
-              At a Glance
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `auto repeat(${scenarios.length}, 1fr)`, fontSize: 13 }}>
-              {/* Header row */}
-              <div style={{ padding: '10px 20px', color: '#64748B', fontWeight: 600 }}></div>
-              {scenarios.map((s, i) => (
-                <div key={i} style={{ padding: '10px 16px', fontWeight: 800, color: i === 0 ? NAVY : (i === 1 ? '#0369A1' : '#065F46'), fontSize: 12, textAlign: 'right', borderLeft: '1px solid #F1F5F9' }}>{s.header}</div>
-              ))}
-              {/* Rate row */}
-              <div style={{ padding: '10px 20px', color: '#64748B', borderTop: '1px solid #F1F5F9' }}>Rate</div>
-              {scenarios.map((s, i) => (
-                <div key={i} style={{ padding: '10px 16px', fontWeight: 700, color: NAVY, textAlign: 'right', borderLeft: '1px solid #F1F5F9', borderTop: '1px solid #F1F5F9', fontVariantNumeric: 'tabular-nums' }}>{fmtRate(s.rate)}</div>
-              ))}
-              {/* APR row */}
-              <div style={{ padding: '10px 20px', color: '#64748B', borderTop: '1px solid #F1F5F9' }}>APR</div>
-              {scenarios.map((s, i) => (
-                <div key={i} style={{ padding: '10px 16px', fontWeight: 600, color: '#475569', textAlign: 'right', borderLeft: '1px solid #F1F5F9', borderTop: '1px solid #F1F5F9', fontVariantNumeric: 'tabular-nums' }}>{fmtRate(s.apr)}</div>
-              ))}
-              {/* Payment row */}
-              <div style={{ padding: '10px 20px', color: '#64748B', borderTop: '1px solid #F1F5F9', fontWeight: 700 }}>Monthly</div>
-              {scenarios.map((s, i) => {
-                const savings = i > 0 ? baseline - s.payment : 0
-                return (
-                  <div key={i} style={{ padding: '10px 16px', textAlign: 'right', borderLeft: '1px solid #F1F5F9', borderTop: '1px solid #F1F5F9', fontVariantNumeric: 'tabular-nums' }}>
-                    <div style={{ fontWeight: 900, fontSize: 15, color: NAVY }}>{fmt(s.payment)}</div>
-                    {savings > 0 && <div style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>−{fmt(savings)}/mo</div>}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* ── How It Works ── */}
