@@ -448,9 +448,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                   <div style={{ background: C.navy, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />
                     <div style={{ color: '#fff', fontSize: 13, lineHeight: 1.5 }}>
-                      <strong>Seller-Paid Rate Reduction</strong> — the seller is contributing{' '}
-                      <strong>${page.seller_contribution.toLocaleString()}{page.seller_contribution_pct ? ` (${page.seller_contribution_pct.toFixed(2)}% of the price)` : ''}</strong>{' '}
-                      to buy down your rate. The payments below already include it.
+                      <strong>Seller-Paid Rate Reduction</strong> — closing costs have been negotiated to buy down your rate. The payments below already include it.
                     </div>
                   </div>
                 ) : null}
