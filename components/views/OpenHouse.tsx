@@ -628,6 +628,15 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
           set('rate_scenarios', extracted.scenarios)
           set('seller_contribution', extracted.seller_contribution ?? 0)
           set('seller_contribution_pct', extracted.seller_contribution_pct ?? 0)
+          // Also save directly to Supabase in case user already saved or form state doesn't persist
+          if (editing?.id) {
+            await supabase.from('open_house_pages').update({
+              rate_scenarios: extracted.scenarios,
+              seller_contribution: extracted.seller_contribution ?? 0,
+              seller_contribution_pct: extracted.seller_contribution_pct ?? 0,
+            }).eq('id', editing.id)
+            console.log('[TCA] Saved rate data directly to Supabase')
+          }
         } else {
           console.warn('[TCA] No scenarios extracted or error:', extracted)
         }
