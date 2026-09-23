@@ -32,7 +32,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const isColin = SPLICE_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
   const isAdmin = profile?.role === 'admin' || isColin
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp') {
     setView(id)
     onClose()
   }
@@ -46,6 +46,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'openhouse' as const,   label: 'Listing Presentations' },
     { id: 'ohevents' as const,    label: 'Open Houses' },
     { id: 'signriders' as const,  label: 'Sign Riders' },
+    { id: 'sellerlp' as const,    label: 'Seller Advantage LP' },
     { id: 'reels' as const,       label: 'Splice' },
     { id: 'terminated' as const,  label: 'Terminated' },
     { id: 'templates' as const,   label: 'Templates' },
@@ -58,6 +59,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     ...((profile?.can_open_houses ?? true)  ? [{ id: 'ohevents'  as const, label: 'Open Houses' }] : []),
     ...(profile?.can_listings               ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
     ...(profile?.can_sign_riders            ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
+    { id: 'sellerlp' as const, label: 'Seller Advantage LP' },
     ...(profile?.can_splice                 ? [{ id: 'reels'      as const, label: 'Splice' }] : []),
   ]
 
