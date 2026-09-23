@@ -143,12 +143,16 @@ function ContactSection({ page }: { page: PageData }) {
               <input type="hidden" name="added_source" value={`Seller Advantage LP — ${page.advisor_name ?? ''}`} />
               <input type="hidden" name="RETURNTIMEOUT" value="10" />
               <input type="hidden" name="USERID" value={page.bntouch_user_id || '10543'} />
-              <input type="hidden" name="SOURCE" value="Web Form" />
+              <input type="hidden" name="GROUPID" value="1" />
+              <input type="hidden" name="SEQUENCEID" value="1" />
+              <input type="hidden" name="WEBFORMID" value="5524" />
+              <input type="hidden" name="PROCESSTYPE" value="mortgage" />
+              <input type="hidden" name="UTMDATA" value="" />
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div>
                   <label style={labelStyle}>Full Name</label>
-                  <input name="name" type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+                  <input name="name_1" type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
@@ -157,7 +161,7 @@ function ContactSection({ page }: { page: PageData }) {
                   </div>
                   <div>
                     <label style={labelStyle}>Phone</label>
-                    <input name="phone" type="tel" placeholder="(801) 555-0100" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
+                    <input name="phone_cell" type="tel" placeholder="(801) 555-0100" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
                   </div>
                 </div>
 
