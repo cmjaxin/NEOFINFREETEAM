@@ -4,12 +4,15 @@ import Anthropic from '@anthropic-ai/sdk'
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 export async function POST(req: NextRequest) {
+  try {
   const { screenshot_url } = await req.json()
   if (!screenshot_url) return NextResponse.json({ error: 'Missing screenshot_url' }, { status: 400 })
 
+  if (!process.env.ANTHROPIC_API_KEY) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not set' }, { status: 500 })
+
   // Fetch the image and convert to base64
   const imgRes = await fetch(screenshot_url)
-  if (!imgRes.ok) return NextResponse.json({ error: 'Could not fetch image' }, { status: 400 })
+  if (!imgRes.ok) return NextResponse.json({ error: `Could not fetch image: ${imgRes.status} ${imgRes.statusText}` }, { status: 400 })
   const imgBuffer = await imgRes.arrayBuffer()
   const base64 = Buffer.from(imgBuffer).toString('base64')
   const contentType = (imgRes.headers.get('content-type') || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
@@ -70,5 +73,9 @@ Rules:
     return NextResponse.json(data)
   } catch {
     return NextResponse.json({ error: 'Parse failed', raw: text }, { status: 422 })
+  }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: 'Server error', detail: msg }, { status: 500 })
   }
 }
