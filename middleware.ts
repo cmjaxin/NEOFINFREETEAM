@@ -27,9 +27,10 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isLoginPage   = pathname.startsWith('/login')
   const isWebhook     = pathname.startsWith('/api/webhooks/')
+  const isInternalApi = pathname.startsWith('/api/')
   const isPublicPage  = pathname.startsWith('/open-house/') || pathname.startsWith('/listing-presentation/') || pathname.startsWith('/sign-rider/')
 
-  if (!user && !isLoginPage && !isWebhook && !isPublicPage) {
+  if (!user && !isLoginPage && !isWebhook && !isInternalApi && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
