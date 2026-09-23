@@ -1,7 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import LeadCaptureModal from '@/components/LeadCaptureModal'
 
 interface SAScenario {
   header: string
@@ -35,17 +34,161 @@ const WHITE = '#fff'
 function fmt(n: number) { return '$' + Math.round(n).toLocaleString() }
 function fmtRate(n: number) { return n.toFixed(3).replace(/\.?0+$/, '') + '%' }
 
-const SCENARIO_THEME = [
-  { border: '#334E6A', label: 'rgba(255,255,255,0.5)', badge: 'rgba(255,255,255,0.1)', badgeText: 'rgba(255,255,255,0.6)' },
-  { border: ACCENT,   label: ACCENT,                  badge: 'rgba(91,203,245,0.15)',  badgeText: ACCENT },
-  { border: '#34D399', label: '#34D399',               badge: 'rgba(52,211,153,0.12)', badgeText: '#34D399' },
-]
+function ContactSection({ page }: { page: PageData }) {
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  function validate() {
+    if (!name.trim()) return 'Please enter your name.'
+    if (!email.trim() || !email.includes('@')) return 'Please enter a valid email.'
+    if (!phone.trim() || phone.replace(/\D/g, '').length < 10) return 'Please enter a valid phone number.'
+    return ''
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    const err = validate()
+    if (err) { setError(err); return }
+    setError('')
+    setSubmitting(true)
+    if (formRef.current) formRef.current.submit()
+    setTimeout(() => { setSubmitted(true); setSubmitting(false) }, 1200)
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '12px 16px', borderRadius: 10, border: '1.5px solid rgba(255,255,255,0.15)',
+    background: 'rgba(255,255,255,0.07)', color: WHITE, fontSize: 15, outline: 'none',
+    boxSizing: 'border-box',
+  }
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
+    textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6,
+  }
+
+  return (
+    <div style={{ background: NAVY, padding: '64px 24px' }}>
+      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+
+        {/* Section label */}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>Work With Us</div>
+          <h2 style={{ fontSize: 'clamp(24px,4vw,38px)', fontWeight: 900, color: WHITE, margin: 0, letterSpacing: '-0.03em' }}>
+            Ready to See Your Numbers?
+          </h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, margin: '12px auto 0', maxWidth: 480, lineHeight: 1.7 }}>
+            We&apos;ll show you exactly how a seller-paid rate reduction changes your payment — for your specific home, loan type, and profile.
+          </p>
+        </div>
+
+        {/* Advisor card */}
+        {page.advisor_name && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 32 }}>
+            {page.advisor_photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={page.advisor_photo} alt={page.advisor_name}
+                style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${ACCENT}`, marginBottom: 14 }} />
+            )}
+            <div style={{ color: WHITE, fontWeight: 800, fontSize: 20 }}>{page.advisor_name}</div>
+            {page.advisor_title && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14, marginTop: 2 }}>{page.advisor_title}</div>}
+            {page.advisor_nmls && <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginTop: 4 }}>NMLS #{page.advisor_nmls}</div>}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', marginTop: 10 }}>
+              {page.advisor_phone && (
+                <a href={`tel:${page.advisor_phone}`} style={{ color: ACCENT, fontWeight: 600, fontSize: 14, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  📞 {page.advisor_phone}
+                </a>
+              )}
+              {page.advisor_email && (
+                <a href={`mailto:${page.advisor_email}`} style={{ color: ACCENT, fontWeight: 600, fontSize: 14, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  ✉️ {page.advisor_email}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* CTA buttons */}
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 40 }}>
+          {page.schedule_url && (
+            <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
+              style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 15, padding: '14px 28px', borderRadius: 10, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+              📅 Schedule a Call
+            </a>
+          )}
+          {page.apply_url && (
+            <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+              style={{ background: 'rgba(255,255,255,0.12)', color: WHITE, fontWeight: 800, fontSize: 15, padding: '14px 28px', borderRadius: 10, textDecoration: 'none', border: '1.5px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              📋 Apply Now
+            </a>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>or send a quick message</span>
+          <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+        </div>
+
+        {/* Inline form */}
+        {!submitted ? (
+          <>
+            <iframe ref={iframeRef} name="bnt_iframe_sa" style={{ display: 'none' }} title="BNTouch Submit" />
+            <form ref={formRef} method="post" action="https://www.bntouchmortgage.net/api/webform/" target="bnt_iframe_sa" onSubmit={handleSubmit}>
+              <input type="hidden" name="added_source" value={`Seller Advantage LP — ${page.advisor_name ?? ''}`} />
+              <input type="hidden" name="RETURNTIMEOUT" value="10" />
+              <input type="hidden" name="USERID" value={page.bntouch_user_id || '10543'} />
+              <input type="hidden" name="SOURCE" value="Web Form" />
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>Full Name</label>
+                  <input name="name" type="text" placeholder="Jane Smith" value={name} onChange={e => setName(e.target.value)} style={inputStyle} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={labelStyle}>Email</label>
+                    <input name="email" type="email" placeholder="jane@email.com" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Phone</label>
+                    <input name="phone" type="tel" placeholder="(801) 555-0100" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
+                  </div>
+                </div>
+
+                {error && <div style={{ color: '#F87171', fontSize: 13, fontWeight: 600 }}>{error}</div>}
+
+                <button type="submit" disabled={submitting}
+                  style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 16, padding: '14px', borderRadius: 10, border: 'none', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.7 : 1, marginTop: 4 }}>
+                  {submitting ? 'Sending…' : 'Request More Info'}
+                </button>
+
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center', lineHeight: 1.5 }}>
+                  By submitting, you consent to be contacted about mortgage products. We respect your privacy.
+                </div>
+              </div>
+            </form>
+          </>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '32px 24px', background: 'rgba(91,203,245,0.1)', borderRadius: 14, border: `1px solid ${ACCENT}33` }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+            <div style={{ color: WHITE, fontWeight: 800, fontSize: 20, marginBottom: 8 }}>Got it — we&apos;ll be in touch!</div>
+            <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Expect to hear from {page.advisor_name ?? 'us'} shortly.</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 export default function PageClient({ slug }: { slug: string }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showLead, setShowLead] = useState(false)
-  const [expanded, setExpanded] = useState<number | null>(1)
 
   useEffect(() => {
     const sb = createClient()
@@ -102,33 +245,31 @@ export default function PageClient({ slug }: { slug: string }) {
           <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 28, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
           <span style={{ color: WHITE, fontWeight: 700, fontSize: 14 }}>NEO Home Loans</span>
         </div>
-        <button onClick={() => setShowLead(true)}
-          style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 13, padding: '8px 20px', borderRadius: 20, border: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}>
-          Get My Numbers
-        </button>
+        {page.apply_url && (
+          <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+            style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 13, padding: '8px 20px', borderRadius: 20, textDecoration: 'none' }}>
+            Apply Now
+          </a>
+        )}
       </div>
 
       {/* ── Hero ── */}
       <div style={{ background: NAVY, padding: 'clamp(48px,8vw,88px) 24px clamp(56px,10vw,120px)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
-        {/* decorative rings */}
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 700, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.07)`, pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.1)`, pointerEvents: 'none' }} />
 
         <div style={{ display: 'inline-block', border: `1px solid rgba(91,203,245,0.4)`, color: ACCENT, fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '5px 16px', borderRadius: 20, marginBottom: 22 }}>
           Seller Advantage Program
         </div>
-
         <h1 style={{ color: WHITE, fontSize: 'clamp(36px,7vw,80px)', fontWeight: 900, margin: '0 0 12px', lineHeight: 1.05, letterSpacing: '-0.035em' }}>
           The Market Is<br /><span style={{ color: ACCENT }}>Expensive.</span>
         </h1>
         <h2 style={{ color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(20px,3.5vw,36px)', fontWeight: 700, margin: '0 0 32px', letterSpacing: '-0.02em' }}>
           We Have Solutions.
         </h2>
-
         <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(15px,2vw,17px)', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.7 }}>
-          When a seller pays closing costs to buy down your rate, your monthly payment can drop by hundreds of dollars — every single month.
+          When a seller uses a portion of closing costs to buy down your interest rate, your monthly payment drops — sometimes by hundreds of dollars, every single month.
         </p>
-
         {page.sales_price > 0 && (
           <div style={{ display: 'inline-flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 24px' }}>
             <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Purchase price <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
@@ -144,53 +285,34 @@ export default function PageClient({ slug }: { slug: string }) {
             const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
             const annualSavings = savings * 12
             const isMarket = i === 0
-            const cardAccent = i === 0 ? ACCENT : i === 1 ? ACCENT : '#34D399'
+            const cardAccent = i === 2 ? '#34D399' : ACCENT
             return (
               <div key={i} style={{ background: NAVY, borderRadius: 18, padding: '28px 24px', boxShadow: '0 12px 40px rgba(0,0,0,0.22)', position: 'relative', overflow: 'hidden', border: `1.5px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '55'}` }}>
                 <div style={{ position: 'absolute', top: -50, right: -50, width: 180, height: 180, borderRadius: '50%', background: cardAccent, opacity: 0.05 }} />
-
-                {/* Header */}
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: cardAccent, marginBottom: 22 }}>
                   {s.header}
                 </div>
-
-                {/* Rate — hero number */}
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 6 }}>Interest Rate</div>
                   <div style={{ fontSize: 'clamp(48px,8vw,72px)', fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
                     {fmtRate(s.rate)}
                   </div>
                 </div>
-
                 <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {/* Monthly Payment */}
                   <div>
                     <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>Monthly Payment</div>
                     <div style={{ fontSize: 28, fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
                   </div>
-
-                  {/* Savings badge */}
                   {!isMarket && savings > 0 && (
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${cardAccent}18`, border: `1px solid ${cardAccent}44`, borderRadius: 20, padding: '6px 14px', alignSelf: 'flex-start' }}>
                       <span style={{ fontSize: 14, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
                     </div>
                   )}
-
-                  {/* Annual callout */}
                   {!isMarket && annualSavings > 0 && (
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
-                      {fmt(annualSavings)}/yr vs. market rate
-                    </div>
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>{fmt(annualSavings)}/yr vs. market rate</div>
                   )}
-
-                  {isMarket && (
-                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Standard market financing</div>
-                  )}
-
-                  {/* APR — small, at bottom */}
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>
-                    APR {fmtRate(s.apr)}
-                  </div>
+                  {isMarket && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Standard market financing</div>}
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 2 }}>APR {fmtRate(s.apr)}</div>
                 </div>
               </div>
             )
@@ -198,77 +320,53 @@ export default function PageClient({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {/* ── How It Works ── */}
-      <div style={{ background: WHITE, padding: '56px 24px' }}>
+      {/* ── What Is the Seller Advantage Program? ── */}
+      <div style={{ background: WHITE, padding: '64px 24px' }}>
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 44 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 10 }}>How It Works</div>
-            <h2 style={{ fontSize: 'clamp(24px,4vw,38px)', fontWeight: 900, color: NAVY, margin: 0, letterSpacing: '-0.03em' }}>Seller Pays → Your Rate Drops</h2>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>How It Works</div>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: NAVY, margin: 0, letterSpacing: '-0.03em' }}>What Is the Seller Advantage Program?</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 32 }}>
-            {[
-              { n: '01', title: 'Seller Pays Closing Costs', body: 'Instead of a price cut, the seller contributes funds at closing specifically to reduce your interest rate.' },
-              { n: '02', title: 'Your Rate Drops', body: 'Those funds permanently or temporarily lower your mortgage rate below what the open market offers.' },
-              { n: '03', title: 'Lower Payment, Every Month', body: 'A lower rate means less interest — that savings hits your bank account every month for the life of the loan.' },
-            ].map(({ n, title, body }) => (
-              <div key={n}>
-                <div style={{ fontSize: 48, fontWeight: 900, color: ACCENT, opacity: 0.3, marginBottom: 10, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: NAVY, marginBottom: 10 }}>{title}</div>
-                <div style={{ fontSize: 14, color: '#64748B', lineHeight: 1.7 }}>{body}</div>
-              </div>
-            ))}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32, marginBottom: 52 }}>
+            <div style={{ background: '#F8FAFC', borderRadius: 16, padding: '28px 28px', border: '1px solid #E2E8F0' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 18 }}>🏷️</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: NAVY, margin: '0 0 10px', letterSpacing: '-0.01em' }}>A Seller-Funded Rate Reduction</h3>
+              <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.75, margin: 0 }}>
+                The seller contributes funds at closing that are used specifically to buy down your mortgage rate — either temporarily for the first few years, or permanently for the life of the loan. Think of it like a builder incentive, applied to any home on the market.
+              </p>
+            </div>
+            <div style={{ background: '#F8FAFC', borderRadius: 16, padding: '28px 28px', border: '1px solid #E2E8F0' }}>
+              <div style={{ width: 44, height: 44, borderRadius: 12, background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 18 }}>👥</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: NAVY, margin: '0 0 10px', letterSpacing: '-0.01em' }}>More Buyers Can Qualify</h3>
+              <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.75, margin: 0 }}>
+                A lower rate means a lower monthly payment — and that lower payment can re-qualify buyers who were priced out at the market rate. The seller doesn&apos;t drop the asking price; instead, they make the financing affordable, which opens the door to a wider pool of buyers.
+              </p>
+            </div>
+          </div>
+
+          {/* How the math works */}
+          <div style={{ background: NAVY, borderRadius: 16, padding: '32px 36px' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: ACCENT, marginBottom: 16 }}>The Simple Version</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[
+                { step: '01', text: 'You make an offer and negotiate for the seller to cover a portion of your closing costs.' },
+                { step: '02', text: 'Those funds are used to permanently or temporarily reduce your interest rate below market.' },
+                { step: '03', text: 'Your monthly payment drops — potentially by hundreds of dollars — without changing the purchase price.' },
+                { step: '04', text: 'You keep more money in your pocket every single month for the life of the buydown.' },
+              ].map(({ step, text }) => (
+                <div key={step} style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: 'rgba(91,203,245,0.3)', lineHeight: 1, flexShrink: 0, fontVariantNumeric: 'tabular-nums', minWidth: 36 }}>{step}</div>
+                  <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.75)', lineHeight: 1.65, paddingTop: 4 }}>{text}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
       {/* ── Contact ── */}
-      <div style={{ background: NAVY, padding: '64px 24px' }}>
-        <div style={{ maxWidth: 580, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 14 }}>Get Your Numbers</div>
-          <h2 style={{ fontSize: 'clamp(24px,4vw,42px)', fontWeight: 900, color: WHITE, margin: '0 0 14px', letterSpacing: '-0.03em' }}>See What This Looks Like for Your Home</h2>
-          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, margin: '0 0 36px', lineHeight: 1.7 }}>
-            Get a personalized analysis based on your actual price, loan type, and credit profile.
-          </p>
-
-          {page.advisor_name && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
-              {page.advisor_photo && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-              )}
-              <div>
-                <div style={{ color: WHITE, fontWeight: 800, fontSize: 15 }}>{page.advisor_name}</div>
-                {page.advisor_title && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{page.advisor_title}</div>}
-                {page.advisor_nmls && <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>NMLS #{page.advisor_nmls}</div>}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
-            <button onClick={() => setShowLead(true)}
-              style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, border: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}>
-              Get My Free Analysis
-            </button>
-            {page.schedule_url && (
-              <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
-                style={{ background: 'rgba(255,255,255,0.1)', color: WHITE, fontWeight: 700, fontSize: 15, padding: '14px 28px', borderRadius: 10, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
-                📅 Schedule a Call
-              </a>
-            )}
-            {page.apply_url && (
-              <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
-                style={{ background: 'rgba(255,255,255,0.1)', color: WHITE, fontWeight: 700, fontSize: 15, padding: '14px 28px', borderRadius: 10, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
-                📋 Start Application
-              </a>
-            )}
-          </div>
-          {page.advisor_phone && (
-            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>
-              Or call: <a href={`tel:${page.advisor_phone}`} style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, textDecoration: 'none' }}>{page.advisor_phone}</a>
-            </div>
-          )}
-        </div>
-      </div>
+      <ContactSection page={page} />
 
       {/* ── Disclaimer ── */}
       <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '24px' }}>
@@ -276,16 +374,6 @@ export default function PageClient({ slug }: { slug: string }) {
           <strong style={{ color: '#64748B' }}>Disclaimer: </strong>{disclaimer}
         </div>
       </div>
-
-      {showLead && (
-        <LeadCaptureModal
-          address="Seller Advantage Program"
-          advisorName={page.advisor_name}
-          bntouchUserId={page.bntouch_user_id}
-          onDismiss={() => setShowLead(false)}
-          callout="I'd like to see how a seller-paid rate reduction could lower my monthly payment."
-        />
-      )}
     </div>
   )
 }
