@@ -3,12 +3,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import LeadCaptureModal from '@/components/LeadCaptureModal'
 
-const C = {
-  navy: '#0A2540', navyDark: '#071a2e', accent: '#5BCBF5',
-  white: '#fff', bg: '#F4F6F8', border: '#E4E8EC',
-  muted: '#6B7280', text: '#1F2937', green: '#059669',
-}
-
 interface SAScenario {
   header: string
   rate: number
@@ -34,32 +28,33 @@ interface PageData {
   bntouch_user_id: string | null
 }
 
+const NAVY = '#0A2540'
+const ACCENT = '#5BCBF5'
+const WHITE = '#fff'
+
 function fmt(n: number) { return '$' + Math.round(n).toLocaleString() }
 function fmtRate(n: number) { return n.toFixed(3).replace(/\.?0+$/, '') + '%' }
+
+const SCENARIO_THEME = [
+  { border: '#334E6A', label: 'rgba(255,255,255,0.5)', badge: 'rgba(255,255,255,0.1)', badgeText: 'rgba(255,255,255,0.6)' },
+  { border: ACCENT,   label: ACCENT,                  badge: 'rgba(91,203,245,0.15)',  badgeText: ACCENT },
+  { border: '#34D399', label: '#34D399',               badge: 'rgba(52,211,153,0.12)', badgeText: '#34D399' },
+]
 
 export default function PageClient({ slug }: { slug: string }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
   const [showLead, setShowLead] = useState(false)
+  const [expanded, setExpanded] = useState<number | null>(1)
 
   useEffect(() => {
     const sb = createClient()
     async function load() {
-      const { data: row } = await sb
-        .from('seller_advantage_pages')
-        .select('*')
-        .eq('slug', slug)
-        .single()
-
+      const { data: row } = await sb.from('seller_advantage_pages').select('*').eq('slug', slug).single()
       if (!row) { setLoading(false); return }
-
-      // Pull advisor info from profile
-      const { data: prof } = await sb
-        .from('profiles')
+      const { data: prof } = await sb.from('profiles')
         .select('full_name, title, phone, email, headshot_url, nmls, schedule_url, apply_url, bntouch_user_id')
-        .eq('id', row.created_by)
-        .single()
-
+        .eq('id', row.created_by).single()
       setPage({
         ...row,
         advisor_name: prof?.full_name ?? null,
@@ -78,219 +73,268 @@ export default function PageClient({ slug }: { slug: string }) {
   }, [slug])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: C.accent, fontSize: 16 }}>Loading…</div>
+    <div style={{ minHeight: '100vh', background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: ACCENT, fontSize: 16 }}>Loading…</div>
     </div>
   )
-
   if (!page) return (
-    <div style={{ minHeight: '100vh', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#fff', fontSize: 16 }}>Page not found.</div>
+    <div style={{ minHeight: '100vh', background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: WHITE, fontSize: 16 }}>Page not found.</div>
     </div>
   )
 
   const scenarios = page.scenarios ?? []
   const baseline = scenarios[0]?.payment ?? 0
-
-  // Format quote date
   const qd = page.quote_date
     ? new Date(page.quote_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : null
+  const disclaimer = `Rates quoted as of ${qd ?? 'the date shown'}. ${page.sales_price ? `Based on a purchase price of ${fmt(page.sales_price)}. ` : ''}${scenarios.map(s => `${s.header}: ${fmtRate(s.rate)} interest rate (${fmtRate(s.apr)} APR), estimated total monthly payment of ${fmt(s.payment)}.`).join(' ')} Payments include estimated P&I, mortgage insurance, taxes and insurance. Rates and programs subject to change. Not a commitment to lend. All loans subject to credit approval. NEO Home Loans is an equal housing lender. Educational purposes only.`
 
-  // Auto-generate disclaimer
-  const disclaimer = `Rates quoted as of ${qd ?? 'the date shown'}. ${
-    page.sales_price ? `Based on a purchase price of ${fmt(page.sales_price)}. ` : ''
-  }${scenarios.map(s => `${s.header}: ${fmtRate(s.rate)} interest rate (${fmtRate(s.apr)} APR), estimated total monthly payment of ${fmt(s.payment)}.`).join(' ')} Payments shown include principal & interest, mortgage insurance, and estimated property taxes and insurance. Actual payments will vary based on credit score, down payment, loan type, and other factors. This is not a commitment to lend. Rates and programs are subject to change without notice. All loans subject to credit approval. NEO Home Loans is an equal housing lender. This content is provided for educational purposes only.`
-
-  const scenarioColors = [
-    { bg: '#0A2540', accent: '#5BCBF5', text: '#fff', label: '#5BCBF5' },  // navy - market
-    { bg: '#064E3B', accent: '#34D399', text: '#fff', label: '#34D399' },  // green - permanent
-    { bg: '#1E3A5F', accent: '#93C5FD', text: '#fff', label: '#93C5FD' },  // blue - temp
-  ]
+  const ff = `'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
 
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: C.bg, minHeight: '100vh' }}>
+    <div style={{ fontFamily: ff, background: '#F0F4F8', minHeight: '100vh', color: NAVY }}>
 
-      {/* Nav */}
-      <div style={{ background: C.navy, padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* ── Nav ── */}
+      <div style={{ background: NAVY, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 16px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 32, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em' }}>NEO Home Loans</span>
+          <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 28, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          <span style={{ color: WHITE, fontWeight: 700, fontSize: 14 }}>NEO Home Loans</span>
         </div>
-        {page.apply_url && (
-          <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
-            style={{ background: C.accent, color: C.navy, fontWeight: 700, fontSize: 13, padding: '8px 18px', borderRadius: 20, textDecoration: 'none' }}>
-            Apply Now
-          </a>
-        )}
+        <button onClick={() => setShowLead(true)}
+          style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 13, padding: '8px 20px', borderRadius: 20, border: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}>
+          Get My Numbers
+        </button>
       </div>
 
-      {/* Hero */}
-      <div style={{ background: C.navy, padding: '56px 24px 64px', textAlign: 'center' }}>
-        <div style={{ display: 'inline-block', background: 'rgba(91,203,245,0.15)', color: C.accent, fontSize: 12, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '5px 14px', borderRadius: 20, marginBottom: 20 }}>
+      {/* ── Hero ── */}
+      <div style={{ background: NAVY, padding: 'clamp(48px,8vw,88px) 24px clamp(56px,10vw,120px)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+        {/* decorative rings */}
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 700, height: 700, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.07)`, pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 500, height: 500, borderRadius: '50%', border: `1px solid rgba(91,203,245,0.1)`, pointerEvents: 'none' }} />
+
+        <div style={{ display: 'inline-block', border: `1px solid rgba(91,203,245,0.4)`, color: ACCENT, fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '5px 16px', borderRadius: 20, marginBottom: 22 }}>
           Seller Advantage Program
         </div>
-        <h1 style={{ color: '#fff', fontSize: 'clamp(28px, 5vw, 48px)', fontWeight: 800, margin: '0 0 16px', lineHeight: 1.15, letterSpacing: '-0.02em' }}>
-          The Market Is Expensive.<br />
-          <span style={{ color: C.accent }}>We Have Solutions.</span>
+
+        <h1 style={{ color: WHITE, fontSize: 'clamp(36px,7vw,80px)', fontWeight: 900, margin: '0 0 12px', lineHeight: 1.05, letterSpacing: '-0.035em' }}>
+          The Market Is<br /><span style={{ color: ACCENT }}>Expensive.</span>
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 16, maxWidth: 560, margin: '0 auto 28px', lineHeight: 1.65 }}>
-          When a seller negotiates closing costs to buy down your interest rate, your monthly payment drops — sometimes dramatically. See how the numbers compare below.
+        <h2 style={{ color: 'rgba(255,255,255,0.5)', fontSize: 'clamp(20px,3.5vw,36px)', fontWeight: 700, margin: '0 0 32px', letterSpacing: '-0.02em' }}>
+          We Have Solutions.
+        </h2>
+
+        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 'clamp(15px,2vw,17px)', maxWidth: 560, margin: '0 auto 36px', lineHeight: 1.7 }}>
+          When a seller pays closing costs to buy down your rate, your monthly payment can drop by hundreds of dollars — every single month.
         </p>
+
         {page.sales_price > 0 && (
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>
-            Based on a purchase price of <strong style={{ color: '#fff' }}>{fmt(page.sales_price)}</strong>
-            {qd ? <> · Rates as of <strong style={{ color: '#fff' }}>{qd}</strong></> : ''}
+          <div style={{ display: 'inline-flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 24px' }}>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Purchase price <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
+            {qd && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Rates as of <strong style={{ color: WHITE }}>{qd}</strong></span>}
           </div>
         )}
       </div>
 
-      {/* Rate Cards */}
-      <div style={{ maxWidth: 960, margin: '-36px auto 0', padding: '0 16px 48px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
+      {/* ── Option Accordion ── */}
+      <div style={{ maxWidth: 820, margin: '-1px auto 0', padding: '0 16px 56px' }}>
+        {/* Section label */}
+        <div style={{ textAlign: 'center', padding: '52px 0 36px' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>Your Options</div>
+          <h2 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 900, margin: 0, letterSpacing: '-0.03em', color: NAVY }}>
+            INCENTIVES
+          </h2>
+          <div style={{ width: 72, height: 3, background: ACCENT, borderRadius: 2, margin: '14px auto 0' }} />
+        </div>
+
+        {/* Accordion rows */}
+        <div style={{ border: `1.5px solid #CBD5E1`, borderRadius: 16, overflow: 'hidden', boxShadow: '0 4px 24px rgba(10,37,64,0.08)' }}>
           {scenarios.map((s, i) => {
-            const col = scenarioColors[i] ?? scenarioColors[0]
+            const theme = SCENARIO_THEME[i] ?? SCENARIO_THEME[0]
             const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
+            const annualSavings = savings * 12
+            const isOpen = expanded === i
             const isMarket = i === 0
+
             return (
-              <div key={i} style={{ background: col.bg, borderRadius: 16, padding: '28px 24px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', position: 'relative', overflow: 'hidden' }}>
-                {/* Background shimmer */}
-                <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: col.accent, opacity: 0.06 }} />
-
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: col.label, marginBottom: 20 }}>
-                  {s.header}
-                </div>
-
-                {/* Monthly Payment — the hero number */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Total Monthly Payment</div>
-                  <div style={{ fontSize: 48, fontWeight: 900, color: '#fff', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                    {fmt(s.payment)}
-                    <span style={{ fontSize: 16, fontWeight: 500, color: 'rgba(255,255,255,0.5)', marginLeft: 4 }}>/mo</span>
+              <div key={i} style={{ borderBottom: i < scenarios.length - 1 ? `1px solid #E2E8F0` : 'none' }}>
+                {/* Row header */}
+                <button
+                  onClick={() => setExpanded(isOpen ? null : i)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '20px 24px', background: isOpen ? NAVY : WHITE, border: 'none', cursor: 'pointer',
+                    transition: 'background 0.2s',
+                  }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <span style={{
+                      fontWeight: 900, fontSize: 'clamp(18px,3vw,28px)', letterSpacing: '-0.02em',
+                      color: isOpen ? (theme.label === 'rgba(255,255,255,0.5)' ? 'rgba(255,255,255,0.5)' : theme.label) : NAVY,
+                    }}>
+                      + {s.header}
+                    </span>
+                    {!isMarket && savings > 0 && !isOpen && (
+                      <span style={{ background: theme.badge, color: theme.badgeText === 'rgba(255,255,255,0.6)' ? ACCENT : theme.badgeText, fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 12, whiteSpace: 'nowrap', border: `1px solid ${theme.border}33` }}>
+                        Save {fmt(savings)}/mo
+                      </span>
+                    )}
                   </div>
-                  {!isMarket && savings > 0 && (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: 'rgba(255,255,255,0.12)', borderRadius: 20, padding: '5px 12px' }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: col.label }}>Save {fmt(savings)}/mo</span>
-                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>vs market</span>
+                  <span style={{ color: isOpen ? ACCENT : '#94A3B8', fontSize: 20, transition: 'transform 0.2s', transform: isOpen ? 'rotate(45deg)' : 'none' }}>+</span>
+                </button>
+
+                {/* Expanded panel */}
+                {isOpen && (
+                  <div style={{ background: NAVY, padding: '0 24px 28px', borderTop: `1px solid rgba(255,255,255,0.08)` }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 1, background: 'rgba(255,255,255,0.08)', borderRadius: 12, overflow: 'hidden', marginBottom: savings > 0 ? 20 : 0 }}>
+                      {[
+                        { label: 'Interest Rate', value: fmtRate(s.rate), big: true },
+                        { label: 'APR', value: fmtRate(s.apr), big: false },
+                        { label: 'Monthly Payment', value: fmt(s.payment), big: true },
+                        ...(savings > 0 ? [{ label: 'Monthly Savings', value: fmt(savings), big: true, highlight: true }] : []),
+                      ].map(({ label, value, big, highlight }) => (
+                        <div key={label} style={{ padding: '18px 20px', background: highlight ? 'rgba(91,203,245,0.12)' : NAVY }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: highlight ? ACCENT : 'rgba(255,255,255,0.4)', marginBottom: 6 }}>{label}</div>
+                          <div style={{ fontSize: big ? 'clamp(22px,4vw,32px)' : 18, fontWeight: 900, color: highlight ? ACCENT : WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+                        </div>
+                      ))}
                     </div>
-                  )}
-                  {isMarket && (
-                    <div style={{ marginTop: 10, fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Standard market financing</div>
-                  )}
-                </div>
 
-                {/* Stats */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 18 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>Interest Rate</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: '#fff' }}>{fmtRate(s.rate)}</span>
+                    {savings > 0 && annualSavings > 0 && (
+                      <div style={{ background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.25)`, borderRadius: 10, padding: '12px 18px', fontSize: 13, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+                        That&apos;s <strong style={{ color: ACCENT }}>{fmt(annualSavings)} per year</strong> back in your pocket compared to standard market financing.
+                      </div>
+                    )}
+
+                    {isMarket && (
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', lineHeight: 1.5, marginTop: 4 }}>
+                        Standard market rate with no seller concessions — the baseline for comparison.
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)' }}>APR</span>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>{fmtRate(s.apr)}</span>
-                  </div>
-                </div>
+                )}
               </div>
             )
           })}
         </div>
 
-        {/* Annual savings callout */}
-        {scenarios.length > 1 && baseline > 0 && (scenarios[1]?.payment ?? 0) < baseline && (
-          <div style={{ background: '#064E3B', borderRadius: 12, padding: '20px 24px', marginTop: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#34D399', flexShrink: 0 }} />
-            <div style={{ color: '#fff', fontSize: 14, lineHeight: 1.5 }}>
-              With a <strong style={{ color: '#34D399' }}>Permanent Buydown</strong>, you could save{' '}
-              <strong style={{ color: '#34D399' }}>{fmt((baseline - scenarios[1].payment) * 12)} per year</strong> compared to standard market financing — that&apos;s real money back in your pocket every month.
+        {/* Compare all at a glance */}
+        {scenarios.length > 1 && (
+          <div style={{ marginTop: 16, background: WHITE, borderRadius: 12, border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(10,37,64,0.06)' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94A3B8' }}>
+              At a Glance
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: `auto repeat(${scenarios.length}, 1fr)`, fontSize: 13 }}>
+              {/* Header row */}
+              <div style={{ padding: '10px 20px', color: '#64748B', fontWeight: 600 }}></div>
+              {scenarios.map((s, i) => (
+                <div key={i} style={{ padding: '10px 16px', fontWeight: 800, color: i === 0 ? NAVY : (i === 1 ? '#0369A1' : '#065F46'), fontSize: 12, textAlign: 'right', borderLeft: '1px solid #F1F5F9' }}>{s.header}</div>
+              ))}
+              {/* Rate row */}
+              <div style={{ padding: '10px 20px', color: '#64748B', borderTop: '1px solid #F1F5F9' }}>Rate</div>
+              {scenarios.map((s, i) => (
+                <div key={i} style={{ padding: '10px 16px', fontWeight: 700, color: NAVY, textAlign: 'right', borderLeft: '1px solid #F1F5F9', borderTop: '1px solid #F1F5F9', fontVariantNumeric: 'tabular-nums' }}>{fmtRate(s.rate)}</div>
+              ))}
+              {/* APR row */}
+              <div style={{ padding: '10px 20px', color: '#64748B', borderTop: '1px solid #F1F5F9' }}>APR</div>
+              {scenarios.map((s, i) => (
+                <div key={i} style={{ padding: '10px 16px', fontWeight: 600, color: '#475569', textAlign: 'right', borderLeft: '1px solid #F1F5F9', borderTop: '1px solid #F1F5F9', fontVariantNumeric: 'tabular-nums' }}>{fmtRate(s.apr)}</div>
+              ))}
+              {/* Payment row */}
+              <div style={{ padding: '10px 20px', color: '#64748B', borderTop: '1px solid #F1F5F9', fontWeight: 700 }}>Monthly</div>
+              {scenarios.map((s, i) => {
+                const savings = i > 0 ? baseline - s.payment : 0
+                return (
+                  <div key={i} style={{ padding: '10px 16px', textAlign: 'right', borderLeft: '1px solid #F1F5F9', borderTop: '1px solid #F1F5F9', fontVariantNumeric: 'tabular-nums' }}>
+                    <div style={{ fontWeight: 900, fontSize: 15, color: NAVY }}>{fmt(s.payment)}</div>
+                    {savings > 0 && <div style={{ fontSize: 11, color: '#059669', fontWeight: 700 }}>−{fmt(savings)}/mo</div>}
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
       </div>
 
-      {/* How It Works */}
-      <div style={{ background: C.white, padding: '56px 24px' }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 40 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.accent, marginBottom: 10 }}>How It Works</div>
-            <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800, color: C.navy, margin: 0, letterSpacing: '-0.02em' }}>Seller-Paid Rate Reductions Explained</h2>
+      {/* ── How It Works ── */}
+      <div style={{ background: WHITE, padding: '56px 24px' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 44 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 10 }}>How It Works</div>
+            <h2 style={{ fontSize: 'clamp(24px,4vw,38px)', fontWeight: 900, color: NAVY, margin: 0, letterSpacing: '-0.03em' }}>Seller Pays → Your Rate Drops</h2>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 28 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 32 }}>
             {[
-              { n: '01', title: 'Seller Pays Closing Costs', body: 'Instead of a price reduction, the seller contributes funds at closing specifically to buy down your interest rate.' },
-              { n: '02', title: 'Your Rate Drops', body: 'Those funds are used to permanently or temporarily lower your mortgage rate below the current market rate.' },
-              { n: '03', title: 'Lower Monthly Payment', body: 'A lower rate means a lower monthly payment — every single month, for the life of your loan (or the buydown period).' },
+              { n: '01', title: 'Seller Pays Closing Costs', body: 'Instead of a price cut, the seller contributes funds at closing specifically to reduce your interest rate.' },
+              { n: '02', title: 'Your Rate Drops', body: 'Those funds permanently or temporarily lower your mortgage rate below what the open market offers.' },
+              { n: '03', title: 'Lower Payment, Every Month', body: 'A lower rate means less interest — that savings hits your bank account every month for the life of the loan.' },
             ].map(({ n, title, body }) => (
               <div key={n}>
-                <div style={{ fontSize: 32, fontWeight: 900, color: C.accent, opacity: 0.4, marginBottom: 8, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
-                <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 8 }}>{title}</div>
-                <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.6 }}>{body}</div>
+                <div style={{ fontSize: 48, fontWeight: 900, color: ACCENT, opacity: 0.3, marginBottom: 10, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{n}</div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: NAVY, marginBottom: 10 }}>{title}</div>
+                <div style={{ fontSize: 14, color: '#64748B', lineHeight: 1.7 }}>{body}</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Contact Section */}
-      <div style={{ background: C.navy, padding: '56px 24px' }}>
-        <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.accent, marginBottom: 12 }}>Get Your Numbers</div>
-          <h2 style={{ fontSize: 'clamp(22px, 4vw, 34px)', fontWeight: 800, color: '#fff', margin: '0 0 12px', letterSpacing: '-0.02em' }}>See What This Looks Like for You</h2>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 15, margin: '0 0 32px', lineHeight: 1.6 }}>
-            Get a personalized analysis based on your actual purchase price, loan type, and the home you&apos;re looking at.
+      {/* ── Contact ── */}
+      <div style={{ background: NAVY, padding: '64px 24px' }}>
+        <div style={{ maxWidth: 580, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 14 }}>Get Your Numbers</div>
+          <h2 style={{ fontSize: 'clamp(24px,4vw,42px)', fontWeight: 900, color: WHITE, margin: '0 0 14px', letterSpacing: '-0.03em' }}>See What This Looks Like for Your Home</h2>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 15, margin: '0 0 36px', lineHeight: 1.7 }}>
+            Get a personalized analysis based on your actual price, loan type, and credit profile.
           </p>
 
-          {/* Advisor card */}
           {page.advisor_name && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 18px', marginBottom: 24, textAlign: 'left' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
               {page.advisor_photo && (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
               )}
               <div>
-                <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{page.advisor_name}</div>
-                {page.advisor_title && <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13 }}>{page.advisor_title}</div>}
-                {page.advisor_nmls && <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>NMLS #{page.advisor_nmls}</div>}
+                <div style={{ color: WHITE, fontWeight: 800, fontSize: 15 }}>{page.advisor_name}</div>
+                {page.advisor_title && <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>{page.advisor_title}</div>}
+                {page.advisor_nmls && <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12 }}>NMLS #{page.advisor_nmls}</div>}
               </div>
             </div>
           )}
 
-          {/* CTA buttons */}
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 20 }}>
             <button onClick={() => setShowLead(true)}
-              style={{ background: C.accent, color: C.navy, fontWeight: 700, fontSize: 15, padding: '13px 28px', borderRadius: 10, border: 'none', cursor: 'pointer' }}>
+              style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, border: 'none', cursor: 'pointer', letterSpacing: '-0.01em' }}>
               Get My Free Analysis
             </button>
             {page.schedule_url && (
               <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
-                style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', fontWeight: 700, fontSize: 15, padding: '13px 28px', borderRadius: 10, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
+                style={{ background: 'rgba(255,255,255,0.1)', color: WHITE, fontWeight: 700, fontSize: 15, padding: '14px 28px', borderRadius: 10, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
                 📅 Schedule a Call
               </a>
             )}
             {page.apply_url && (
               <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
-                style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', fontWeight: 700, fontSize: 15, padding: '13px 28px', borderRadius: 10, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
+                style={{ background: 'rgba(255,255,255,0.1)', color: WHITE, fontWeight: 700, fontSize: 15, padding: '14px 28px', borderRadius: 10, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.2)' }}>
                 📋 Start Application
               </a>
             )}
           </div>
-
           {page.advisor_phone && (
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
-              Or call directly: <a href={`tel:${page.advisor_phone}`} style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600, textDecoration: 'none' }}>{page.advisor_phone}</a>
+            <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 13 }}>
+              Or call: <a href={`tel:${page.advisor_phone}`} style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, textDecoration: 'none' }}>{page.advisor_phone}</a>
             </div>
           )}
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <div style={{ background: '#F9FAFB', borderTop: `1px solid ${C.border}`, padding: '28px 24px' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto', fontSize: 11, color: C.muted, lineHeight: 1.7 }}>
-          <strong style={{ color: C.text }}>Disclaimer: </strong>{disclaimer}
+      {/* ── Disclaimer ── */}
+      <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '24px' }}>
+        <div style={{ maxWidth: 820, margin: '0 auto', fontSize: 11, color: '#94A3B8', lineHeight: 1.8 }}>
+          <strong style={{ color: '#64748B' }}>Disclaimer: </strong>{disclaimer}
         </div>
       </div>
 
-      {/* Lead modal */}
       {showLead && (
         <LeadCaptureModal
           address="Seller Advantage Program"
