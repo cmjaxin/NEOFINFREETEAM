@@ -275,9 +275,20 @@ export default function PageClient({ slug }: { slug: string }) {
           </p>
 
           {page.sales_price > 0 && (
-            <div style={{ display: 'inline-flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '7px 20px', marginBottom: 20 }}>
-              <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Ex: <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
-              {qd && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12 }}>Rates as of <strong style={{ color: WHITE }}>{qd}</strong></span>}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '12px 24px', marginBottom: 20 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 3 }}>Ex. Home Price</div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: WHITE, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmt(page.sales_price)}</div>
+              </div>
+              {qd && (
+                <>
+                  <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.12)' }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>Rates As Of</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{qd}</div>
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
