@@ -37,6 +37,12 @@ interface OHEPage {
   schedule_url: string | null
   apply_url: string | null
   page_type: string
+  seller_contribution: number | null
+  seller_contribution_pct: number | null
+  rate_scenarios: Array<{
+    label: string; down_pct: number; market_rate: number; buydown_rate: number
+    market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number
+  }> | null
 }
 
 function SectionHead({ title, sub }: { title: string; sub?: string }) {
@@ -386,6 +392,9 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     partner_nmls: (init as OHEPage).partner_nmls ?? '',
     partner_photo: (init as OHEPage).partner_photo ?? '',
     partner_logo: (init as OHEPage).partner_logo ?? '',
+    seller_contribution: (init as OHEPage).seller_contribution ?? 0,
+    seller_contribution_pct: (init as OHEPage).seller_contribution_pct ?? 0,
+    rate_scenarios: (init as OHEPage).rate_scenarios ?? null,
   })
   const [showPartner, setShowPartner] = useState(!!(init as OHEPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
@@ -479,7 +488,36 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     const { error } = await supabase.storage.from('splice-clips').upload(path, resized, { upsert: true, contentType: 'image/jpeg' })
     if (!error) {
       const { data } = supabase.storage.from('splice-clips').getPublicUrl(path)
-      set('tca_screenshot', data.publicUrl)
+      const publicUrl = data.publicUrl
+      set('tca_screenshot', publicUrl)
+      try {
+        console.log('[TCA] Extracting rates from', publicUrl)
+        const res = await fetch('/api/extract-tca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ screenshot_url: publicUrl })
+        })
+        const extracted = await res.json()
+        console.log('[TCA] Extraction result:', extracted)
+        if (res.ok && extracted.scenarios?.length) {
+          set('rate_scenarios', extracted.scenarios)
+          set('seller_contribution', extracted.seller_contribution ?? 0)
+          set('seller_contribution_pct', extracted.seller_contribution_pct ?? 0)
+          if (editing?.id) {
+            const { error: sbErr } = await supabase.from('open_house_pages').update({
+              rate_scenarios: extracted.scenarios,
+              seller_contribution: extracted.seller_contribution ?? 0,
+              seller_contribution_pct: extracted.seller_contribution_pct ?? 0,
+            }).eq('id', editing.id)
+            if (sbErr) console.error('[TCA] Supabase save error:', sbErr)
+            else console.log('[TCA] Saved rate data to Supabase for id:', editing.id)
+          } else {
+            console.warn('[TCA] No editing.id — will save on form submit')
+          }
+        } else {
+          console.warn('[TCA] No scenarios extracted or error:', extracted)
+        }
+      } catch (e) { console.error('[TCA] Extraction failed:', e) }
     }
     setTcaUploading(false)
   }
@@ -534,6 +572,9 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
       page_type: 'open_house',
       schedule_url: (profile as any)?.schedule_url ?? null,
       apply_url: (profile as any)?.apply_url ?? null,
+      seller_contribution: form.seller_contribution ?? 0,
+      seller_contribution_pct: form.seller_contribution_pct ?? 0,
+      rate_scenarios: form.rate_scenarios ?? null,
       updated_at: new Date().toISOString(),
     }
 
@@ -548,7 +589,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     }
     let res = await attempt(payload as Record<string, unknown>)
     if (res.error?.code === '42703') {
-      const { loan_description: _ld, tca_url: _a, tca_screenshot: _b, page_type: _pt, ...corePayload } = payload
+      const { loan_description: _ld, tca_url: _a, tca_screenshot: _b, page_type: _pt, seller_contribution: _sc, seller_contribution_pct: _scp, rate_scenarios: _rs, ...corePayload } = payload
       res = await attempt(corePayload as Record<string, unknown>)
     }
     if (res.error) { setMsg(`Save failed: ${res.error.message} (${res.error.code})`); setSaving(false); return }
