@@ -173,8 +173,8 @@ function ContactSection({ page }: { page: PageData }) {
                   {submitting ? 'Sending…' : 'Request More Info'}
                 </button>
 
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', textAlign: 'center', lineHeight: 1.5 }}>
-                  By submitting, you consent to be contacted about mortgage products. We respect your privacy.
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.7 }}>
+                  By submitting you allow mortgage related text message communication to this number. Providing your phone number above, and clicking the &quot;Request More Info&quot; button above, you agree to receive text messages from NEO Home Loans. Consent is not a condition of service. Message and data rates may apply. Message frequency varies. Reply HELP for help or STOP to cancel.
                 </div>
               </div>
             </form>
