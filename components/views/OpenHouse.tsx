@@ -695,7 +695,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     let res = await attempt(payload as Record<string, unknown>)
     // If any new optional columns don't exist yet in the DB, strip them and retry
     if (res.error?.code === '42703') {
-      const { tca_url: _a, tca_screenshot: _b, ...corePayload } = payload
+      const { tca_url: _a, tca_screenshot: _b, seller_contribution: _c, seller_contribution_pct: _d, rate_scenarios: _e, ...corePayload } = payload
       res = await attempt(corePayload as Record<string, unknown>)
     }
     if (res.error) { setMsg(`Save failed: ${res.error.message} (${res.error.code})`); setSaving(false); return }
