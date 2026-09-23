@@ -140,7 +140,8 @@ function ContactSection({ page }: { page: PageData }) {
           <>
             <iframe ref={iframeRef} name="bnt_iframe_sa" style={{ display: 'none' }} title="BNTouch Submit" />
             <form ref={formRef} method="post" action="https://www.bntouchmortgage.net/api/webform/" target="bnt_iframe_sa" onSubmit={handleSubmit}>
-              <input type="hidden" name="added_source" value={`Seller Advantage LP — ${page.advisor_name ?? ''}`} />
+              <input type="hidden" name="added_source" value={`Seller Advantage LP — ${page.advisor_name ?? 'NEO Home Loans'}`} />
+              <input type="hidden" name="loan_officer" value={page.advisor_name ?? ''} />
               <input type="hidden" name="RETURNTIMEOUT" value="10" />
               <input type="hidden" name="USERID" value={page.bntouch_user_id || '10543'} />
               <input type="hidden" name="GROUPID" value="1" />
