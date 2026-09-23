@@ -72,7 +72,7 @@ function ContactSection({ page }: { page: PageData }) {
   }
 
   return (
-    <div style={{ background: NAVY, padding: '64px 24px' }}>
+    <div id="contact" style={{ background: NAVY, padding: '64px 24px' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
 
         {/* Section label */}
@@ -274,11 +274,17 @@ export default function PageClient({ slug }: { slug: string }) {
           When a seller uses a portion of closing costs to buy down your interest rate, your monthly payment drops — sometimes by hundreds of dollars, every single month.
         </p>
         {page.sales_price > 0 && (
-          <div style={{ display: 'inline-flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 24px' }}>
+          <div style={{ display: 'inline-flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 24px', marginBottom: 28 }}>
             <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ex: Purchase price <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
             {qd && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Rates as of <strong style={{ color: WHITE }}>{qd}</strong></span>}
           </div>
         )}
+        <div>
+          <a href="#contact"
+            style={{ display: 'inline-block', background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 16, padding: '14px 36px', borderRadius: 10, textDecoration: 'none', letterSpacing: '-0.01em' }}>
+            See What I Qualify For →
+          </a>
+        </div>
       </div>
 
       {/* ── Rate Cards ── */}
