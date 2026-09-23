@@ -272,7 +272,7 @@ export default function PageClient({ slug }: { slug: string }) {
         </p>
         {page.sales_price > 0 && (
           <div style={{ display: 'inline-flex', gap: 20, flexWrap: 'wrap', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 24px' }}>
-            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Purchase price <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Ex: Purchase price <strong style={{ color: WHITE }}>{fmt(page.sales_price)}</strong></span>
             {qd && <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 13 }}>Rates as of <strong style={{ color: WHITE }}>{qd}</strong></span>}
           </div>
         )}
