@@ -240,15 +240,12 @@ export default function PageClient({ slug }: { slug: string }) {
     <div style={{ fontFamily: ff, background: '#F0F4F8', minHeight: '100vh', color: NAVY }}>
 
       {/* ── Nav ── */}
-      <div style={{ background: NAVY, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 2px 16px rgba(0,0,0,0.2)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 28, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
-          <span style={{ color: WHITE, fontWeight: 700, fontSize: 14 }}>NEO Home Loans</span>
-        </div>
+      <div style={{ background: WHITE, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 12px rgba(0,0,0,0.08)' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 32, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
         {page.apply_url && (
           <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
-            style={{ background: ACCENT, color: NAVY, fontWeight: 800, fontSize: 13, padding: '8px 20px', borderRadius: 20, textDecoration: 'none' }}>
+            style={{ background: '#0369A1', color: WHITE, fontWeight: 700, fontSize: 14, padding: '9px 22px', borderRadius: 8, textDecoration: 'none' }}>
             Apply Now
           </a>
         )}
