@@ -131,7 +131,7 @@ function ContactSection({ page }: { page: PageData }) {
         {/* Divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 32 }}>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>or send a quick message</span>
+          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap' }}>or request a consultation</span>
           <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
         </div>
 
