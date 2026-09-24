@@ -6,6 +6,7 @@ interface AFScenario { header: string; rate: number; apr: number; payment: numbe
 
 interface PageData {
   id: string; slug: string; created_by: string
+  sales_price: number; quote_date: string | null
   image_urls: string[]
   ai_headline: string | null; ai_explainer: string | null; ai_talking_point: string | null
   scenarios: AFScenario[]
@@ -16,6 +17,7 @@ interface PageData {
 
 const NAVY = '#0A2540'
 const ACCENT = '#5BCBF5'
+const GREEN = '#22c55e'
 const WHITE = '#fff'
 
 function fmt(n: number) { return '$' + Math.round(n).toLocaleString() }
@@ -177,6 +179,8 @@ export default function PageClient({ slug }: { slug: string }) {
         .eq('id', row.created_by).single()
       setPage({
         ...row,
+        sales_price: row.sales_price ?? 0,
+        quote_date: row.quote_date ?? null,
         image_urls: Array.isArray(row.image_urls) ? row.image_urls : [],
         scenarios: Array.isArray(row.scenarios) ? row.scenarios : [],
         advisor_name: prof?.full_name ?? null,
@@ -199,6 +203,9 @@ export default function PageClient({ slug }: { slug: string }) {
 
   const baseline = page.scenarios[0]?.payment ?? 0
   const images = page.image_urls ?? []
+  const qd = page.quote_date
+    ? new Date(page.quote_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null
 
   return (
     <>
@@ -208,8 +215,10 @@ export default function PageClient({ slug }: { slug: string }) {
         .af-hero { padding: 40px 20px 32px; }
         .af-h1 { font-size: clamp(30px, 5vw, 62px); }
         .af-sub { font-size: 16px; }
-        .af-charts-grid-top { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-        .af-charts-grid-bottom { width: 100%; }
+        .af-carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; scrollbar-width: none; -ms-overflow-style: none; padding-bottom: 4px; }
+        .af-carousel::-webkit-scrollbar { display: none; }
+        .af-carousel-slide { flex: 0 0 100%; scroll-snap-align: start; border-radius: 14px; overflow: hidden; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+        .af-carousel-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
         .af-ai-box { padding: 28px 32px; }
         .af-headline { font-size: clamp(20px, 3vw, 30px); }
         .af-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; padding: 0 16px; }
@@ -258,30 +267,45 @@ export default function PageClient({ slug }: { slug: string }) {
           <h1 className="af-h1" style={{ fontWeight: 900, color: WHITE, lineHeight: 1.05, letterSpacing: '-0.04em', marginBottom: 16 }}>
             The Problem Isn&apos;t Home Prices.<br />It&apos;s Affordability.
           </h1>
-          <p className="af-sub" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 560, margin: '0 auto 32px', lineHeight: 1.7 }}>
+          <p className="af-sub" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 560, margin: '0 auto 24px', lineHeight: 1.7 }}>
             This Is How We Manufacture Affordability.
           </p>
+
+          {(page.sales_price > 0 || qd) && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 16, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 20px', marginBottom: 8 }}>
+              {page.sales_price > 0 && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 3 }}>Ex. Home Price</div>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: WHITE, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmt(page.sales_price)}</div>
+                </div>
+              )}
+              {page.sales_price > 0 && qd && <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.12)' }} />}
+              {qd && (
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>Rates As Of</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{qd}</div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Market Charts */}
+        {/* Market Charts — carousel */}
         {images.length > 0 && (
-          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 40px' }}>
-            {/* 2x2 grid */}
-            {images.slice(0, 4).length > 0 && (
-              <div className="af-charts-grid-top" style={{ marginBottom: 12 }}>
-                {images.slice(0, 4).map((url, i) => (
-                  <div key={i} style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
-                  </div>
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 40px' }}>
+            <div className="af-carousel">
+              {images.map((url, i) => (
+                <div key={i} className="af-carousel-slide">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
+                </div>
+              ))}
+            </div>
+            {images.length > 1 && (
+              <div className="af-carousel-dots">
+                {images.map((_, i) => (
+                  <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
                 ))}
-              </div>
-            )}
-            {/* Chart 5: full width */}
-            {images[4] && (
-              <div className="af-charts-grid-bottom" style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={images[4]} alt="Market chart 5" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
               </div>
             )}
           </div>
@@ -327,31 +351,41 @@ export default function PageClient({ slug }: { slug: string }) {
               <div className="af-cards">
                 {page.scenarios.map((s, i) => {
                   const isMarket = i === 0
+                  const isBest = i === page.scenarios.length - 1 && i > 0
                   const savings = i > 0 && baseline > 0 ? baseline - s.payment : 0
                   const annualSavings = savings * 12
-                  const cardBg = isMarket ? 'rgba(255,255,255,0.05)' : 'rgba(91,203,245,0.1)'
-                  const cardAccent = isMarket ? 'rgba(255,255,255,0.4)' : ACCENT
+                  const cardAccent = isMarket ? 'rgba(255,255,255,0.4)' : isBest ? GREEN : ACCENT
+                  const cardBg = isMarket ? 'rgba(255,255,255,0.05)' : isBest ? 'rgba(34,197,94,0.10)' : 'rgba(91,203,245,0.08)'
+                  const cardBorder = isMarket ? 'rgba(255,255,255,0.1)' : isBest ? GREEN + '50' : ACCENT + '40'
+                  const cardGlow = isBest ? `0 0 40px ${GREEN}30, 0 2px 16px rgba(0,0,0,0.3)` : undefined
                   return (
-                    <div key={i} className="af-card" style={{ background: cardBg, border: `1px solid ${isMarket ? 'rgba(255,255,255,0.1)' : ACCENT + '40'}`, position: 'relative', overflow: 'hidden' }}>
-                      <div style={{ position: 'absolute', top: -40, right: -40, width: 160, height: 160, borderRadius: '50%', background: cardAccent, opacity: isMarket ? 0.03 : 0.08, filter: 'blur(20px)' }} />
+                    <div key={i} className="af-card" style={{ background: cardBg, border: `1px solid ${cardBorder}`, position: 'relative', overflow: 'hidden', boxShadow: cardGlow }}>
+                      {isBest && (
+                        <div style={{ position: 'absolute', top: 12, right: 12, background: GREEN, color: '#fff', fontSize: 9, fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: 20 }}>
+                          Best Option
+                        </div>
+                      )}
+                      <div style={{ position: 'absolute', top: -40, right: -40, width: 200, height: 200, borderRadius: '50%', background: cardAccent, opacity: isMarket ? 0.03 : isBest ? 0.15 : 0.08, filter: 'blur(30px)' }} />
                       <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: cardAccent, marginBottom: 14 }}>{s.header}</div>
                       <div style={{ marginBottom: 16 }}>
                         <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 4 }}>Interest Rate</div>
-                        <div className="af-rate-num" style={{ fontWeight: 900, color: WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
+                        <div className="af-rate-num" style={{ fontWeight: 900, color: isBest ? GREEN : WHITE, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums' }}>
                           {fmtRate(s.rate)}
                         </div>
                       </div>
                       {!isMarket && savings > 0 && (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', background: `${cardAccent}20`, border: `1px solid ${cardAccent}50`, borderRadius: 20, padding: '5px 12px', marginBottom: 14 }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', background: `${cardAccent}25`, border: `1px solid ${cardAccent}60`, borderRadius: 20, padding: '6px 14px', marginBottom: 14 }}>
+                          <span style={{ fontSize: 14, fontWeight: 900, color: cardAccent }}>💰 Save {fmt(savings)}/mo</span>
                         </div>
                       )}
-                      <div style={{ borderTop: `1px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '22'}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ borderTop: `1px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '30'}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                         <div>
                           <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 3 }}>Monthly Payment</div>
                           <div className="af-payment-num" style={{ fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
                         </div>
-                        {!isMarket && annualSavings > 0 && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{fmt(annualSavings)}/yr vs. market</div>}
+                        {!isMarket && annualSavings > 0 && (
+                          <div style={{ fontSize: 12, fontWeight: 700, color: isBest ? GREEN : 'rgba(255,255,255,0.5)' }}>{fmt(annualSavings)}/yr savings vs. market</div>
+                        )}
                         {isMarket && <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>Standard market financing</div>}
                         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>APR {fmtRate(s.apr)}</div>
                       </div>

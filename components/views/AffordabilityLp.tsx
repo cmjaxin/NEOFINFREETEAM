@@ -1,4 +1,5 @@
-// SQL: create table if not exists affordability_pages (id uuid primary key default gen_random_uuid(), created_by uuid references auth.users(id), slug text unique not null, image_urls text[] default '{}', ai_headline text, ai_explainer text, ai_talking_point text, scenarios jsonb, updated_at timestamptz default now());
+// SQL: create table if not exists affordability_pages (id uuid primary key default gen_random_uuid(), created_by uuid references auth.users(id), slug text unique not null, sales_price numeric, quote_date date, image_urls text[] default '{}', ai_headline text, ai_explainer text, ai_talking_point text, scenarios jsonb, updated_at timestamptz default now());
+// SQL (migration): alter table affordability_pages add column if not exists sales_price numeric; alter table affordability_pages add column if not exists quote_date date;
 // SQL: alter table affordability_pages enable row level security;
 // SQL: create policy "owner full access" on affordability_pages for all using (auth.uid() = created_by) with check (auth.uid() = created_by);
 // SQL: create policy "public read" on affordability_pages for select using (true);
@@ -16,6 +17,7 @@ interface AFScenario { header: string; rate: number; apr: number; payment: numbe
 
 interface AFPage {
   id: string; slug: string; created_by: string
+  sales_price: number; quote_date: string
   image_urls: string[]
   ai_headline: string | null; ai_explainer: string | null; ai_talking_point: string | null
   scenarios: AFScenario[]
@@ -63,6 +65,8 @@ export default function AffordabilityLp() {
   const [msg, setMsg] = useState('')
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
 
+  const [salesPrice, setSalesPrice] = useState('545000')
+  const [quoteDate, setQuoteDate] = useState(new Date().toISOString().slice(0, 10))
   const [imageUrls, setImageUrls] = useState<(string | null)[]>([null, null, null, null, null])
   const [scenarios, setScenarios] = useState<AFScenario[]>(DEFAULT_SCENARIOS)
   const [aiHeadline, setAiHeadline] = useState('')
@@ -79,6 +83,8 @@ export default function AffordabilityLp() {
         if (data) {
           const d = data as AFPage
           setPage(d)
+          setSalesPrice(String(d.sales_price ?? 545000))
+          setQuoteDate(d.quote_date ?? new Date().toISOString().slice(0, 10))
           const urls = Array.isArray(d.image_urls) ? d.image_urls : []
           setImageUrls([0,1,2,3,4].map(i => urls[i] ?? null))
           setScenarios((d.scenarios as AFScenario[]) ?? DEFAULT_SCENARIOS)
@@ -146,6 +152,8 @@ export default function AffordabilityLp() {
     const slug = page?.slug ?? 'af-' + slugify(profile.full_name || profile.email || profile.id)
     const payload = {
       created_by: profile.id, slug,
+      sales_price: parseFloat(salesPrice.replace(/,/g, '')) || 0,
+      quote_date: quoteDate,
       image_urls: imageUrls.filter(Boolean),
       ai_headline: aiHeadline, ai_explainer: aiExplainer, ai_talking_point: aiTalkingPoint,
       scenarios, updated_at: new Date().toISOString(),
@@ -183,6 +191,15 @@ export default function AffordabilityLp() {
             🔗 View Live Page →
           </a>
         )}
+      </div>
+
+      {/* Page Settings */}
+      <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Page Settings</div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Field label="Example Home Price" value={salesPrice} onChange={setSalesPrice} half placeholder="545000" note="Shown as 'Ex. Home Price' on the page" />
+          <Field label="Quote Date" value={quoteDate} onChange={setQuoteDate} half type="date" note="Displayed as 'Rates As Of'" />
+        </div>
       </div>
 
       {/* Image Upload */}
