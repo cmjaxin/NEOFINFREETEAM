@@ -14,6 +14,7 @@ import OpenHouse from '@/components/views/OpenHouse'
 import OpenHouseEvents from '@/components/views/OpenHouseEvents'
 import SignRiders from '@/components/views/SignRiders'
 import SellerAdvantageLp from '@/components/views/SellerAdvantageLp'
+import AffordabilityLp from '@/components/views/AffordabilityLp'
 import EmployeeProfile from '@/components/views/EmployeeProfile'
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal'
 import SettingsModal from '@/components/modals/SettingsModal'
@@ -145,6 +146,7 @@ function Shell() {
           {view === 'ohevents' && <OpenHouseEvents />}
           {view === 'signriders' && <SignRiders />}
           {view === 'sellerlp' && <SellerAdvantageLp />}
+          {view === 'affordabilitylp' && <AffordabilityLp />}
         </div>{/* end main-content */}
       </main>
 

@@ -31,8 +31,10 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const SPLICE_ALLOWED = ['colin.jenson@neohomeloans.com']
   const isColin = SPLICE_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
   const isAdmin = profile?.role === 'admin' || isColin
+  const AFFORDABILITY_ALLOWED = ['justin.padron@neohomeloans.com']
+  const canAffordabilityLp = isAdmin || AFFORDABILITY_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp') {
     setView(id)
     onClose()
   }
@@ -47,6 +49,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'ohevents' as const,    label: 'Open Houses' },
     { id: 'signriders' as const,  label: 'Sign Riders' },
     { id: 'sellerlp' as const,    label: 'Seller Advantage LP' },
+    { id: 'affordabilitylp' as const, label: 'Affordability LP' },
     { id: 'reels' as const,       label: 'Splice' },
     { id: 'terminated' as const,  label: 'Terminated' },
     { id: 'templates' as const,   label: 'Templates' },
@@ -60,6 +63,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     ...(profile?.can_listings               ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
     ...(profile?.can_sign_riders            ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
     { id: 'sellerlp' as const, label: 'Seller Advantage LP' },
+    ...(canAffordabilityLp ? [{ id: 'affordabilitylp' as const, label: 'Affordability LP' }] : []),
     ...(profile?.can_splice                 ? [{ id: 'reels'      as const, label: 'Splice' }] : []),
   ]
 
