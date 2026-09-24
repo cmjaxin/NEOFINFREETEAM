@@ -327,7 +327,7 @@ export default function PageClient({ slug }: { slug: string }) {
           )}
 
           <h1 className="af-h1" style={{ fontWeight: 900, color: WHITE, lineHeight: 1.05, letterSpacing: '-0.04em', marginBottom: 16 }}>
-            The Problem Isn&apos;t Home Prices.<br />It&apos;s Affordability.
+            The Problem Isn&apos;t Home Prices.<br /><span style={{ color: ACCENT }}>It&apos;s Affordability.</span>
           </h1>
           <p className="af-sub" style={{ color: 'rgba(255,255,255,0.6)', maxWidth: 560, margin: '0 auto 24px', lineHeight: 1.7 }}>
             This Is How We Manufacture Affordability.
