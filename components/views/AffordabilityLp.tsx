@@ -93,12 +93,22 @@ export default function AffordabilityLp() {
   async function uploadImage(idx: number, file: File) {
     if (!profile?.id) return
     setUploadingIdx(idx)
+    setMsg('')
     const ext = file.name.split('.').pop() ?? 'png'
     const path = `affordability/${profile.id}/chart-${idx + 1}-${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('open-house-screenshots').upload(path, file, { upsert: true })
-    if (error) { setMsg('Upload failed: ' + error.message); setUploadingIdx(null); return }
-    const { data: urlData } = supabase.storage.from('open-house-screenshots').getPublicUrl(path)
-    setImageUrls(prev => prev.map((u, i) => i === idx ? urlData.publicUrl : u))
+    const { error } = await supabase.storage.from('marketing-assets').upload(path, file, { upsert: true })
+    if (error) {
+      setMsg('Upload failed: ' + error.message)
+      setUploadingIdx(null)
+      return
+    }
+    const { data: urlData } = supabase.storage.from('marketing-assets').getPublicUrl(path)
+    const url = urlData.publicUrl
+    setImageUrls(prev => {
+      const next = [...prev]
+      next[idx] = url
+      return next
+    })
     setUploadingIdx(null)
   }
 
