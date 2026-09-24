@@ -284,6 +284,7 @@ export default function PageClient({ slug }: { slug: string }) {
           .sa-advisor-card { text-align: center; flex-direction: column !important; align-items: center !important; }
           .sa-cta-row { justify-content: center; }
           .sa-divider { margin: 0 auto; }
+          .sa-pill-divider { display: none; }
         }
       `}</style>
 
@@ -325,7 +326,7 @@ export default function PageClient({ slug }: { slug: string }) {
               </div>
               {qd && (
                 <>
-                  <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.12)' }} />
+                  <div className="sa-pill-divider" style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.12)' }} />
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>Rates As Of</div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{qd}</div>
