@@ -260,21 +260,30 @@ export default function PageClient({ slug }: { slug: string }) {
         .sa-form-grid { grid-template-columns: 1fr 1fr; }
         .sa-contact-pad { padding: 56px 24px; }
         @media (max-width: 640px) {
-          .sa-hero { padding: 20px 16px 20px; }
+          .sa-hero { padding: 20px 16px 20px; text-align: center; }
           .sa-apply-btn { position: static; display: block; text-align: center; margin: 0 auto 16px; width: fit-content; }
-          .sa-logo { height: 28px; margin-bottom: 12px; }
-          .sa-h1 { font-size: 30px; line-height: 1.1; }
-          .sa-sub { font-size: 14px; }
+          .sa-logo { height: 28px; margin: 0 auto 12px; }
+          .sa-h1 { font-size: 30px; line-height: 1.1; text-align: center; }
+          .sa-sub { font-size: 14px; text-align: center; }
           .sa-price-pill { flex-direction: column; gap: 8px; padding: 12px 16px; }
           .sa-price-num { font-size: 22px; }
           .sa-cards { grid-template-columns: 1fr; gap: 10px; padding: 0 12px; }
-          .sa-card { padding: 20px 18px; border-radius: 16px; }
-          .sa-rate-num { font-size: 58px; }
-          .sa-payment-num { font-size: 28px; }
+          .sa-card { padding: 20px 18px; border-radius: 16px; text-align: center; }
+          .sa-card-label { text-align: center; }
+          .sa-rate-num { font-size: 58px; text-align: center; }
+          .sa-payment-num { font-size: 28px; text-align: center; }
+          .sa-savings-badge { align-self: center !important; }
+          .sa-card-stats { align-items: center; }
           .sa-steps-box { padding: 22px 20px; }
+          .sa-step { text-align: center; align-items: center !important; flex-direction: column !important; gap: 8px !important; }
           .sa-how-grid { grid-template-columns: 1fr !important; gap: 16px; }
+          .sa-how-card { text-align: center; }
+          .sa-how-icon { margin: 0 auto 14px; }
           .sa-form-grid { grid-template-columns: 1fr; }
           .sa-contact-pad { padding: 40px 16px; }
+          .sa-advisor-card { text-align: center; flex-direction: column !important; align-items: center !important; }
+          .sa-cta-row { justify-content: center; }
+          .sa-divider { margin: 0 auto; }
         }
       `}</style>
 
