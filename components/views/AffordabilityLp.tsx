@@ -195,11 +195,11 @@ export default function AffordabilityLp() {
         </div>
 
         {/* Row 1: 3 charts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
           {[0, 1, 2].map(idx => <ImageSlot key={idx} idx={idx} url={imageUrls[idx]} label={IMAGE_LABELS[idx]} uploading={uploadingIdx === idx} onFile={f => uploadImage(idx, f)} onClear={() => setImageUrls(prev => prev.map((u, i) => i === idx ? null : u))} fileRefs={fileRefs} />)}
         </div>
         {/* Row 2: 2 charts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, maxWidth: '66.6%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxWidth: '66.6%' }}>
           {[3, 4].map(idx => <ImageSlot key={idx} idx={idx} url={imageUrls[idx]} label={IMAGE_LABELS[idx]} uploading={uploadingIdx === idx} onFile={f => uploadImage(idx, f)} onClear={() => setImageUrls(prev => prev.map((u, i) => i === idx ? null : u))} fileRefs={fileRefs} />)}
         </div>
       </div>
@@ -266,7 +266,7 @@ function ImageSlot({ idx, url, label, uploading, onFile, onClear, fileRefs }: {
       {url ? (
         <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #E4E8EC' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={label} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', display: 'block' }} />
+          <img src={url} alt={label} style={{ width: '100%', display: 'block', objectFit: 'contain', minHeight: 180 }} />
           <button onClick={onClear}
             style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(10,37,64,0.75)', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
             ✕ Remove
@@ -274,7 +274,7 @@ function ImageSlot({ idx, url, label, uploading, onFile, onClear, fileRefs }: {
         </div>
       ) : (
         <button onClick={() => fileRefs.current[idx]?.click()} disabled={uploading}
-          style={{ width: '100%', aspectRatio: '4/3', border: '2px dashed #C5CDD6', borderRadius: 10, background: uploading ? '#F4F6F8' : '#FAFBFC', cursor: uploading ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#858889', fontSize: 12, fontWeight: 600 }}>
+          style={{ width: '100%', minHeight: 180, border: '2px dashed #C5CDD6', borderRadius: 10, background: uploading ? '#F4F6F8' : '#FAFBFC', cursor: uploading ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#858889', fontSize: 12, fontWeight: 600 }}>
           {uploading ? (
             <><span style={{ fontSize: 22 }}>⏳</span> Uploading…</>
           ) : (
