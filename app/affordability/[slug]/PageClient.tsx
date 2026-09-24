@@ -63,12 +63,12 @@ function ContactSection({ page }: { page: PageData }) {
     <div id="contact" className="af-contact-pad" style={{ background: NAVY }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>Get Your Numbers</div>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>Ready to Run the Numbers?</div>
           <h2 style={{ fontSize: 'clamp(24px,4vw,38px)', fontWeight: 900, color: WHITE, margin: 0, letterSpacing: '-0.03em' }}>
-            See What Affordability Looks Like for You
+            See the Numbers for Your Client
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, margin: '12px auto 0', maxWidth: 480, lineHeight: 1.7 }}>
-            We&apos;ll show you exactly how a seller-paid rate reduction changes your payment — for your specific home, loan type, and profile.
+            Connect with us and we&apos;ll show you exactly how a seller-paid rate buydown changes the payment — specific to their home, loan type, and profile.
           </p>
         </div>
 
