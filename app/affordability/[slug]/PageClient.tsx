@@ -6,7 +6,7 @@ interface AFScenario { header: string; rate: number; apr: number; payment: numbe
 
 interface PageData {
   id: string; slug: string; created_by: string
-  sales_price: number; quote_date: string | null
+  sales_price: number; quote_date: string | null; seller_advantage_subheading: string | null
   image_urls: string[]
   ai_headline: string | null; ai_explainer: string | null; ai_talking_point: string | null
   scenarios: AFScenario[]
@@ -398,7 +398,7 @@ export default function PageClient({ slug }: { slug: string }) {
                   Seller Advantage Program
                 </h3>
                 <p style={{ fontSize: 'clamp(15px,2vw,18px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, margin: 0, maxWidth: 580, marginLeft: 'auto', marginRight: 'auto' }}>
-                  A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
+                  {page.seller_advantage_subheading ?? 'A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.'}
                 </p>
               </div>
 

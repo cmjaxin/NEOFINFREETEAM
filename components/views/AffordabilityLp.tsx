@@ -1,5 +1,5 @@
-// SQL: create table if not exists affordability_pages (id uuid primary key default gen_random_uuid(), created_by uuid references auth.users(id), slug text unique not null, sales_price numeric, quote_date date, image_urls text[] default '{}', ai_headline text, ai_explainer text, ai_talking_point text, scenarios jsonb, updated_at timestamptz default now());
-// SQL (migration): alter table affordability_pages add column if not exists sales_price numeric; alter table affordability_pages add column if not exists quote_date date;
+// SQL: create table if not exists affordability_pages (id uuid primary key default gen_random_uuid(), created_by uuid references auth.users(id), slug text unique not null, sales_price numeric, quote_date date, seller_advantage_subheading text, image_urls text[] default '{}', ai_headline text, ai_explainer text, ai_talking_point text, scenarios jsonb, updated_at timestamptz default now());
+// SQL (migration): alter table affordability_pages add column if not exists sales_price numeric; alter table affordability_pages add column if not exists quote_date date; alter table affordability_pages add column if not exists seller_advantage_subheading text;
 // SQL: alter table affordability_pages enable row level security;
 // SQL: create policy "owner full access" on affordability_pages for all using (auth.uid() = created_by) with check (auth.uid() = created_by);
 // SQL: create policy "public read" on affordability_pages for select using (true);
@@ -17,7 +17,7 @@ interface AFScenario { header: string; rate: number; apr: number; payment: numbe
 
 interface AFPage {
   id: string; slug: string; created_by: string
-  sales_price: number; quote_date: string
+  sales_price: number; quote_date: string; seller_advantage_subheading: string | null
   image_urls: string[]
   ai_headline: string | null; ai_explainer: string | null; ai_talking_point: string | null
   scenarios: AFScenario[]
@@ -67,6 +67,7 @@ export default function AffordabilityLp() {
 
   const [salesPrice, setSalesPrice] = useState('545000')
   const [quoteDate, setQuoteDate] = useState(new Date().toISOString().slice(0, 10))
+  const [saSubheading, setSaSubheading] = useState('A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.')
   const [imageUrls, setImageUrls] = useState<(string | null)[]>([null, null, null, null, null])
   const [scenarios, setScenarios] = useState<AFScenario[]>(DEFAULT_SCENARIOS)
   const [aiHeadline, setAiHeadline] = useState('')
@@ -85,6 +86,7 @@ export default function AffordabilityLp() {
           setPage(d)
           setSalesPrice(String(d.sales_price ?? 545000))
           setQuoteDate(d.quote_date ?? new Date().toISOString().slice(0, 10))
+          setSaSubheading(d.seller_advantage_subheading ?? 'A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.')
           const urls = Array.isArray(d.image_urls) ? d.image_urls : []
           setImageUrls([0,1,2,3,4].map(i => urls[i] ?? null))
           setScenarios((d.scenarios as AFScenario[]) ?? DEFAULT_SCENARIOS)
@@ -154,6 +156,7 @@ export default function AffordabilityLp() {
       created_by: profile.id, slug,
       sales_price: parseFloat(salesPrice.replace(/,/g, '')) || 0,
       quote_date: quoteDate,
+      seller_advantage_subheading: saSubheading,
       image_urls: imageUrls.filter(Boolean),
       ai_headline: aiHeadline, ai_explainer: aiExplainer, ai_talking_point: aiTalkingPoint,
       scenarios, updated_at: new Date().toISOString(),
@@ -199,6 +202,7 @@ export default function AffordabilityLp() {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Example Home Price" value={salesPrice} onChange={setSalesPrice} half placeholder="545000" note="Shown as 'Ex. Home Price' on the page" />
           <Field label="Quote Date" value={quoteDate} onChange={setQuoteDate} half type="date" note="Displayed as 'Rates As Of'" />
+          <TextArea label="Seller Advantage Subheading" value={saSubheading} onChange={setSaSubheading} rows={3} />
         </div>
       </div>
 
