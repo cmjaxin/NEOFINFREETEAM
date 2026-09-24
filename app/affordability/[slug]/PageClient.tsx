@@ -377,14 +377,17 @@ export default function PageClient({ slug }: { slug: string }) {
         <ContactSection page={page} />
 
         {/* Disclaimer */}
-        <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 40px' }}>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', lineHeight: 1.7 }}>
-            Illustrative example only. Actual rates, payments, and savings will vary based on credit score, loan type, property, down payment, and market conditions at time of application. Rate buydown requires seller contribution and is subject to lender approval and program guidelines. Consult a licensed mortgage professional for personalized advice.
-          </p>
-          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.2)', lineHeight: 1.7, marginTop: 10 }}>
-            NEO Home Loans is a division of Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 3 World Trade Center, 175 Greenwich Street, 57th Floor, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. For licensing information go to{' '}
-            <a href="https://www.nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'underline' }}>www.nmlsconsumeraccess.org</a>.
-          </p>
+        <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '28px 24px' }}>
+          <div style={{ maxWidth: 820, margin: '0 auto', fontSize: 11, color: '#94A3B8', lineHeight: 1.8 }}>
+            <p style={{ margin: '0 0 12px' }}>
+              <strong style={{ color: '#64748B' }}>Disclaimer: </strong>
+              {`Illustrative example only. ${page.scenarios?.map(s => `${s.header}: ${fmtRate(s.rate)} interest rate (${fmtRate(s.apr)} APR), estimated total monthly payment of ${fmt(s.payment)}.`).join(' ')} Payments include estimated P&I, mortgage insurance, taxes and insurance. Rates and programs subject to change. Not a commitment to lend. All loans subject to credit approval. NEO Home Loans is an equal housing lender. Educational purposes only. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan.`}
+            </p>
+            <p style={{ margin: 0 }}>
+              {`© 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation provides home loans; Better Real Estate, LLC (CA License # 02164055) provides real estate services; Better Cover, LLC sells insurance products; Better Settlement Services provides title insurance; Better Inspect, LLC provides home inspection services. Home lending products offered by Better Mortgage Corporation. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Not available in all states. Equal Housing Lender. `}
+              <a href="https://www.nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" style={{ color: '#64748B', textDecoration: 'underline' }}>www.nmlsconsumeraccess.org</a>
+            </p>
+          </div>
         </div>
       </div>
     </>
