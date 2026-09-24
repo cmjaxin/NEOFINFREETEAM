@@ -183,7 +183,7 @@ function ChartCarousel({ images }: { images: string[] }) {
           {images.map((url, i) => (
             <div key={i} style={{ flex: '0 0 100%', background: 'rgba(255,255,255,0.04)' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: 520 }} />
+              <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: 720 }} />
             </div>
           ))}
         </div>
@@ -394,10 +394,12 @@ export default function PageClient({ slug }: { slug: string }) {
 
               {/* Seller Advantage section header */}
               <div style={{ textAlign: 'center', marginBottom: 28, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 10 }}>Seller Advantage Program</div>
-                <h3 style={{ fontSize: 'clamp(20px,3.5vw,32px)', fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 14px' }}>
-                  A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
+                <h3 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 12px' }}>
+                  Seller Advantage Program
                 </h3>
+                <p style={{ fontSize: 'clamp(15px,2vw,18px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, margin: '0 0 14px', maxWidth: 580, marginLeft: 'auto', marginRight: 'auto' }}>
+                  A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
+                </p>
                 {(page.sales_price > 0 || qd) && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, padding: '10px 20px', marginTop: 6 }}>
                     {page.sales_price > 0 && (
