@@ -202,7 +202,6 @@ export default function AffordabilityLp() {
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Field label="Example Home Price" value={salesPrice} onChange={setSalesPrice} half placeholder="545000" note="Shown as 'Ex. Home Price' on the page" />
           <Field label="Quote Date" value={quoteDate} onChange={setQuoteDate} half type="date" note="Displayed as 'Rates As Of'" />
-          <TextArea label="Seller Advantage Subheading" value={saSubheading} onChange={setSaSubheading} rows={3} />
         </div>
       </div>
 
