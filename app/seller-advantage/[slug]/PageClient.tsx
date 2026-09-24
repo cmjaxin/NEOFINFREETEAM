@@ -366,17 +366,18 @@ export default function PageClient({ slug }: { slug: string }) {
                     </div>
                   </div>
 
+                  {!isMarket && savings > 0 && (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', background: `${cardAccent}20`, border: `1px solid ${cardAccent}50`, borderRadius: 20, padding: '5px 12px', marginBottom: 14, alignSelf: 'flex-start' }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
+                    </div>
+                  )}
+
                   <div style={{ borderTop: `1px solid ${isMarket ? 'rgba(255,255,255,0.08)' : cardAccent + '22'}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div>
                       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 3 }}>Monthly Payment</div>
                       <div className="sa-payment-num" style={{ fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums' }}>{fmt(s.payment)}</div>
                     </div>
 
-                    {!isMarket && savings > 0 && (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', background: `${cardAccent}20`, border: `1px solid ${cardAccent}50`, borderRadius: 20, padding: '5px 12px', alignSelf: 'flex-start' }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: cardAccent }}>Save {fmt(savings)}/mo</span>
-                      </div>
-                    )}
                     {!isMarket && annualSavings > 0 && (
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{fmt(annualSavings)}/yr vs. market</div>
                     )}
