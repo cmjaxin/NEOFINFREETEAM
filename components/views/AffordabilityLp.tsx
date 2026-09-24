@@ -194,14 +194,12 @@ export default function AffordabilityLp() {
           Upload PNG/JPG market data graphics. Layout: 3 on top, 2 on bottom.
         </div>
 
-        {/* Row 1: 3 charts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
-          {[0, 1, 2].map(idx => <ImageSlot key={idx} idx={idx} url={imageUrls[idx]} label={IMAGE_LABELS[idx]} uploading={uploadingIdx === idx} onFile={f => uploadImage(idx, f)} onClear={() => setImageUrls(prev => prev.map((u, i) => i === idx ? null : u))} fileRefs={fileRefs} />)}
+        {/* 2x2 + 1 layout: two columns of 2 stacked, then one full-width */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          {[0, 1, 2, 3].map(idx => <ImageSlot key={idx} idx={idx} url={imageUrls[idx]} label={IMAGE_LABELS[idx]} uploading={uploadingIdx === idx} onFile={f => uploadImage(idx, f)} onClear={() => setImageUrls(prev => prev.map((u, i) => i === idx ? null : u))} fileRefs={fileRefs} />)}
         </div>
-        {/* Row 2: 2 charts */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, maxWidth: '66.6%' }}>
-          {[3, 4].map(idx => <ImageSlot key={idx} idx={idx} url={imageUrls[idx]} label={IMAGE_LABELS[idx]} uploading={uploadingIdx === idx} onFile={f => uploadImage(idx, f)} onClear={() => setImageUrls(prev => prev.map((u, i) => i === idx ? null : u))} fileRefs={fileRefs} />)}
-        </div>
+        {/* Chart 5: full width */}
+        <ImageSlot idx={4} url={imageUrls[4]} label={IMAGE_LABELS[4]} uploading={uploadingIdx === 4} onFile={f => uploadImage(4, f)} onClear={() => setImageUrls(prev => prev.map((u, i) => i === 4 ? null : u))} fileRefs={fileRefs} />
       </div>
 
       {/* AI Analysis */}

@@ -208,8 +208,8 @@ export default function PageClient({ slug }: { slug: string }) {
         .af-hero { padding: 40px 20px 32px; }
         .af-h1 { font-size: clamp(30px, 5vw, 62px); }
         .af-sub { font-size: 16px; }
-        .af-charts-grid-top { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .af-charts-grid-bottom { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; max-width: 66.6%; margin: 0 auto; }
+        .af-charts-grid-top { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .af-charts-grid-bottom { width: 100%; }
         .af-ai-box { padding: 28px 32px; }
         .af-headline { font-size: clamp(20px, 3vw, 30px); }
         .af-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; padding: 0 16px; }
@@ -266,10 +266,10 @@ export default function PageClient({ slug }: { slug: string }) {
         {/* Market Charts */}
         {images.length > 0 && (
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px 40px' }}>
-            {/* Row 1: up to 3 */}
-            {images.slice(0, 3).length > 0 && (
+            {/* 2x2 grid */}
+            {images.slice(0, 4).length > 0 && (
               <div className="af-charts-grid-top" style={{ marginBottom: 12 }}>
-                {images.slice(0, 3).map((url, i) => (
+                {images.slice(0, 4).map((url, i) => (
                   <div key={i} style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
@@ -277,15 +277,11 @@ export default function PageClient({ slug }: { slug: string }) {
                 ))}
               </div>
             )}
-            {/* Row 2: charts 4 & 5 */}
-            {images.slice(3, 5).length > 0 && (
-              <div className="af-charts-grid-bottom">
-                {images.slice(3, 5).map((url, i) => (
-                  <div key={i} style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={url} alt={`Market chart ${i + 4}`} style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
-                  </div>
-                ))}
+            {/* Chart 5: full width */}
+            {images[4] && (
+              <div className="af-charts-grid-bottom" style={{ borderRadius: 14, overflow: 'hidden', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={images[4]} alt="Market chart 5" style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
               </div>
             )}
           </div>
