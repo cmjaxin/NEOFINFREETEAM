@@ -196,15 +196,6 @@ export default function AffordabilityLp() {
         )}
       </div>
 
-      {/* Page Settings */}
-      <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
-        <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Page Settings</div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Field label="Example Home Price" value={salesPrice} onChange={setSalesPrice} half placeholder="545000" note="Shown as 'Ex. Home Price' on the page" />
-          <Field label="Quote Date" value={quoteDate} onChange={setQuoteDate} half type="date" note="Displayed as 'Rates As Of'" />
-        </div>
-      </div>
-
       {/* Image Upload */}
       <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 16 }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 6, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
@@ -245,6 +236,14 @@ export default function AffordabilityLp() {
       </div>
 
       {/* Rate Scenarios */}
+      <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 12 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>Rate Scenario Settings</div>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <Field label="Example Home Price" value={salesPrice} onChange={setSalesPrice} half placeholder="545000" note="Shown above rate scenarios" />
+          <Field label="Quote Date" value={quoteDate} onChange={setQuoteDate} half type="date" note="Displayed as 'Rates As Of'" />
+        </div>
+      </div>
+
       {scenarios.map((s, i) => (
         <div key={i} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 12 }}>
           <div style={{ fontWeight: 700, fontSize: 14, color: C.navy, marginBottom: 14, paddingBottom: 8, borderBottom: `1px solid ${C.border}` }}>
