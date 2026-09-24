@@ -281,7 +281,7 @@ function ImageSlot({ idx, url, label, uploading, onFile, onClear, fileRefs }: {
       {url ? (
         <div style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1px solid #E4E8EC' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={url} alt={label} style={{ width: '100%', display: 'block', objectFit: 'contain', minHeight: 180 }} />
+          <img src={url} alt={label} style={{ width: '100%', display: 'block', objectFit: 'contain', minHeight: 320 }} />
           <button onClick={onClear}
             style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(10,37,64,0.75)', color: '#fff', border: 'none', borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
             ✕ Remove
@@ -289,7 +289,7 @@ function ImageSlot({ idx, url, label, uploading, onFile, onClear, fileRefs }: {
         </div>
       ) : (
         <button onClick={() => fileRefs.current[idx]?.click()} disabled={uploading}
-          style={{ width: '100%', minHeight: 180, border: '2px dashed #C5CDD6', borderRadius: 10, background: uploading ? '#F4F6F8' : '#FAFBFC', cursor: uploading ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#858889', fontSize: 12, fontWeight: 600 }}>
+          style={{ width: '100%', minHeight: 320, border: '2px dashed #C5CDD6', borderRadius: 10, background: uploading ? '#F4F6F8' : '#FAFBFC', cursor: uploading ? 'default' : 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#858889', fontSize: 12, fontWeight: 600 }}>
           {uploading ? (
             <><span style={{ fontSize: 22 }}>⏳</span> Uploading…</>
           ) : (
