@@ -165,6 +165,68 @@ function ContactSection({ page }: { page: PageData }) {
   )
 }
 
+function ChartCarousel({ images }: { images: string[] }) {
+  const [current, setCurrent] = useState(0)
+  const trackRef = useRef<HTMLDivElement>(null)
+
+  function goTo(idx: number) {
+    const next = Math.max(0, Math.min(idx, images.length - 1))
+    setCurrent(next)
+    trackRef.current?.children[next]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  }
+
+  return (
+    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 16px 48px' }}>
+      {/* Slide */}
+      <div style={{ position: 'relative' }}>
+        <div ref={trackRef} style={{ display: 'flex', overflow: 'hidden', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)' }}>
+          {images.map((url, i) => (
+            <div key={i} style={{ flex: '0 0 100%', background: 'rgba(255,255,255,0.04)' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain', maxHeight: 520 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Prev button */}
+        {current > 0 && (
+          <button onClick={() => goTo(current - 1)}
+            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(10,37,64,0.75)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+            ‹
+          </button>
+        )}
+
+        {/* Next button */}
+        {current < images.length - 1 && (
+          <button onClick={() => goTo(current + 1)}
+            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(10,37,64,0.75)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+            ›
+          </button>
+        )}
+      </div>
+
+      {/* Dots + counter */}
+      {images.length > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 14 }}>
+          <button onClick={() => goTo(current - 1)} disabled={current === 0}
+            style={{ background: 'none', border: 'none', color: current === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', cursor: current === 0 ? 'default' : 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>
+            ←
+          </button>
+          {images.map((_, i) => (
+            <button key={i} onClick={() => goTo(i)}
+              style={{ width: i === current ? 20 : 8, height: 8, borderRadius: 4, border: 'none', cursor: 'pointer', background: i === current ? '#5BCBF5' : 'rgba(255,255,255,0.25)', padding: 0, transition: 'all 0.2s' }} />
+          ))}
+          <button onClick={() => goTo(current + 1)} disabled={current === images.length - 1}
+            style={{ background: 'none', border: 'none', color: current === images.length - 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.6)', cursor: current === images.length - 1 ? 'default' : 'pointer', fontSize: 18, padding: '0 4px', lineHeight: 1 }}>
+            →
+          </button>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginLeft: 4 }}>{current + 1} / {images.length}</span>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PageClient({ slug }: { slug: string }) {
   const [page, setPage] = useState<PageData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -291,25 +353,7 @@ export default function PageClient({ slug }: { slug: string }) {
         </div>
 
         {/* Market Charts — carousel */}
-        {images.length > 0 && (
-          <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 16px 40px' }}>
-            <div className="af-carousel">
-              {images.map((url, i) => (
-                <div key={i} className="af-carousel-slide">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt={`Market chart ${i + 1}`} style={{ width: '100%', display: 'block', objectFit: 'contain' }} />
-                </div>
-              ))}
-            </div>
-            {images.length > 1 && (
-              <div className="af-carousel-dots">
-                {images.map((_, i) => (
-                  <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {images.length > 0 && <ChartCarousel images={images} />}
 
         {/* AI Explainer */}
         {(page.ai_headline || page.ai_explainer) && (
