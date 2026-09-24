@@ -385,11 +385,34 @@ export default function PageClient({ slug }: { slug: string }) {
         {page.scenarios?.length > 0 && (
           <div style={{ padding: '0 16px 48px' }}>
             <div style={{ maxWidth: 900, margin: '0 auto' }}>
-              <div style={{ textAlign: 'center', marginBottom: 28 }}>
+              <div style={{ textAlign: 'center', marginBottom: 32 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 10 }}>NEO Home Loans</div>
                 <h2 style={{ fontSize: 'clamp(22px,4vw,38px)', fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
                   Our Solutions to Housing Affordability
                 </h2>
+              </div>
+
+              {/* Seller Advantage intro block */}
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 16, padding: '24px 28px', marginBottom: 28 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 8 }}>Seller Advantage Program</div>
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 16, lineHeight: 1.75, margin: '0 0 20px' }}>
+                  A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
+                </p>
+                <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', gap: 20, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, padding: '10px 18px' }}>
+                  {page.sales_price > 0 && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 3 }}>Ex. Home Price</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: WHITE, fontVariantNumeric: 'tabular-nums' }}>{fmt(page.sales_price)}</div>
+                    </div>
+                  )}
+                  {page.sales_price > 0 && qd && <div style={{ width: 1, height: 32, background: 'rgba(255,255,255,0.12)' }} />}
+                  {qd && (
+                    <div>
+                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>Rates As Of</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{qd}</div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="af-cards">
