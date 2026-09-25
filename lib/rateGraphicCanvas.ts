@@ -3,7 +3,7 @@
 import QRCode from 'qrcode'
 
 export interface RateGraphicValues {
-  rate?: string; apr?: string; promo_payment?: string; promo_date?: string
+  rate?: string; apr?: string; promo_payment?: string; promo_date?: string; promo_savings?: string
   advisor_name?: string; advisor_title?: string; advisor_nmls?: string; advisor_phone?: string
   property_image?: string
 }
@@ -201,6 +201,40 @@ export async function renderRateGraphic(
   const infoLine = dateVal ? `${paymentVal}  ·  As of ${dateVal}` : paymentVal
   ctx.fillText(infoLine, w / 2, h * 0.663)
   ctx.textAlign = 'left'
+
+  // Savings badge — green pill, shown when promo_savings is set
+  if (values.promo_savings) {
+    const savingsText = `💰 Save $${values.promo_savings}/mo`
+    const badgeFs = Math.round(h * 0.028)
+    ctx.font = `900 ${badgeFs}px Inter, Arial, sans-serif`
+    const badgeW = ctx.measureText(savingsText).width + 28
+    const badgeH = Math.round(h * 0.048)
+    const badgeX = (w - badgeW) / 2
+    const badgeY = h * 0.670
+    const radius = badgeH / 2
+    ctx.save()
+    ctx.shadowColor = '#22c55e'
+    ctx.shadowBlur = 18
+    ctx.fillStyle = '#22c55e'
+    ctx.beginPath()
+    ctx.moveTo(badgeX + radius, badgeY)
+    ctx.lineTo(badgeX + badgeW - radius, badgeY)
+    ctx.arcTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + badgeH, radius)
+    ctx.lineTo(badgeX + badgeW, badgeY + badgeH - radius)
+    ctx.arcTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - radius, badgeY + badgeH, radius)
+    ctx.lineTo(badgeX + radius, badgeY + badgeH)
+    ctx.arcTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - radius, radius)
+    ctx.lineTo(badgeX, badgeY + radius)
+    ctx.arcTo(badgeX, badgeY, badgeX + radius, badgeY, radius)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+    ctx.fillStyle = '#fff'
+    ctx.font = `900 ${badgeFs}px Inter, Arial, sans-serif`
+    ctx.textAlign = 'center'
+    ctx.fillText(savingsText, w / 2, badgeY + badgeH * 0.7)
+    ctx.textAlign = 'left'
+  }
 
   // Divider before disclaimer
   ctx.strokeStyle = 'rgba(255,255,255,0.15)'

@@ -2,6 +2,11 @@
 // ─── DB MIGRATION (run in Supabase SQL editor before first use) ───────────────
 // alter table open_house_pages add column if not exists page_type text default 'listing';
 // alter table open_house_pages add column if not exists loan_description text;
+// alter table open_house_pages add column if not exists promo_rate text;
+// alter table open_house_pages add column if not exists promo_apr text;
+// alter table open_house_pages add column if not exists promo_payment text;
+// alter table open_house_pages add column if not exists promo_date text;
+// alter table open_house_pages add column if not exists promo_savings text;
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useRef } from 'react'
@@ -33,6 +38,11 @@ interface OHEPage {
   tca_url: string
   tca_screenshot: string
   loan_description: string
+  promo_rate: string | null
+  promo_apr: string | null
+  promo_payment: string | null
+  promo_date: string | null
+  promo_savings: string | null
   callout_text: string | null
   schedule_url: string | null
   apply_url: string | null
@@ -395,6 +405,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     seller_contribution: (init as OHEPage).seller_contribution ?? 0,
     seller_contribution_pct: (init as OHEPage).seller_contribution_pct ?? 0,
     rate_scenarios: (init as OHEPage).rate_scenarios ?? null,
+    promo_rate: (init as OHEPage).promo_rate ?? '',
+    promo_apr: (init as OHEPage).promo_apr ?? '',
+    promo_payment: (init as OHEPage).promo_payment ?? '',
+    promo_date: (init as OHEPage).promo_date ?? '',
+    promo_savings: (init as OHEPage).promo_savings ?? '',
   })
   const [showPartner, setShowPartner] = useState(!!(init as OHEPage).partner_name)
   const [partnerSearch, setPartnerSearch] = useState('')
@@ -575,6 +590,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
       seller_contribution: form.seller_contribution ?? 0,
       seller_contribution_pct: form.seller_contribution_pct ?? 0,
       rate_scenarios: form.rate_scenarios ?? null,
+      promo_rate: form.promo_rate || null,
+      promo_apr: form.promo_apr || null,
+      promo_payment: form.promo_payment || null,
+      promo_date: form.promo_date || null,
+      promo_savings: form.promo_savings || null,
       updated_at: new Date().toISOString(),
     }
 
@@ -589,7 +609,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     }
     let res = await attempt(payload as Record<string, unknown>)
     if (res.error?.code === '42703') {
-      const { loan_description: _ld, tca_url: _a, tca_screenshot: _b, page_type: _pt, seller_contribution: _sc, seller_contribution_pct: _scp, rate_scenarios: _rs, ...corePayload } = payload
+      const { loan_description: _ld, tca_url: _a, tca_screenshot: _b, page_type: _pt, seller_contribution: _sc, seller_contribution_pct: _scp, rate_scenarios: _rs, promo_rate: _pr, promo_apr: _pa, promo_payment: _pp, promo_date: _pd, promo_savings: _ps, ...corePayload } = payload
       res = await attempt(corePayload as Record<string, unknown>)
     }
     if (res.error) { setMsg(`Save failed: ${res.error.message} (${res.error.code})`); setSaving(false); return }
@@ -768,6 +788,18 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
                 )}
                 <input ref={tcaRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) uploadTcaScreenshot(e.target.files[0]) }} />
               </div>
+            </div>
+          </section>
+
+          {/* Special Financing Rate Graphic */}
+          <section>
+            <SectionHead title="Special Financing Rate Graphic" sub="These values auto-generate the rate graphic on the agent hub — agents won't need to fill them in." />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <Field label="Interest Rate (%)" name="promo_rate" placeholder="e.g. 4.875" half value={form.promo_rate} onChange={set} />
+              <Field label="APR (%)" name="promo_apr" placeholder="e.g. 5.12" half value={form.promo_apr} onChange={set} />
+              <Field label="Monthly Payment ($)" name="promo_payment" placeholder="e.g. 2,450" half value={form.promo_payment} onChange={set} />
+              <Field label="Rate Date" name="promo_date" placeholder="e.g. 09/25/2026" half value={form.promo_date} onChange={set} />
+              <Field label="Monthly Savings ($)" name="promo_savings" placeholder="e.g. 312" half value={form.promo_savings} onChange={set} note="Shown as 'Save $X/mo' on the graphic" />
             </div>
           </section>
 

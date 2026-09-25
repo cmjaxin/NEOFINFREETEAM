@@ -1314,7 +1314,7 @@ export default function AgentPageClient({ slug }: { slug: string }) {
   const [dbError, setDbError] = useState<string | null>(null)
   const [socialEditing, setSocialEditing] = useState<string | null>(null)
   const [socialEdits, setSocialEdits] = useState<Record<string, Record<string,string>>>({})
-  const [rateVals, setRateVals] = useState({ rate: '', apr: '', promo_payment: '', promo_date: '' })
+  const [rateVals, setRateVals] = useState({ rate: '', apr: '', promo_payment: '', promo_date: '', promo_savings: '' })
   const [rateRendering, setRateRendering] = useState(false)
   const rateCanvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -1376,6 +1376,15 @@ export default function AgentPageClient({ slug }: { slug: string }) {
             if (match?.logo_url) finalData = { ...finalData, partner_logo: match.logo_url }
           }
           setPage(finalData)
+          if ((row as any).promo_rate || (row as any).promo_apr || (row as any).promo_payment || (row as any).promo_date || (row as any).promo_savings) {
+            setRateVals({
+              rate: (row as any).promo_rate ?? '',
+              apr: (row as any).promo_apr ?? '',
+              promo_payment: (row as any).promo_payment ?? '',
+              promo_date: (row as any).promo_date ?? '',
+              promo_savings: (row as any).promo_savings ?? '',
+            })
+          }
         }
         fetchExtras()
         setLoading(false)
@@ -1486,22 +1495,26 @@ export default function AgentPageClient({ slug }: { slug: string }) {
                 <div style={{ flex: '0 0 320px', padding: '18px 20px', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rate Details</div>
                   {([
-                    { key: 'rate', label: 'Interest Rate', placeholder: '6.750%' },
-                    { key: 'apr', label: 'APR', placeholder: '7.125%' },
-                    { key: 'promo_payment', label: 'Monthly Payment', placeholder: '$2,345' },
-                    { key: 'promo_date', label: 'Rate Date', placeholder: 'Jan 1, 2026' },
-                  ] as { key: keyof typeof rateVals; label: string; placeholder: string }[]).map(f => (
+                    { key: 'rate', label: 'Interest Rate' },
+                    { key: 'apr', label: 'APR' },
+                    { key: 'promo_payment', label: 'Monthly Payment' },
+                    { key: 'promo_date', label: 'Rate Date' },
+                  ] as { key: keyof typeof rateVals; label: string }[]).map(f => (
                     <div key={f.key}>
-                      <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 4, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</label>
-                      <input
-                        type="text" value={rateVals[f.key]} placeholder={f.placeholder}
-                        onChange={e => setRateVals(prev => ({ ...prev, [f.key]: e.target.value }))}
-                        style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, fontFamily: 'inherit', color: C.dim, outline: 'none', boxSizing: 'border-box' as const }}
-                      />
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 3, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</div>
+                      <div style={{ padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, color: rateVals[f.key] ? C.text : C.muted, background: '#F9FAFB' }}>
+                        {rateVals[f.key] || <span style={{ fontStyle: 'italic' }}>Set in Open House admin</span>}
+                      </div>
                     </div>
                   ))}
+                  {rateVals.promo_savings && (
+                    <div style={{ padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1.5px solid #22c55e', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 18 }}>💰</span>
+                      <span style={{ fontSize: 15, fontWeight: 900, color: '#16a34a' }}>Save ${rateVals.promo_savings}/mo</span>
+                    </div>
+                  )}
                   <div style={{ fontSize: 11, color: C.muted, background: 'rgba(91,203,245,0.07)', border: '1px solid rgba(91,203,245,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.5 }}>
-                    QR code links buyers directly to this open house page.
+                    Rate values are set by admin. QR code links buyers directly to this open house page.
                   </div>
                   <button
                     onClick={() => {
