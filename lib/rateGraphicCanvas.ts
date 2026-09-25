@@ -152,7 +152,7 @@ export async function renderRateGraphic(
     const badgeW = ctx.measureText(savingsText).width + 28
     const badgeH = Math.round(h * 0.048)
     const badgeX = (w - badgeW) / 2
-    const badgeY = h * 0.32
+    const badgeY = h * 0.24
     const radius = badgeH / 2
     ctx.save()
     ctx.shadowColor = '#22c55e'
