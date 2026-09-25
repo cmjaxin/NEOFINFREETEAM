@@ -156,7 +156,6 @@ export default function AffordabilityLp() {
       created_by: profile.id, slug,
       sales_price: parseFloat(salesPrice.replace(/,/g, '')) || 0,
       quote_date: quoteDate,
-      seller_advantage_subheading: saSubheading,
       image_urls: imageUrls.filter(Boolean),
       ai_headline: aiHeadline, ai_explainer: aiExplainer, ai_talking_point: aiTalkingPoint,
       scenarios, updated_at: new Date().toISOString(),
