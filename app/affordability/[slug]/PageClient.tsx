@@ -333,23 +333,6 @@ export default function PageClient({ slug }: { slug: string }) {
             This Is How We Manufacture Affordability.
           </p>
 
-          {(page.sales_price > 0 || qd) && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 16, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 12, padding: '10px 20px', marginBottom: 8 }}>
-              {page.sales_price > 0 && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 3 }}>Ex. Home Price</div>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: WHITE, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{fmt(page.sales_price)}</div>
-                </div>
-              )}
-              {page.sales_price > 0 && qd && <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.12)' }} />}
-              {qd && (
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', marginBottom: 3 }}>Rates As Of</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>{qd}</div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Market Charts — carousel */}
@@ -397,14 +380,11 @@ export default function PageClient({ slug }: { slug: string }) {
                 <h3 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 900, color: WHITE, letterSpacing: '-0.03em', lineHeight: 1.1, margin: '0 0 12px' }}>
                   Seller Advantage Program
                 </h3>
-                <p style={{ fontSize: 'clamp(15px,2vw,18px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, margin: 0, maxWidth: 580, marginLeft: 'auto', marginRight: 'auto' }}>
+                <p style={{ fontSize: 'clamp(15px,2vw,18px)', color: 'rgba(255,255,255,0.55)', lineHeight: 1.65, margin: '0 0 20px', maxWidth: 580, marginLeft: 'auto', marginRight: 'auto' }}>
                   {page.seller_advantage_subheading ?? 'A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.'}
                 </p>
-              </div>
 
-              {/* Price + date pill */}
-              {(page.sales_price > 0 || qd) && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+                {(page.sales_price > 0 || qd) && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', gap: 24, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 14, padding: '14px 28px' }}>
                     {page.sales_price > 0 && (
                       <div style={{ textAlign: 'center' }}>
@@ -420,8 +400,8 @@ export default function PageClient({ slug }: { slug: string }) {
                       </div>
                     )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className="af-cards">
                 {page.scenarios.map((s, i) => {
