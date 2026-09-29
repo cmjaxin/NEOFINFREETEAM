@@ -1640,9 +1640,12 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
           {step === 'done' && (
             <div style={{ textAlign: 'center', padding: '48px 24px' }}>
               <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg,#2DAEFF,#7A33F5)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>✓</div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#2DAEFF', marginBottom: 8 }}>Video Submitted!</div>
-              <div style={{ fontSize: 14, color: '#999', marginBottom: 28 }}>Your clips are uploaded. An admin will stitch them into a final MP4 with your contact info end card.</div>
-              <button onClick={handleClose} style={{ padding: '12px 32px', background: '#2DAEFF', color: '#000a15', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>Done</button>
+              <div style={{ fontSize: 22, fontWeight: 900, color: '#2DAEFF', marginBottom: 8 }}>Clips Uploaded!</div>
+              <div style={{ fontSize: 14, color: '#999', marginBottom: 20 }}>Your clips are saved. An admin will send them to Video Editor — editing usually takes a few minutes.</div>
+              <div style={{ background: 'rgba(45,174,255,0.08)', border: '1px solid rgba(45,174,255,0.2)', borderRadius: 10, padding: '14px 18px', marginBottom: 28, fontSize: 13, color: '#2DAEFF', lineHeight: 1.6 }}>
+                Come back to the <strong>Videos tab</strong> later — your finished video will be ready to download once editing is complete.
+              </div>
+              <button onClick={handleClose} style={{ padding: '12px 32px', background: '#2DAEFF', color: '#000a15', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, cursor: 'pointer' }}>Got It</button>
             </div>
           )}
         </div>
