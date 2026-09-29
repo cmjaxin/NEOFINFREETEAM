@@ -1208,6 +1208,11 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       const finishData = await finishRes.json()
       if (!finishRes.ok) throw new Error(finishData.error ?? 'Failed to save clips')
 
+      // Auto-send to Video Editor
+      setSubmitStatus('Sending to Video Editor…')
+      const clip_urls = clipRecords.map(c => c.clipUrl)
+      await supabase.from('render_jobs').insert({ splice_video_id: videoId, clip_urls, bot_status: 'pending' })
+
       setSubmitStatus(''); setStep('done')
     } catch (e: any) { setError('Upload failed: ' + e.message); setStep('scene'); setSceneSubStep('ready') }
   }
