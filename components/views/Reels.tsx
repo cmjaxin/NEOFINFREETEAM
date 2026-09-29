@@ -855,17 +855,6 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
         )}
         <div style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>{new Date(video.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
 
-        {isAdmin && video.status !== 'rendering' && (
-          <button onClick={onRender} disabled={rendering} style={{ width: '100%', padding: '8px 0', background: 'rgba(122,51,245,0.15)', color: '#7A33F5', border: '1px solid rgba(122,51,245,0.3)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: rendering ? 0.6 : 1, marginBottom: 6 }}>
-            {rendering ? 'Starting…' : video.status === 'ready' ? 'Re-render' : 'Trigger Render'}
-          </button>
-        )}
-
-        {video.status === 'rendering' && (
-          <div style={{ padding: '8px 12px', background: 'rgba(122,51,245,0.1)', border: '1px solid rgba(122,51,245,0.2)', borderRadius: 7, fontSize: 12, color: '#7A33F5', fontWeight: 600, marginBottom: 6 }}>
-            Rendering… usually 2–5 min. This will update automatically.
-          </div>
-        )}
 
         {video.status === 'ready' && video.file_url && (
           <button
