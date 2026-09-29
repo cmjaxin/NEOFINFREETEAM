@@ -1208,18 +1208,6 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       const finishData = await finishRes.json()
       if (!finishRes.ok) throw new Error(finishData.error ?? 'Failed to save clips')
 
-      // Trigger render — await so errors surface; render route updates status in DB
-      setSubmitStatus('Starting render…')
-      const renderRes = await fetch('/api/reels/render', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId }),
-      })
-      if (!renderRes.ok) {
-        const renderErr = await renderRes.json().catch(() => ({}))
-        throw new Error(renderErr.error ?? 'Render failed to start')
-      }
-
       setSubmitStatus(''); setStep('done')
     } catch (e: any) { setError('Upload failed: ' + e.message); setStep('scene'); setSceneSubStep('ready') }
   }
