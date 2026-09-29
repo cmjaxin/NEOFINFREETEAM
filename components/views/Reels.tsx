@@ -692,6 +692,87 @@ function AssignModal({ script, members, onClose }: { script: SpliceScript; membe
 
 // ── Video Card ─────────────────────────────────────────────────────────────
 
+// ── Send to Video Editor ───────────────────────────────────────────────────
+
+interface RenderJob {
+  id: string
+  bot_status: 'pending' | 'processing' | 'done' | 'failed'
+  output_url: string | null
+  error_message: string | null
+}
+
+function SendToEditorButton({ videoId }: { videoId: string }) {
+  const supabase = createClient()
+  const [job, setJob] = useState<RenderJob | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    supabase.from('render_jobs').select('id,bot_status,output_url,error_message')
+      .eq('splice_video_id', videoId).order('created_at', { ascending: false }).limit(1).maybeSingle()
+      .then(({ data }) => { setJob(data ?? null); setLoading(false) })
+  }, [videoId])
+
+  useEffect(() => {
+    if (!job || job.bot_status === 'done' || job.bot_status === 'failed') return
+    const channel = supabase.channel(`rj_${job.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'render_jobs', filter: `id=eq.${job.id}` },
+        payload => setJob(prev => prev ? { ...prev, ...(payload.new as Partial<RenderJob>) } : prev))
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [job?.id, job?.bot_status])
+
+  async function send() {
+    setSubmitting(true)
+    try {
+      const { data: clips, error } = await supabase
+        .from('splice_video_clips').select('clip_url, clip_order')
+        .eq('video_id', videoId).order('clip_order', { ascending: true })
+      if (error) throw error
+      if (!clips?.length) throw new Error('No clips found for this video')
+      const clip_urls = clips.map(c => c.clip_url)
+      const { data: newJob, error: jobErr } = await supabase
+        .from('render_jobs').insert({ splice_video_id: videoId, clip_urls, bot_status: 'pending' })
+        .select('id,bot_status,output_url,error_message').single()
+      if (jobErr) throw jobErr
+      setJob(newJob)
+    } catch (e: any) { alert(e.message) }
+    finally { setSubmitting(false) }
+  }
+
+  if (loading) return null
+
+  if (job?.bot_status === 'done' && job.output_url) return (
+    <a href={job.output_url} download style={{ display: 'block', width: '100%', padding: '9px 0', background: 'rgba(52,211,153,0.15)', color: '#34D399', border: '1px solid rgba(52,211,153,0.3)', borderRadius: 7, fontSize: 13, fontWeight: 700, textAlign: 'center', marginBottom: 6, textDecoration: 'none' }}>
+      ↓ Download Edited Video
+    </a>
+  )
+
+  if (job?.bot_status === 'failed') return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ fontSize: 11, color: '#EF4444', marginBottom: 4 }}>{job.error_message || 'Edit failed'}</div>
+      <button onClick={send} disabled={submitting} style={{ width: '100%', padding: '8px 0', background: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.6 : 1 }}>
+        Retry
+      </button>
+    </div>
+  )
+
+  if (job?.bot_status === 'pending' || job?.bot_status === 'processing') return (
+    <div style={{ padding: '8px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 7, fontSize: 12, color: '#F59E0B', fontWeight: 600, marginBottom: 6, textAlign: 'center' }}>
+      <span style={{ display: 'inline-block', animation: 'pulse 1.5s infinite' }}>●</span>
+      {' '}{job.bot_status === 'pending' ? 'Waiting for Video Editor…' : 'Editing in progress…'}
+    </div>
+  )
+
+  return (
+    <button onClick={send} disabled={submitting} style={{ width: '100%', padding: '8px 0', background: 'rgba(45,174,255,0.12)', color: '#2DAEFF', border: '1px solid rgba(45,174,255,0.25)', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: submitting ? 0.6 : 1, marginBottom: 6 }}>
+      {submitting ? 'Sending…' : '✂ Send to Video Editor'}
+    </button>
+  )
+}
+
+// ── Video Card ─────────────────────────────────────────────────────────────
+
 function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }: {
   video: SpliceVideo; isAdmin?: boolean; onRender?: () => void; rendering?: boolean; onDelete?: () => void; onRefresh?: () => void
 }) {
@@ -817,6 +898,8 @@ function VideoCard({ video, isAdmin, onRender, rendering, onDelete, onRefresh }:
             {saving ? 'Preparing…' : '↓ Save Video'}
           </button>
         )}
+
+        {isAdmin && <SendToEditorButton videoId={video.id} />}
 
         <button onClick={deleteThis} style={{ width: '100%', padding: '7px 0', background: 'transparent', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 7, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
           Delete
