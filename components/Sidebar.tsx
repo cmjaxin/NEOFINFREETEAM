@@ -31,8 +31,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const SPLICE_ALLOWED = ['colin.jenson@neohomeloans.com']
   const isColin = SPLICE_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
   const isAdmin = profile?.role === 'admin' || isColin
-  const AFFORDABILITY_ALLOWED = ['justin.padron@neohomeloans.com']
-  const canAffordabilityLp = isAdmin || AFFORDABILITY_ALLOWED.includes(profile?.email?.toLowerCase() ?? '')
+  const AFFORDABILITY_ALLOWED: string[] = []
+  const canAffordabilityLp = isAdmin
 
   function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp') {
     setView(id)
