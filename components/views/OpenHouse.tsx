@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '@/lib/appContext'
 import { slugify } from '@/lib/openHouseMath'
 import { renderRateGraphic } from '@/lib/rateGraphicCanvas'
+import { fetchMLSListing } from '@/lib/utahMls'
 
 interface MarketingPartner {
   id: string; name: string; title: string; company: string
@@ -539,6 +540,43 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
   function set(k: string, v: unknown) { setForm(f => ({ ...f, [k]: v })) }
 
+  // ── Utah MLS pull ──
+  const [mlsNum, setMlsNum] = useState('')
+  const [mlsPulling, setMlsPulling] = useState(false)
+  const [mlsError, setMlsError] = useState('')
+  const [mlsPulled, setMlsPulled] = useState('')
+
+  async function pullFromMLS() {
+    const num = mlsNum.trim()
+    if (!num) return
+    const apiKey = process.env.NEXT_PUBLIC_UTAH_MLS_KEY
+    if (!apiKey) { setMlsError('Add NEXT_PUBLIC_UTAH_MLS_KEY to .env.local'); return }
+    setMlsPulling(true); setMlsError('')
+    try {
+      const d = await fetchMLSListing(num, apiKey)
+      setForm(f => ({
+        ...f,
+        address: d.address,
+        city: d.city,
+        state: d.state,
+        zip: d.zip,
+        list_price: d.list_price ? String(d.list_price) : f.list_price,
+        beds: d.beds != null ? String(d.beds) : f.beds,
+        baths: d.baths != null ? String(d.baths) : f.baths,
+        sqft: d.sqft != null ? String(d.sqft) : f.sqft,
+        lot_size: d.lot_size || f.lot_size,
+        year_built: d.year_built != null ? String(d.year_built) : f.year_built,
+        description: d.description || f.description,
+        photos: d.photos.length ? d.photos : (f.photos as string[]),
+      }))
+      setMlsPulled(num)
+    } catch (e) {
+      setMlsError(e instanceof Error ? e.message : 'Failed to pull listing')
+    } finally {
+      setMlsPulling(false)
+    }
+  }
+
   function applyPartner(p: MarketingPartner) {
     setForm(f => ({
       ...f,
@@ -732,6 +770,34 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+          {/* Utah MLS Pull */}
+          <section>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', background: '#F0F9FF', border: '1px solid #BAE6FD', borderRadius: 10, padding: '12px 14px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0369A1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#0369A1', whiteSpace: 'nowrap' }}>Pull from Utah MLS</span>
+              <input
+                value={mlsNum}
+                onChange={e => setMlsNum(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && pullFromMLS()}
+                placeholder="MLS # — e.g. 2025-123456"
+                style={{ flex: 1, minWidth: 160, fontSize: 13, padding: '6px 10px', border: '1px solid #BAE6FD', borderRadius: 7, outline: 'none', background: '#fff', color: '#0A2540' }}
+              />
+              <button
+                onClick={pullFromMLS}
+                disabled={mlsPulling || !mlsNum.trim()}
+                style={{ fontSize: 12, fontWeight: 700, padding: '7px 14px', borderRadius: 7, border: 'none', background: mlsPulling ? '#93C5FD' : '#0369A1', color: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', opacity: (!mlsNum.trim() && !mlsPulling) ? 0.5 : 1 }}
+              >
+                {mlsPulling ? 'Pulling…' : 'Pull listing'}
+              </button>
+              {mlsPulled && !mlsError && (
+                <span style={{ fontSize: 11, color: '#15803D', fontWeight: 600 }}>✓ Filled from MLS #{mlsPulled}</span>
+              )}
+              {mlsError && (
+                <span style={{ fontSize: 11, color: '#DC2626' }}>{mlsError}</span>
+              )}
+            </div>
+          </section>
 
           {/* Property Info */}
           <section>
