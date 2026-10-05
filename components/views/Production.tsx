@@ -1019,10 +1019,10 @@ function BranchProductionTab({ maData, prevYearData, onFundingsUpload, onPrevYea
   const totalVolume = activeData.reduce((s, m) => s + maVol(m), 0)
 
   const FEATURED_NAMES = [
-    'katrinka', 'justin', 'jason', 'skyler', 'drake', 'ross', 'aaron',
+    'katrinka', 'jason', 'skyler', 'drake', 'ross', 'aaron',
     'matthew smith', 'scott digregorio', 'michael breen', 'edgardo',
     'michael jones', 'benjamin', 'kaytlin', 'david', 'ashley',
-    'anthony', 'bryon', 'matthew mcnally',
+    'anthony', 'bryon', 'matthew mcnally', 'miles', 'lauren martin',
   ]
   function isFeatured(name: string) {
     const n = name.toLowerCase()
