@@ -2070,7 +2070,10 @@ function OpsStatsTab({ opsData }: { opsData: OPSData }) {
 }
 
 // ─── Changemaker helpers ──────────────────────────────────────────────────────
-const PROJ_FACTOR = 365 / 196
+const _now = new Date()
+const _startOfYear = new Date(_now.getFullYear(), 0, 1)
+const _daysElapsed = Math.max(1, Math.floor((_now.getTime() - _startOfYear.getTime()) / 86_400_000))
+const PROJ_FACTOR = 365 / _daysElapsed
 
 function getIndivStatus(ytdVol: number, ytdFam: number): BadgeStatus {
   const pV = ytdVol * PROJ_FACTOR, pF = ytdFam * PROJ_FACTOR
