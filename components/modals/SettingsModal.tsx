@@ -36,6 +36,12 @@ export default function SettingsModal() {
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_production?: boolean; can_wins?: boolean; can_marketing?: boolean; can_open_houses?: boolean; can_listings?: boolean; can_sign_riders?: boolean; can_splice?: boolean }[]>([])
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [resetPwId, setResetPwId] = useState<string | null>(null)
+  const [newPw, setNewPw] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwMsg, setPwMsg] = useState('')
 
   useEffect(() => {
     if (profile?.role !== 'admin') return
@@ -84,6 +90,23 @@ export default function SettingsModal() {
   async function toggleFeature(id: string, field: string, current: boolean) {
     await supabase.from('profiles').update({ [field]: !current }).eq('id', id)
     setApprovedProfiles(prev => prev.map(p => p.id === id ? { ...p, [field]: !current } : p))
+  }
+
+  async function deleteUser(id: string) {
+    setDeletingId(id)
+    await fetch('/api/admin/delete-user', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: id }) })
+    setApprovedProfiles(prev => prev.filter(p => p.id !== id))
+    setConfirmDeleteId(null)
+    setDeletingId(null)
+  }
+
+  async function resetPassword(id: string) {
+    if (!newPw.trim()) return
+    setPwSaving(true); setPwMsg('')
+    const res = await fetch('/api/admin/set-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: id, password: newPw }) })
+    if (res.ok) { setPwMsg('Password updated'); setNewPw(''); setTimeout(() => { setResetPwId(null); setPwMsg('') }, 1500) }
+    else { const d = await res.json(); setPwMsg(d.error || 'Failed') }
+    setPwSaving(false)
   }
 
   async function approve(id: string) {
@@ -209,10 +232,64 @@ export default function SettingsModal() {
                 ]
                 return (
                   <div key={p.id} style={{ border: '1px solid #EEF1F4', borderRadius: 10, padding: '12px 14px' }}>
-                    <div style={{ marginBottom: 10 }}>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: '#132B44' }}>{p.full_name}</div>
-                      <div style={{ fontSize: 11, color: '#858889' }}>{p.email}</div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 13, color: '#132B44' }}>{p.full_name}</div>
+                        <div style={{ fontSize: 11, color: '#858889' }}>{p.email}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <button
+                          onClick={() => { setResetPwId(resetPwId === p.id ? null : p.id); setNewPw(''); setPwMsg('') }}
+                          style={{ fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, border: '1px solid #BAE6FD', background: '#F0F9FF', color: '#0369A1', cursor: 'pointer' }}
+                        >
+                          Reset PW
+                        </button>
+                        {confirmDeleteId === p.id ? (
+                          <>
+                            <button
+                              onClick={() => setConfirmDeleteId(null)}
+                              style={{ fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, border: '1px solid #E4E8EC', background: '#fff', color: '#5C6570', cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              onClick={() => deleteUser(p.id)}
+                              disabled={deletingId === p.id}
+                              style={{ fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, border: 'none', background: '#DC2626', color: '#fff', cursor: 'pointer' }}
+                            >
+                              {deletingId === p.id ? '…' : 'Confirm'}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDeleteId(p.id)}
+                            style={{ fontSize: 11, fontWeight: 600, padding: '4px 8px', borderRadius: 6, border: '1px solid #FECACA', background: '#FEF2F2', color: '#DC2626', cursor: 'pointer' }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    {resetPwId === p.id && (
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 10 }}>
+                        <input
+                          type="password"
+                          value={newPw}
+                          onChange={e => setNewPw(e.target.value)}
+                          placeholder="New password"
+                          onKeyDown={e => e.key === 'Enter' && resetPassword(p.id)}
+                          style={{ flex: 1, fontSize: 12, padding: '6px 10px', border: '1px solid #E4E8EC', borderRadius: 7, outline: 'none' }}
+                        />
+                        <button
+                          onClick={() => resetPassword(p.id)}
+                          disabled={pwSaving || !newPw.trim()}
+                          style={{ fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 7, border: 'none', background: '#0A2540', color: '#fff', cursor: 'pointer', opacity: (!newPw.trim() || pwSaving) ? 0.5 : 1 }}
+                        >
+                          {pwSaving ? '…' : 'Set'}
+                        </button>
+                        {pwMsg && <span style={{ fontSize: 11, color: pwMsg === 'Password updated' ? '#15803D' : '#DC2626' }}>{pwMsg}</span>}
+                      </div>
+                    )}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
                       {features.map(({ label, field, val }) => (
                         <div key={field} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
