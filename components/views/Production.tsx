@@ -2078,14 +2078,16 @@ const PROJ_FACTOR = 365 / _daysElapsed
 function getIndivStatus(ytdVol: number, ytdFam: number): BadgeStatus {
   const pV = ytdVol * PROJ_FACTOR, pF = ytdFam * PROJ_FACTOR
   if (pV >= 27_500_000 || pF >= 75) return 'qualified'
-  if (pV >= 14_000_000 || pF >= 38) return 'ontrack'
+  // on track = projection hits 80% of the qualified threshold
+  if (pV >= 22_000_000 || pF >= 60) return 'ontrack'
   return 'rising'
 }
 
 function getBranchStatus(ytdVol: number, ytdFam: number): BadgeStatus {
   const pV = ytdVol * PROJ_FACTOR, pF = ytdFam * PROJ_FACTOR
   if (pV >= 50_000_000 || pF >= 150) return 'qualified'
-  if (pV >= 25_000_000 || pF >= 70) return 'ontrack'
+  // on track = projection hits 80% of the qualified threshold
+  if (pV >= 40_000_000 || pF >= 120) return 'ontrack'
   return 'rising'
 }
 
