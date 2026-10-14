@@ -35,7 +35,7 @@ export default function SettingsModal() {
   const [saved, setSaved] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
-  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; can_production?: boolean; can_wins?: boolean; can_marketing?: boolean; can_open_houses?: boolean; can_listings?: boolean; can_sign_riders?: boolean; can_splice?: boolean }[]>([])
+  const [approvedProfiles, setApprovedProfiles] = useState<{ id: string; full_name: string; email: string; bntouch_user_id?: string | null; can_production?: boolean; can_wins?: boolean; can_marketing?: boolean; can_open_houses?: boolean; can_listings?: boolean; can_sign_riders?: boolean; can_splice?: boolean }[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [resetPwId, setResetPwId] = useState<string | null>(null)
@@ -45,7 +45,7 @@ export default function SettingsModal() {
 
   useEffect(() => {
     if (profile?.role !== 'admin') return
-    supabase.from('profiles').select('id, full_name, email, can_production, can_wins, can_marketing, can_open_houses, can_listings, can_sign_riders, can_splice').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
+    supabase.from('profiles').select('id, full_name, email, bntouch_user_id, can_production, can_wins, can_marketing, can_open_houses, can_listings, can_sign_riders, can_splice').eq('status', 'approved').neq('id', profile.id).then(({ data }) => {
       if (data) setApprovedProfiles(data)
     })
   }, [profile?.id])
@@ -181,13 +181,11 @@ export default function SettingsModal() {
           <Input value={form.apply_url} onChange={set('apply_url')} placeholder="https://apply.neohomeloans.com/…" />
           <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Used as the "Apply Now" button on your sign rider pages.</div>
         </div>
-        {profile?.role === 'admin' && (
-          <div style={{ marginTop: 6 }}>
-            <Label>BNTouch User ID</Label>
-            <Input value={form.bntouch_user_id} onChange={set('bntouch_user_id')} placeholder="e.g. 10543" />
-            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Admin only — powers the lead capture form on listing pages.</div>
-          </div>
-        )}
+        <div style={{ marginTop: 6 }}>
+          <Label>BNTouch User ID</Label>
+          <Input value={form.bntouch_user_id} onChange={set('bntouch_user_id')} placeholder="e.g. 10543" />
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 3 }}>Your BNTouch ID — leads from your listing pages get assigned to you.</div>
+        </div>
 
         {error && <div style={{ fontSize: 13, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>{error}</div>}
         {saved && <div style={{ fontSize: 13, color: '#2E7D57', background: '#F0F7F3', border: '1px solid #D6E8DE', borderRadius: 9, padding: '9px 12px', marginTop: 12 }}>Saved — your info will pre-fill on your next template.</div>}
@@ -302,6 +300,19 @@ export default function SettingsModal() {
                           </button>
                         </div>
                       ))}
+                    </div>
+                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, whiteSpace: 'nowrap' }}>BNTouch ID</span>
+                      <input
+                        defaultValue={p.bntouch_user_id ?? ''}
+                        placeholder="e.g. 10543"
+                        onBlur={async e => {
+                          const val = e.target.value.trim()
+                          await supabase.from('profiles').update({ bntouch_user_id: val || null }).eq('id', p.id)
+                          setApprovedProfiles(prev => prev.map(x => x.id === p.id ? { ...x, bntouch_user_id: val || null } : x))
+                        }}
+                        style={{ flex: 1, fontSize: 12, padding: '5px 9px', border: '1px solid #E4E8EC', borderRadius: 7, outline: 'none', color: '#0A2540' }}
+                      />
                     </div>
                   </div>
                 )
