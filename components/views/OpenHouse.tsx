@@ -692,6 +692,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       seller_contribution_pct: form.seller_contribution_pct || null,
       rate_scenarios: form.rate_scenarios || null,
       page_type: 'listing',
+      bntouch_user_id: (profile as any)?.bntouch_user_id ?? null,
       updated_at: new Date().toISOString(),
     }
 

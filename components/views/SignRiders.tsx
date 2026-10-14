@@ -280,6 +280,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
       page_type: 'sign_rider',
       schedule_url: (profile as any)?.schedule_url ?? null,
       apply_url: (profile as any)?.apply_url ?? null,
+      bntouch_user_id: (profile as any)?.bntouch_user_id ?? null,
       updated_at: new Date().toISOString(),
     }
 
