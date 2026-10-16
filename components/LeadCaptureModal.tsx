@@ -89,12 +89,6 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
           })()}
         </div>
 
-        {/* Callout banner */}
-        {callout && (
-          <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '14px 32px', textAlign: 'center' }}>
-            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>{callout}</div>
-          </div>
-        )}
 
         {/* Body */}
         <div style={{ padding: '28px 32px 32px' }}>
