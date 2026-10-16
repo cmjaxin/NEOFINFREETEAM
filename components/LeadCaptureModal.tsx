@@ -66,7 +66,7 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
 
         {/* Header band */}
         <div style={{
-          background: '#0A2540', padding: '28px 32px 24px',
+          background: '#0A2540', padding: '24px 32px 20px',
           textAlign: 'center',
         }}>
           <img
@@ -74,22 +74,25 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
             alt="NEO Home Loans"
             style={{ height: 28, width: 'auto', marginBottom: 16 }}
           />
-          <div style={{ color: '#5BCBF5', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
-            Exclusive Listing Info
-          </div>
-          <div style={{ color: '#fff', fontSize: 20, fontWeight: 800, lineHeight: 1.25 }}>
-            See loan scenarios &amp; full details
-          </div>
-          <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
-            Enter your info to unlock the full listing presentation including rate scenarios and cost analysis.
-          </div>
+          {(() => {
+            const rate = callout?.match(/[\d.]+%/)?.[0]
+            return (
+              <>
+                <div style={{ color: '#5BCBF5', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Special Financing Arranged for This Home
+                </div>
+                <div style={{ color: '#fff', fontSize: 20, fontWeight: 800, lineHeight: 1.3 }}>
+                  {rate ? <>See what a {rate} rate does<br />to your payment</> : 'See your personalized rate scenarios'}
+                </div>
+              </>
+            )
+          })()}
         </div>
 
         {/* Callout banner */}
         {callout && (
-          <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '18px 32px', textAlign: 'center' }}>
-            <div style={{ fontSize: 26, marginBottom: 6 }}>📣</div>
-            <div style={{ fontSize: 16, fontWeight: 900, color: '#fff', lineHeight: 1.25 }}>{callout}</div>
+          <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '14px 32px', textAlign: 'center' }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>{callout}</div>
           </div>
         )}
 
