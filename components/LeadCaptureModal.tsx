@@ -102,7 +102,7 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
                 target="bnt_iframe"
                 onSubmit={handleSubmit}
               >
-                <input type="hidden" name="added_source" value={`${advisorName ? advisorName + ' — ' : ''}${address}`} />
+                <input type="hidden" name="added_source" value={`${advisorName ? 'Record Owner: ' + advisorName + ' | ' : ''}${address}`} />
                 <input type="hidden" name="RETURNTIMEOUT" value="10" />
                 <input type="hidden" name="USERID" value={bntouchUserId || '10543'} />
                 <input type="hidden" name="GROUPID" value="1" />
