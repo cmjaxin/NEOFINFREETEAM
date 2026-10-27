@@ -1081,7 +1081,7 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
     chunksRef.current = []
     const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus') ? 'video/webm;codecs=vp9,opus'
       : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : 'video/mp4'
-    const recorder = new MediaRecorder(streamRef.current, { mimeType, videoBitsPerSecond: 16_000_000, audioBitsPerSecond: 256_000 })
+    const recorder = new MediaRecorder(streamRef.current, { mimeType, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 })
     recorderRef.current = recorder
     recorder.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
     recorder.onstop = () => {
