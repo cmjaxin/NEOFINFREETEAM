@@ -1151,11 +1151,14 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
     if (!selectedScript || !profile) return
     const clipsToUpload = finalClips ?? allClips
     setSubmitStatus('Preparing storage…')
+    let stage = 'init'
     try {
       // Ensure bucket exists (server-side, bypasses RLS)
+      stage = 'ensure-bucket'
       await fetch('/api/reels/ensure-bucket', { method: 'POST' })
 
       // Create video record server-side (bypasses RLS)
+      stage = 'create-video'
       setSubmitStatus('Creating video record…')
       const startRes = await fetch('/api/reels/start-video', {
         method: 'POST',
@@ -1163,10 +1166,11 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
         body: JSON.stringify({ scriptId: selectedScript.id, userId: profile.id }),
       })
       const startData = await startRes.json()
-      if (!startRes.ok || !startData.videoId) throw new Error(startData.error ?? 'Failed to create video')
+      if (!startRes.ok || !startData.videoId) throw new Error(startData.error ?? 'Failed to create video record')
       const videoId = startData.videoId
 
-      // Upload blobs directly to storage (bucket is public so anon key works)
+      // Upload blobs via server-side route to bypass storage RLS
+      stage = 'upload-clips'
       const clipRecords: { sceneId: string | null; clipUrl: string; durationSeconds: number; clipOrder: number }[] = []
       let totalClips = 0
       for (let si = 0; si < clipsToUpload.length; si++) totalClips += (clipsToUpload[si] ?? []).length
@@ -1179,15 +1183,26 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
           const clip = sceneClips[ci]
           uploaded++
           setSubmitStatus(`Uploading clip ${uploaded} of ${totalClips}…`)
-          const path = `splice-clips/${videoId}/scene-${si}-clip-${ci}.webm`
+          const path = `${videoId}/scene-${si}-clip-${ci}.webm`
+
+          // Try client-side first; if RLS blocks it, fall back to server-side upload route
           const { error: uploadErr } = await supabase.storage.from('splice-clips').upload(path, clip.blob, { contentType: 'video/webm', upsert: true })
-          if (uploadErr) throw uploadErr
+          if (uploadErr) {
+            // Fall back: send blob to server-side upload route which uses service role key
+            const fd = new FormData()
+            fd.append('file', clip.blob, `scene-${si}-clip-${ci}.webm`)
+            fd.append('path', path)
+            const upRes = await fetch('/api/reels/upload-clip', { method: 'POST', body: fd })
+            if (!upRes.ok) { const d = await upRes.json(); throw new Error(d.error ?? uploadErr.message) }
+          }
+
           const { data: urlData } = supabase.storage.from('splice-clips').getPublicUrl(path)
           clipRecords.push({ sceneId: scene?.id ?? null, clipUrl: urlData.publicUrl, durationSeconds: clip.duration, clipOrder: ci })
         }
       }
 
       // Save clip records + mark video ready — server-side (bypasses RLS)
+      stage = 'finish-video'
       setSubmitStatus('Saving…')
       const finishRes = await fetch('/api/reels/finish-video', {
         method: 'POST',
@@ -1198,12 +1213,13 @@ function RecordModal({ scripts, assignedScripts, profile, onClose, initialScript
       if (!finishRes.ok) throw new Error(finishData.error ?? 'Failed to save clips')
 
       // Auto-send to Video Editor
+      stage = 'render-job'
       setSubmitStatus('Sending to Video Editor…')
       const clip_urls = clipRecords.map(c => c.clipUrl)
       await supabase.from('render_jobs').insert({ splice_video_id: videoId, clip_urls, bot_status: 'pending' })
 
       setSubmitStatus(''); setStep('done')
-    } catch (e: any) { setError('Upload failed: ' + e.message); setStep('scene'); setSceneSubStep('ready') }
+    } catch (e: any) { setError(`Upload failed at [${stage}]: ${e.message}`); setStep('scene'); setSceneSubStep('ready') }
   }
 
   function fmt(s: number) { return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
