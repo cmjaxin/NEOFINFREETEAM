@@ -74,6 +74,10 @@ interface PageData {
   schedule_url: string | null
   apply_url: string | null
   bntouch_user_id: string | null
+  rate_scenarios: Array<{
+    label: string; down_pct: number; market_rate: number; buydown_rate: number
+    market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number
+  }> | null
 }
 
 export default function SignRiderPage({ slug }: { slug: string }) {
@@ -181,14 +185,27 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {page.callout_text && (
-        <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '28px 20px' }}>
-          <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 10 }}>📣</div>
-            <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.02em' }}>{page.callout_text}</div>
+      {(() => {
+        const ctRate = page.callout_text?.match(/([\d.]+)%/)?.[1] ?? null
+        const scenarios = page.rate_scenarios ?? []
+        const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : scenarios.reduce((min:any,s:any) => (!min || s.buydown_rate < min.buydown_rate) ? s : min, null as any)
+        const rate = ctRate ?? (matched ? matched.buydown_rate.toFixed(3) : null)
+        const apr = matched?.apr ? matched.apr.toFixed(3) : null
+        if (!rate && !page.callout_text) return null
+        return (
+          <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '28px 20px' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>📣</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
+                {rate ? <>See how a {rate}% interest rate{apr ? <> ({apr}% APR)</> : ''} could impact your estimated payment</> : page.callout_text}
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 8, fontStyle: 'italic' }}>
+                Subject to financing qualifications and applicable incentive terms.
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 60px' }}>
 
@@ -440,7 +457,27 @@ export default function SignRiderPage({ slug }: { slug: string }) {
       {/* Legal Disclaimer Footer */}
       <div style={{ background: '#F1F5F9', borderTop: '1px solid #E4E8EC', padding: '20px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 9, color: '#94A3B8', lineHeight: 1.7 }}>
-          Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details. © 2026 Better Home &amp; Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License # 02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Better BMC operates under the name Better Mortgage Corporation in New York. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access. Better Real Estate, LLC dba BRE, Better Home Services, BRE Services, LLC and Better Real Estate, and operating in the State of California through its wholly owned subsidiary Better Real Estate California Inc., is a licensed real estate brokerage and maintains its corporate headquarters at 325-41 Chestnut Street, Suite 826, Philadelphia, PA 19106. Better Real Estate, LLC provides access to real estate brokerage services via its nationwide network of partner brokerages and real estate agents. Equal Housing Opportunity. All rights reserved. New York State Housing and Anti-Discrimination Notice. New York Standard Operating Procedures. Texas Real Estate Commission: Information About Brokerage Services | Consumer Protection Notice. Better Settlement Services, LLC. 325-41 Chestnut Street, Suite 803, Philadelphia, PA 19106. Homeowners insurance policies are offered through Better Cover, LLC, a Pennsylvania Resident Producer Agency. License #881593. 325-41 Chestnut Street, Suite 807, Philadelphia, PA 19106. Better Inspect, LLC maintains its corporate headquarters at 325-41 Chestnut Street, Suite 846, Philadelphia, PA 19106. Better Mortgage Corporation, Better Real Estate, LLC, Better Settlement Services, LLC, Better Cover, LLC, Better Connect, and Better Inspect, LLC are separate operating subsidiaries of Better Home &amp; Finance Holding Company. Each company is a separate legal entity operated and managed through its own management and governance structure as required by its state of incorporation, and applicable and legal and regulatory requirements. Products not available in all states. Any unauthorized use of any proprietary or intellectual property is strictly prohibited. All trademarks, service marks, trade names, logos, icons, and domain names are proprietary to Better Home &amp; Finance Holding Company. Licensed by the Department of Financial Protection and Innovation under the California Residential Mortgage Lending Act.
+          {(() => {
+            const ctRate = page.callout_text?.match(/([\d.]+)%/)?.[1] ?? null
+            const scenarios = page.rate_scenarios ?? []
+            const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : scenarios.reduce((min:any,s:any) => (!min || s.buydown_rate < min.buydown_rate) ? s : min, null as any)
+            const rate = ctRate ?? (matched ? matched.buydown_rate.toFixed(3) : null)
+            const apr = matched?.apr ? matched.apr.toFixed(3) : null
+            return (
+              <>
+                <strong style={{ color: '#64748B' }}>Special Financing Incentive &amp; Mortgage Disclosures</strong><br />
+                Special financing incentive available. This property may qualify for a reduced interest rate or closing cost credit when financed through NEO Home Loans. Financing incentives are subject to availability, borrower qualifications, loan approval, and applicable program requirements. Participation is optional, and buyers may use any lender of their choice.<br />
+                {(rate || apr) && <>Advertised Interest Rate: {rate ?? 'N/A'}% | Annual Percentage Rate (APR): {apr ?? 'N/A'}%.<br /></>}
+                Advertised rates and financing scenarios are illustrative and subject to change without notice. Actual rates, APRs, payments, fees, and financing terms may vary based on borrower qualifications, credit profile, loan program, property eligibility, and market conditions. Advertised rates are not guaranteed and may require discount points, seller contributions, or other financing incentives.<br />
+                Loan Scenario &amp; Payment Estimates: The mortgage scenarios displayed on this page are generated using Mortgage Coach Total Cost Analysis (TCA). The TCA provides additional information regarding the assumptions used in each scenario, including applicable loan amounts, down payments, repayment terms, estimated payments, and closing costs. Payment estimates may exclude property taxes, homeowners insurance, mortgage insurance, HOA dues, or other applicable expenses unless expressly included. Actual monthly payments and total borrowing costs may be higher.<br />
+                Rate Comparisons: Any comparison rates are illustrative unless otherwise identified and substantiated. Comparisons are intended to demonstrate how different financing assumptions may affect estimated payments and borrowing costs and do not necessarily represent prevailing market rates or financing terms available to all borrowers.<br />
+                Financing Incentives: Any advertised reduced interest rate or closing cost credit is subject to the terms of the applicable financing incentive. Incentives may be funded by the seller, lender, or another permitted party, as applicable, and may be subject to contribution limits and other restrictions. Incentives are not guaranteed and may not be combined with other offers. Buyers are not required to use NEO Home Loans or any particular lender to purchase this property.<br />
+                This advertisement is not a commitment to lend or a guarantee of loan approval. All loans are subject to underwriting approval, applicable program requirements, and satisfactory property evaluation. Contact the lender for current financing terms and eligibility requirements.<br /><br />
+                <strong style={{ color: '#64748B' }}>Copyright, Licensing &amp; Corporate Disclosures</strong><br />
+                &copy; 2026 Better Home &amp; Finance Holding Company and/or its affiliates. All rights reserved. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc. (California License #02164055) provide real estate services; Better Cover, LLC offers insurance products; Better Settlement Services, LLC provides title and settlement services; and Better Inspect, LLC provides home inspection services. Home lending products are offered by Better Mortgage Corporation, a direct lender. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Better Mortgage Corporation operates under the name Better BMC in New York. Loans made or arranged pursuant to a California Finance Lenders Law License. Licensed by the California Department of Financial Protection and Innovation under the California Residential Mortgage Lending Act. Products are not available in all states. Equal Housing Lender. NMLS Consumer Access: www.nmlsconsumeraccess.org. Better Real Estate, LLC, doing business as BRE, Better Home Services, BRE Services, LLC, and Better Real Estate, operates in California through its wholly owned subsidiary Better Real Estate California Inc. Better Real Estate, LLC maintains its corporate headquarters at 325&ndash;41 Chestnut Street, Suite 826, Philadelphia, PA 19106, and provides access to real estate brokerage services through its nationwide network of partner brokerages and real estate agents. Equal Housing Opportunity. New York State Housing and Anti-Discrimination Notice | New York Standard Operating Procedures | Texas Real Estate Commission: Information About Brokerage Services | Consumer Protection Notice. Better Settlement Services, LLC, 325&ndash;41 Chestnut Street, Suite 803, Philadelphia, PA 19106. Homeowners insurance products are offered through Better Cover, LLC, a Pennsylvania Resident Producer Agency, License #881593, 325&ndash;41 Chestnut Street, Suite 807, Philadelphia, PA 19106. Better Inspect, LLC maintains its corporate headquarters at 325&ndash;41 Chestnut Street, Suite 846, Philadelphia, PA 19106. Better Mortgage Corporation, Better Real Estate, LLC, Better Settlement Services, LLC, Better Cover, LLC, Better Connect, and Better Inspect, LLC are separate operating subsidiaries of Better Home &amp; Finance Holding Company. Each company is a separate legal entity, operated and managed under its own governance structure and applicable legal and regulatory requirements. All trademarks, service marks, trade names, logos, icons, and domain names are proprietary to Better Home &amp; Finance Holding Company or their respective owners. Unauthorized use of proprietary intellectual property is prohibited.
+              </>
+            )
+          })()}
         </div>
       </div>
 
