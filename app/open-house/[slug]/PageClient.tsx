@@ -322,10 +322,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
             <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>📣</div>
               <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
-                {rate ? <>See how a {rate}% interest rate{apr ? <> ({apr}% APR)</> : ''} could impact your estimated payment</> : page.callout_text}
+                {rate ? <>See how a {rate}% interest rate could impact your estimated payment</> : page.callout_text}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 8, fontStyle: 'italic' }}>
-                Subject to financing qualifications and applicable incentive terms.
+                {apr && <>{apr}% APR &nbsp;·&nbsp; </>}Subject to financing qualifications and applicable incentive terms.
               </div>
             </div>
           </div>
