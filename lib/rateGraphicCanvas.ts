@@ -123,7 +123,7 @@ export async function renderRateGraphic(
   ctx.font = `800 ${Math.round(h * 0.032)}px Inter, Arial, sans-serif`
   ctx.fillStyle = '#5BCBF5'
   ctx.textAlign = 'center'
-  ctx.fillText('SPECIAL FINANCING AVAILABLE', w / 2, h * 0.178)
+  ctx.fillText('SPECIAL FINANCING INCENTIVE', w / 2, h * 0.178)
   ctx.restore()
   ctx.textAlign = 'left'
 
@@ -289,7 +289,9 @@ export async function renderRateGraphic(
   }
 
   // Disclaimer text — left portion, narrower when QR is present
-  const disclaimer = 'Example rate scenario for illustration purposes only. Rate and APR assume a 30-year fixed-rate mortgage on a primary residence for a well-qualified borrower with strong credit. Loan amount, down payment, loan type, property type, and borrower qualifications will affect actual rate and APR. Monthly payment shown does not include taxes or insurance; actual obligation may be greater. Rate shown reflects terms available as of the date indicated and may not be available to all applicants. A complete loan scenario must be evaluated for each individual borrower. This is not a commitment to lend or an offer of credit. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, Floor 80, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access'
+  const rateDisc = values.rate ? `Advertised Interest Rate: ${values.rate}% | ` : ''
+  const aprDisc = values.apr ? `Annual Percentage Rate (APR): ${values.apr}%. ` : ''
+  const disclaimer = `Special financing incentive available. This property may qualify for a reduced interest rate or closing cost credit when financed through NEO Home Loans. Financing incentives are subject to availability, borrower qualifications, loan approval, and applicable program requirements. Participation is optional; buyers may use any lender of their choice. ${rateDisc}${aprDisc}Advertised rates and scenarios are illustrative and subject to change without notice. Actual rates, APRs, payments, fees, and terms may vary based on borrower qualifications, credit profile, loan program, property eligibility, and market conditions. Advertised rates are not guaranteed and may require discount points, seller contributions, or other financing incentives. Payment estimates may exclude property taxes, homeowners insurance, mortgage insurance, HOA dues, or other applicable expenses. This is not a commitment to lend or a guarantee of loan approval. All loans subject to underwriting approval and satisfactory property evaluation. © 2026 Better Home & Finance Holding Company and/or its affiliates. All rights reserved. Better Mortgage Corporation, a direct lender. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Better Mortgage Corporation operates under the name Better BMC in New York. Loans made or arranged pursuant to a California Finance Lenders Law License. Licensed by the CA Dept. of Financial Protection and Innovation under the CA Residential Mortgage Lending Act. Not available in all states. Equal Housing Lender. NMLS Consumer Access: www.nmlsconsumeraccess.org`
   const discFs = Math.round(h * (hasQr ? 0.011 : 0.0135))
   ctx.font = `400 ${discFs}px Inter, Arial, sans-serif`
   ctx.fillStyle = 'rgba(255,255,255,0.42)'
