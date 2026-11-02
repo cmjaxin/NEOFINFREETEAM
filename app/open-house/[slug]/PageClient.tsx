@@ -469,9 +469,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                   {page.rate_scenarios.map((s, i) => {
                     const hasBuydown = s.buydown_rate !== s.market_rate
                     const savings = s.market_payment - s.buydown_payment
+                    const displayLabel = !hasBuydown ? 'Illustrative Comparison Rate' : s.label
                     return (
                       <div key={i} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: `1px solid ${C.border}` }}>
-                        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.navy, marginBottom: 8 }}>{s.label}</div>
+                        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.navy, marginBottom: 8 }}>{displayLabel}</div>
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
                           {hasBuydown && (
                             <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>
@@ -485,7 +486,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                           <span style={{ fontSize: 26, fontWeight: 900, color: C.navy }}>${s.buydown_payment.toLocaleString()}<span style={{ fontSize: 13, fontWeight: 600 }}>/mo</span></span>
                         </div>
                         {hasBuydown && savings > 0 && (
-                          <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Save ${savings.toLocaleString()}/mo</div>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Est. Payment Difference: ${savings.toLocaleString()}/mo</div>
+                            <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 3, lineHeight: 1.5 }}>vs. illustrative comparison at {s.market_rate.toFixed(3)}% ({s.market_payment > 0 ? `$${s.market_payment.toLocaleString()}/mo` : 'see TCA'})</div>
+                          </div>
                         )}
                         {s.apr > 0 && (
                           <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>APR {s.apr.toFixed(3)}%</div>
