@@ -188,10 +188,10 @@ export default function SignRiderPage({ slug }: { slug: string }) {
       {(() => {
         const ctRate = page.callout_text?.match(/([\d.]+)%/)?.[1] ?? null
         const scenarios = page.rate_scenarios ?? []
-        const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : scenarios.reduce((min:any,s:any) => (!min || s.buydown_rate < min.buydown_rate) ? s : min, null as any)
-        const rate = ctRate ?? (matched ? matched.buydown_rate.toFixed(3) : null)
+        const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : null
+        const rate = ctRate
         const apr = matched?.apr ? matched.apr.toFixed(3) : null
-        if (!rate && !page.callout_text) return null
+        if (!page.callout_text) return null
         return (
           <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '28px 20px' }}>
             <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
@@ -460,8 +460,8 @@ export default function SignRiderPage({ slug }: { slug: string }) {
           {(() => {
             const ctRate = page.callout_text?.match(/([\d.]+)%/)?.[1] ?? null
             const scenarios = page.rate_scenarios ?? []
-            const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : scenarios.reduce((min:any,s:any) => (!min || s.buydown_rate < min.buydown_rate) ? s : min, null as any)
-            const rate = ctRate ?? (matched ? matched.buydown_rate.toFixed(3) : null)
+            const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : null
+            const rate = ctRate
             const apr = matched?.apr ? matched.apr.toFixed(3) : null
             return (
               <>

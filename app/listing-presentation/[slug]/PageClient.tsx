@@ -293,7 +293,7 @@ table.ct{width:100%;border-collapse:collapse;font-size:11.5px}
     </div>
     <div class="tca-sec">
       <div class="sec-head">See It in Action</div>
-      <p class="body-p">A static example on a ${price} purchase: the same buyer, three ways to finance it.</p>
+      <p class="body-p">A static example on a ${price} purchase: the same buyer, multiple ways to finance it.</p>
       ${page.tca_screenshot
         ? `<div class="tca-img-wrap"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>`
         : `<div class="tca-tbl-wrap"><table class="ct"><thead><tr><th></th><th>Market Rate</th><th>Seller Advantage<br>30 YR Fixed FHA</th><th>Seller Advantage<br>5 YR FHA ARM</th></tr></thead><tbody><tr><td>Purchase Price</td><td>$500,000</td><td>$515,000</td><td>$515,000</td></tr><tr><td>Down Payment</td><td>$17,500</td><td>$18,025</td><td>$18,025</td></tr><tr><td>Loan Amount</td><td>$490,943</td><td>$505,672</td><td>$505,672</td></tr><tr class="r-rate"><td>Interest Rate</td><td>6.375%</td><td>5.490%</td><td>4.750%</td></tr><tr><td>APR</td><td>*7.141%</td><td>*6.244%</td><td>*5.495%</td></tr><tr><td>Term (mos)</td><td>360</td><td>360</td><td>360</td></tr><tr class="r-pay"><td>Payment</td><td>**$3,574.52</td><td>**$3,394.78</td><td>**$3,164.42</td></tr><tr><td>Cash to Close</td><td>$25,590.75</td><td>$26,115.06</td><td>$26,115.06</td></tr><tr class="r-save"><td>Monthly Savings</td><td>$0.00</td><td>$179.74</td><td>$410.10</td></tr><tr><td>Savings (120 mos)</td><td>$0</td><td>$35,015</td><td>$71,964</td></tr><tr><td>Freedom Pt 1</td><td>30.00 yrs</td><td>30.00 yrs</td><td>30.00 yrs</td></tr></tbody></table></div>`
