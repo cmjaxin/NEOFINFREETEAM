@@ -28,6 +28,7 @@ interface OHPage {
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string
   tca_screenshot: string
+  loom_url: string
   seller_contribution: number | null
   seller_contribution_pct: number | null
   rate_scenarios: RateScenario[] | null
@@ -502,6 +503,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
     list_price: init.list_price ? String(init.list_price) : '',
     tca_url: (init as OHPage).tca_url ?? '',
     tca_screenshot: (init as OHPage).tca_screenshot ?? '',
+    loom_url: (init as OHPage).loom_url ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
     advisor_title: init.advisor_title || profile?.title || '',
     advisor_email: init.advisor_email || profile?.email || '',
@@ -675,6 +677,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
       list_price: Number(String(form.list_price).replace(/,/g, '')) || 0,
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
+      loom_url: form.loom_url || null,
       advisor_name: form.advisor_name,
       advisor_title: form.advisor_title,
       advisor_email: form.advisor_email,
@@ -822,6 +825,11 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
           </section>
 
           {/* TCA Link + Screenshot */}
+          <section>
+            <SectionHead title="Video Walkthrough" sub="Paste a Loom share URL to embed a video on the online page." />
+            <Field label="Loom Video URL" name="loom_url" placeholder="https://www.loom.com/share/…" value={form.loom_url} onChange={set} />
+          </section>
+
           <section>
             <SectionHead title="MortgageCoach TCA" sub="The URL embeds live on the Seller Advantage tab. The screenshot appears on the printed flyer." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

@@ -18,6 +18,13 @@ function fmtPrice(n: number) {
   return '$' + Math.round(n).toLocaleString()
 }
 
+function loomIdFromUrl(url: string): string | null {
+  try {
+    const match = url.match(/loom\.com\/(?:share|embed)\/([a-zA-Z0-9]+)/)
+    return match?.[1] ?? null
+  } catch { return null }
+}
+
 // ─── Photo Gallery ─────────────────────────────────────────────────────────────
 function PhotoGallery({ photos, address }: { photos: string[]; address: string }) {
   const [idx, setIdx] = useState(0)
@@ -337,6 +344,7 @@ interface PageData {
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string | null
   tca_screenshot: string | null
+  loom_url: string | null
   schedule_url: string | null
   bntouch_user_id: string | null
   callout_text: string | null
@@ -367,7 +375,7 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
         const row = data[0]
         const pageData: PageData = {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
-          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, tca_screenshot: null, schedule_url: null, bntouch_user_id: null,
+          partner_photo: '', partner_nmls: '', partner_logo: '', tca_url: null, tca_screenshot: null, loom_url: null, schedule_url: null, bntouch_user_id: null,
           ...row,
         } as PageData
 
@@ -413,6 +421,8 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
       </div>
     </div>
   )
+
+  const loomId = page.loom_url ? loomIdFromUrl(page.loom_url) : null
 
   const TABS = [
     { id: 'overview', label: 'Property' },
@@ -588,6 +598,30 @@ export default function ListingPresentationPage({ slug }: { slug: string }) {
                   style={{ width: '100%', border: 'none', display: 'block' }}
                   title="Seller Advantage Presentation"
                 />
+              </div>
+            )}
+
+            {/* Loom Video */}
+            {loomId && (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Video Walkthrough</div>
+                  {page.loom_url && (
+                    <a href={page.loom_url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: C.accent, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                      Open Full Screen ↗
+                    </a>
+                  )}
+                </div>
+                <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
+                  <iframe
+                    src={`https://www.loom.com/embed/${loomId}`}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    title="Video Walkthrough"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                  />
+                </div>
               </div>
             )}
 
