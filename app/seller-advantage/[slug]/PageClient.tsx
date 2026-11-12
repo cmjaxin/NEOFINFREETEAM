@@ -82,7 +82,7 @@ function ContactSection({ page }: { page: PageData }) {
             Ready to See Your Numbers?
           </h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, margin: '12px auto 0', maxWidth: 480, lineHeight: 1.7 }}>
-            We&apos;ll show you exactly how a seller-paid rate reduction changes your payment — for your specific home, loan type, and profile.
+            We&apos;ll show you exactly how a lender-paid 1/0 buydown changes your payment — for your specific home, loan type, and profile.
           </p>
         </div>
 
@@ -307,7 +307,7 @@ export default function PageClient({ slug }: { slug: string }) {
           <img src="https://mettlehq.com/wp-content/uploads/2023/06/NEO_LOGO_HORIZ_WHITE-1.png" alt="NEO Home Loans" className="sa-logo" />
 
           <div style={{ display: 'inline-block', border: `1px solid rgba(91,203,245,0.4)`, color: ACCENT, fontSize: 10, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', padding: '4px 14px', borderRadius: 20, marginBottom: 14 }}>
-            Seller Advantage Program
+            NEO Financing Incentive
           </div>
 
           <h1 className="sa-h1" style={{ color: WHITE, fontWeight: 900, margin: '0 0 10px', lineHeight: 1.05, letterSpacing: '-0.03em' }}>
@@ -315,7 +315,7 @@ export default function PageClient({ slug }: { slug: string }) {
             <span style={{ color: ACCENT }}>Not the Monthly Payment?</span>
           </h1>
           <p className="sa-sub" style={{ color: 'rgba(255,255,255,0.6)', margin: '0 auto 20px', maxWidth: 520, lineHeight: 1.65 }}>
-            A seller-paid rate buydown could reduce your monthly payment by hundreds of dollars — without waiting for market rates to fall.
+            A lender-paid 1/0 buydown could reduce your first-year payment by hundreds of dollars — no seller contribution required.
           </p>
 
           {page.sales_price > 0 && (
@@ -405,22 +405,22 @@ export default function PageClient({ slug }: { slug: string }) {
         <div style={{ maxWidth: 820, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: ACCENT, marginBottom: 12 }}>How It Works</div>
-            <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: NAVY, margin: 0, letterSpacing: '-0.03em' }}>What Is the Seller Advantage Program?</h2>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,42px)', fontWeight: 900, color: NAVY, margin: 0, letterSpacing: '-0.03em' }}>What Is a Lender-Paid 1/0 Buydown?</h2>
           </div>
 
           <div className="sa-how-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', marginBottom: 52 }}>
             <div style={{ background: '#F8FAFC', borderRadius: 16, padding: '28px 28px', border: '1px solid #E2E8F0' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 18 }}>🏷️</div>
-              <h3 style={{ fontSize: 18, fontWeight: 800, color: NAVY, margin: '0 0 10px', letterSpacing: '-0.01em' }}>A Seller-Funded Rate Reduction</h3>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: NAVY, margin: '0 0 10px', letterSpacing: '-0.01em' }}>A Lender-Paid Rate Reduction</h3>
               <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.75, margin: 0 }}>
-                The seller contributes funds at closing that are used specifically to buy down your mortgage rate — either temporarily for the first few years, or permanently for the life of the loan. Think of it like a builder incentive, applied to any home on the market.
+                NEO covers the cost of a 1/0 buydown at closing — reducing your interest rate by 1% for the first year of your loan. No seller contribution required. It&apos;s a financing incentive built into your loan, not a negotiation tactic.
               </p>
             </div>
             <div style={{ background: '#F8FAFC', borderRadius: 16, padding: '28px 28px', border: '1px solid #E2E8F0' }}>
               <div style={{ width: 44, height: 44, borderRadius: 12, background: NAVY, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, marginBottom: 18 }}>👥</div>
               <h3 style={{ fontSize: 18, fontWeight: 800, color: NAVY, margin: '0 0 10px', letterSpacing: '-0.01em' }}>More Buyers Can Qualify</h3>
               <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.75, margin: 0 }}>
-                A lower rate means a lower monthly payment — and that lower payment can re-qualify buyers who were priced out at the market rate. The seller doesn&apos;t drop the asking price; instead, they make the financing affordable, which opens the door to a wider pool of buyers.
+                A lower first-year rate means a lower monthly payment — and that lower payment can re-qualify buyers who were priced out at the current market rate. The seller doesn&apos;t need to contribute anything; NEO handles it.
               </p>
             </div>
           </div>
@@ -430,10 +430,10 @@ export default function PageClient({ slug }: { slug: string }) {
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: ACCENT, marginBottom: 16 }}>The Simple Version</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
-                { step: '01', text: 'You make an offer and negotiate for the seller to cover a portion of your closing costs.' },
-                { step: '02', text: 'Those funds are used to permanently or temporarily reduce your interest rate below market.' },
-                { step: '03', text: 'Your monthly payment drops — potentially by hundreds of dollars — without changing the purchase price.' },
-                { step: '04', text: 'You keep more money in your pocket every single month for the life of the buydown.' },
+                { step: '01', text: 'You purchase a home using NEO Home Loans financing — no special negotiation or seller contribution required.' },
+                { step: '02', text: 'NEO covers the cost of a 1/0 buydown, reducing your interest rate by 1% for your entire first year.' },
+                { step: '03', text: 'Your first-year payment drops — potentially by hundreds of dollars — without changing your purchase price or loan terms.' },
+                { step: '04', text: 'In year two, your rate adjusts to the note rate for the remaining life of the loan.' },
               ].map(({ step, text }) => (
                 <div key={step} style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
                   <div style={{ fontSize: 28, fontWeight: 900, color: 'rgba(91,203,245,0.3)', lineHeight: 1, flexShrink: 0, fontVariantNumeric: 'tabular-nums', minWidth: 36 }}>{step}</div>
