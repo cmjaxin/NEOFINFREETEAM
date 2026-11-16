@@ -29,6 +29,7 @@ interface OHPage {
   tca_url: string
   tca_screenshot: string
   loom_url: string
+  callout_text: string | null
   seller_contribution: number | null
   seller_contribution_pct: number | null
   rate_scenarios: RateScenario[] | null
@@ -985,21 +986,24 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
 
 // ─── Page Card ────────────────────────────────────────────────────────────────
 // ─── Create Open House from Listing Modal ────────────────────────────────────
-function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage; onClose: () => void; onCreated: (slug: string) => void }) {
+function CreateOpenHouseModal({ listing, editing, onClose, onCreated }: { listing: OHPage; editing?: OHPage; onClose: () => void; onCreated: (slug: string) => void }) {
   const { supabase, profile } = useApp()
-  const [photos, setPhotos] = useState<string[]>(listing.photos ?? [])
+  const src = editing ?? listing
+  const [photos, setPhotos] = useState<string[]>(src.photos ?? [])
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const photoRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState({
-    list_price: listing.list_price ? String(listing.list_price) : '',
-    beds: listing.beds ? String(listing.beds) : '',
-    baths: listing.baths ? String(listing.baths) : '',
-    sqft: listing.sqft ? String(listing.sqft) : '',
-    lot_size: listing.lot_size ?? '',
-    year_built: listing.year_built ? String(listing.year_built) : '',
-    description: listing.description ?? '',
+    list_price: src.list_price ? String(src.list_price) : '',
+    beds: src.beds ? String(src.beds) : '',
+    baths: src.baths ? String(src.baths) : '',
+    sqft: src.sqft ? String(src.sqft) : '',
+    lot_size: src.lot_size ?? '',
+    year_built: src.year_built ? String(src.year_built) : '',
+    description: src.description ?? '',
+    loom_url: editing?.loom_url ?? '',
+    callout_text: editing?.callout_text ?? '',
   })
   function set(k: string, v: string) { setForm(f => ({ ...f, [k]: v })) }
 
@@ -1036,19 +1040,10 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
     setUploading(false)
   }
 
-  async function create() {
+  async function save() {
     if (!profile) return
     setSaving(true); setMsg('')
-    const slug = 'oh-' + slugify(listing.address + ' ' + listing.city) + '-' + Date.now().toString(36)
-    const { error } = await supabase.from('open_house_pages').insert({
-      slug,
-      page_type: 'open_house',
-      status: 'active',
-      created_by: profile.id,
-      address: listing.address,
-      city: listing.city,
-      state: listing.state,
-      zip: listing.zip,
+    const payload = {
       beds: form.beds ? Number(form.beds) : null,
       baths: form.baths ? Number(form.baths) : null,
       sqft: form.sqft ? Number(form.sqft) : null,
@@ -1057,25 +1052,32 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
       lot_size: form.lot_size,
       year_built: form.year_built ? Number(form.year_built) : null,
       photos,
-      advisor_name: listing.advisor_name,
-      advisor_title: listing.advisor_title,
-      advisor_email: listing.advisor_email,
-      advisor_phone: listing.advisor_phone,
-      advisor_nmls: listing.advisor_nmls,
-      advisor_photo: listing.advisor_photo,
-      partner_name: listing.partner_name,
-      partner_title: listing.partner_title,
-      partner_email: listing.partner_email,
-      partner_phone: listing.partner_phone,
-      partner_photo: listing.partner_photo,
-      partner_nmls: listing.partner_nmls,
-      partner_logo: listing.partner_logo,
-      tca_url: listing.tca_url,
-      tca_screenshot: listing.tca_screenshot,
-    })
-    setSaving(false)
-    if (error) { setMsg('Failed: ' + error.message); return }
-    onCreated(slug)
+      loom_url: form.loom_url || null,
+      callout_text: form.callout_text || null,
+    }
+    if (editing) {
+      const { error } = await supabase.from('open_house_pages').update(payload).eq('id', editing.id)
+      setSaving(false)
+      if (error) { setMsg('Failed: ' + error.message); return }
+      onCreated(editing.slug)
+    } else {
+      const slug = 'oh-' + slugify(listing.address + ' ' + listing.city) + '-' + Date.now().toString(36)
+      const { error } = await supabase.from('open_house_pages').insert({
+        slug, page_type: 'open_house', status: 'active', created_by: profile.id,
+        address: listing.address, city: listing.city, state: listing.state, zip: listing.zip,
+        advisor_name: listing.advisor_name, advisor_title: listing.advisor_title,
+        advisor_email: listing.advisor_email, advisor_phone: listing.advisor_phone,
+        advisor_nmls: listing.advisor_nmls, advisor_photo: listing.advisor_photo,
+        partner_name: listing.partner_name, partner_title: listing.partner_title,
+        partner_email: listing.partner_email, partner_phone: listing.partner_phone,
+        partner_photo: listing.partner_photo, partner_nmls: listing.partner_nmls,
+        partner_logo: listing.partner_logo, tca_url: listing.tca_url,
+        tca_screenshot: listing.tca_screenshot, ...payload,
+      })
+      setSaving(false)
+      if (error) { setMsg('Failed: ' + error.message); return }
+      onCreated(slug)
+    }
   }
 
   return (
@@ -1085,9 +1087,9 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
         onClick={e => e.stopPropagation()}>
         <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 18, background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, color: C.muted }}>×</button>
 
-        <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Create Open House</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>{editing ? 'Edit Open House' : 'Create Open House'}</div>
         <div style={{ fontSize: 20, fontWeight: 800, color: C.navy, marginBottom: 4 }}>{listing.address}</div>
-        <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>All contact and partner info will be copied from this listing. Edit property details below if needed.</div>
+        <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>{editing ? 'Update property details, video, or callout banner.' : 'All contact and partner info will be copied from this listing. Edit property details below if needed.'}</div>
 
         {/* Editable property fields */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
@@ -1134,13 +1136,28 @@ function CreateOpenHouseModal({ listing, onClose, onCreated }: { listing: OHPage
           <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && handleFiles(e.target.files)} />
         </div>
 
+        {/* Video + Callout */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Loom Video URL</label>
+          <input type="text" value={form.loom_url} placeholder="https://www.loom.com/share/…"
+            onChange={e => set('loom_url', e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Callout Banner Text</label>
+          <input type="text" value={form.callout_text} placeholder="e.g. See how a 5.25% interest rate could impact your payment"
+            onChange={e => set('callout_text', e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', boxSizing: 'border-box' }} />
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Leave blank to hide the banner. Include a % rate to auto-populate APR.</div>
+        </div>
+
         {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{ flex: 1, padding: '12px 0', background: C.bg, border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, fontWeight: 600, color: C.dim, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={create} disabled={saving || uploading}
+          <button onClick={save} disabled={saving || uploading}
             style={{ flex: 2, padding: '12px 0', background: C.navy, border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 800, color: '#fff', cursor: 'pointer' }}>
-            {saving ? 'Creating…' : 'Create Open House →'}
+            {saving ? 'Saving…' : editing ? 'Save Changes →' : 'Create Open House →'}
           </button>
         </div>
       </div>
@@ -1280,11 +1297,20 @@ function RateGraphicModal({ page, onClose }: { page: OHPage; onClose: () => void
 }
 
 function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void; onDelete: () => void }) {
+  const { supabase } = useApp()
   const url = `/listing-presentation/${page.slug}`
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showCreateOH, setShowCreateOH] = useState(false)
+  const [editingOH, setEditingOH] = useState<OHPage | null>(null)
   const [showRateGraphic, setShowRateGraphic] = useState(false)
   const [createdSlug, setCreatedSlug] = useState<string | null>(null)
+  const [linkedOH, setLinkedOH] = useState<OHPage[]>([])
+
+  useEffect(() => {
+    supabase.from('open_house_pages').select('*')
+      .eq('page_type', 'open_house').eq('status', 'active').eq('address', page.address)
+      .then(({ data }) => setLinkedOH((data ?? []) as OHPage[]))
+  }, [page.address, createdSlug])
   return (
     <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       {page.photos && page.photos.length > 0 ? (
@@ -1338,6 +1364,12 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
               + Open House
             </button>
+            {linkedOH.map(oh => (
+              <button key={oh.id} onClick={() => setEditingOH(oh)}
+                style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
+                ✏️ Edit OH
+              </button>
+            ))}
             <button onClick={() => setShowRateGraphic(true)}
               style={{ padding: '8px 12px', background: 'rgba(91,203,245,0.08)', border: `1px solid rgba(91,203,245,0.35)`, borderRadius: 8, fontSize: 12, color: C.navy, cursor: 'pointer', fontWeight: 700 }}>
               Rate Graphic
@@ -1362,6 +1394,14 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
           listing={page}
           onClose={() => setShowCreateOH(false)}
           onCreated={slug => setCreatedSlug(slug)}
+        />
+      )}
+      {editingOH && (
+        <CreateOpenHouseModal
+          listing={page}
+          editing={editingOH}
+          onClose={() => setEditingOH(null)}
+          onCreated={() => setEditingOH(null)}
         />
       )}
       {showRateGraphic && <RateGraphicModal page={page} onClose={() => setShowRateGraphic(false)} />}
