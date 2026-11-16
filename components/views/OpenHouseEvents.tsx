@@ -37,6 +37,7 @@ interface OHEPage {
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string
   tca_screenshot: string
+  loom_url: string | null
   loan_description: string
   promo_rate: string | null
   promo_apr: string | null
@@ -387,6 +388,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
       return m ? m[1] : '4.875'
     })(),
     callout_text: (init as OHEPage).callout_text ?? 'See how a 4.875% interest rate impacts your payment',
+    loom_url: (init as OHEPage).loom_url ?? '',
     tca_url: (init as OHEPage).tca_url ?? '',
     tca_screenshot: (init as OHEPage).tca_screenshot ?? '',
     advisor_name: init.advisor_name || profile?.full_name || '',
@@ -569,6 +571,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
       list_price: Number(String(form.list_price).replace(/,/g, '')) || 0,
       loan_description: form.loan_description || null,
       callout_text: form.callout_text || null,
+      loom_url: form.loom_url || null,
       tca_url: form.tca_url || null,
       tca_screenshot: form.tca_screenshot || null,
       advisor_name: form.advisor_name,
@@ -789,6 +792,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
                 <input ref={tcaRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { if (e.target.files?.[0]) uploadTcaScreenshot(e.target.files[0]) }} />
               </div>
             </div>
+          </section>
+
+          {/* Video Walkthrough */}
+          <section>
+            <SectionHead title="Video Walkthrough" sub="Paste a Loom share URL to embed a video on the online open house page." />
+            <Field label="Loom Video URL" name="loom_url" placeholder="https://www.loom.com/share/…" value={form.loom_url} onChange={set} />
           </section>
 
           {/* Special Financing Rate Graphic */}
