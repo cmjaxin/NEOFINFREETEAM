@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import LeadCaptureModal from '@/components/LeadCaptureModal'
 import { createClient } from '@/lib/supabase/client'
+import { BetterDisclaimer } from '@/lib/disclaimer'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -311,6 +312,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
   const totalSubsidy = primary?.total_subsidy ?? 0
   const finalPiti = primary?.final_piti ?? 0
   const yr1Savings = (yr1 && yr3plus) ? Math.round(yr3plus.piti - yr1.piti) : 0
+  const hasBuydown = !!(primary && primary.buydown_rate !== primary.market_rate)
   const effectiveDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   const reviewDate = new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
@@ -413,86 +415,101 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         </div>
       )}
 
-      {/* ── Rate spotlight ───────────────────────────────────────────────── */}
+      {/* ── Rate & Payment Cards (SA-style) ─────────────────────────────── */}
       {primary && (
-        <div className="oh-rate-band">
-          <div className="oh-rate-inner">
-            {/* Primary column: big year-1 rate */}
-            <div className="oh-rate-primary">
-              <div className="oh-rate-eyebrow">Year 1 Payment-Equivalent*</div>
-              <div className="oh-rate-big">{(yr1?.rate ?? primary.buydown_rate).toFixed(1)}%</div>
-              <div className="oh-rate-footnote">*Not the mortgage interest rate · first 12 monthly payments</div>
-            </div>
-            {/* Secondary: year 2, note rate, APR */}
-            <div className="oh-rate-secondary">
-              {yr2 && yr2.rate !== (yr3plus?.rate ?? primary.market_rate) && (
-                <div className="oh-rate-sec-item">
-                  <div className="oh-rate-sec-label">Year 2</div>
-                  <div className="oh-rate-sec-val">{yr2.rate.toFixed(1)}%</div>
-                </div>
-              )}
-              <div className="oh-rate-sec-item">
-                <div className="oh-rate-sec-label">Permanent Note Rate</div>
-                <div className="oh-rate-sec-val">{primary.market_rate.toFixed(3)}%</div>
-              </div>
-              {primary.apr > 0 && (
-                <div className="oh-rate-sec-item">
-                  <div className="oh-rate-sec-label">APR</div>
-                  <div className="oh-rate-sec-val">{primary.apr.toFixed(3)}%</div>
-                </div>
-              )}
-            </div>
-          </div>
-          {primary.buydown_rate !== primary.market_rate && (
-            <div className="oh-rate-disc">Illustrative {Math.round(primary.market_rate - primary.buydown_rate)}-{Math.round(primary.market_rate - primary.buydown_rate) > 1 ? Math.round(primary.market_rate - primary.buydown_rate) - 1 + '-' : ''}1 temporary payment buydown · Subject to qualifications</div>
-          )}
-        </div>
-      )}
+        <div className="oh-rate-band" style={{ position: 'relative', overflow: 'hidden' }}>
+          {/* decorative rings */}
+          <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 900, borderRadius: '50%', border: '1px solid rgba(91,203,245,0.04)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: 580, height: 580, borderRadius: '50%', border: '1px solid rgba(91,203,245,0.07)', pointerEvents: 'none' }} />
 
-      {/* ── PITI summary card ─────────────────────────────────────────────── */}
-      {primary && (hasPitiSchedule || primary.buydown_payment > 0) && (
-        <div className="oh-piti-wrap">
-          <div className="oh-piti-card">
-            {hasPitiSchedule && yr1 && yr2 && yr3plus ? (
-              <>
-                <div className="oh-piti-row">
-                  <span className="oh-piti-label">Year 1 · 12 payments</span>
-                  <span className="oh-piti-val">{fmtPrice(Math.round(yr1.piti))}<span className="oh-piti-mo">/mo</span></span>
-                </div>
-                <div className="oh-piti-row">
-                  <span className="oh-piti-label">Year 2 · 12 payments</span>
-                  <span className="oh-piti-val">{fmtPrice(Math.round(yr2.piti))}<span className="oh-piti-mo">/mo</span></span>
-                </div>
-                <div className="oh-piti-row">
-                  <span className="oh-piti-label">Year 3+</span>
-                  <span className="oh-piti-val">{fmtPrice(Math.round(yr3plus.piti))}<span className="oh-piti-mo">/mo</span></span>
-                </div>
-                <div className="oh-piti-includes">Estimated total including taxes, insurance &amp; HOA</div>
-                {yr1Savings > 0 && (
-                  <div className="oh-piti-savings">{fmtPrice(yr1Savings)} lower estimated payment in Year 1</div>
-                )}
-                {totalSubsidy > 0 && (
-                  <div className="oh-piti-subsidy">{fmtPrice(totalSubsidy)} modeled subsidy deposit</div>
-                )}
-              </>
-            ) : (
-              <>
-                <div className="oh-piti-row">
-                  <span className="oh-piti-label">{primary.buydown_rate !== primary.market_rate ? 'Year 1 P&I' : 'P&I Payment'}</span>
-                  <span className="oh-piti-val">{fmtPrice(primary.buydown_payment)}<span className="oh-piti-mo">/mo</span></span>
-                </div>
-                {primary.buydown_rate !== primary.market_rate && (
-                  <div className="oh-piti-row">
-                    <span className="oh-piti-label">Note rate P&I</span>
-                    <span className="oh-piti-val">{fmtPrice(primary.market_payment)}<span className="oh-piti-mo">/mo</span></span>
-                  </div>
-                )}
-              </>
-            )}
-            <div className="oh-piti-dates">
-              Effective {effectiveDate} · Review by {reviewDate}
+          <div className="oh-rate-inner" style={{ position: 'relative', flexDirection: 'column', alignItems: 'flex-start' }}>
+            {/* Headline */}
+            <div style={{ marginBottom: 28 }}>
+              <div className="oh-rate-eyebrow">
+                {hasBuydown ? 'NEO Financing Incentive' : 'Financing Overview'}
+              </div>
+              <div style={{ fontSize: 'clamp(24px,4vw,38px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 8, textWrap: 'balance' }}>
+                {hasBuydown
+                  ? <>Love the house. <span style={{ color: C.accent }}>Not the first-year payment.</span></>
+                  : <>Smart financing <span style={{ color: C.accent }}>for this home.</span></>}
+              </div>
             </div>
-            <a href="#next-step" className="oh-piti-cta">See if this fits my budget →</a>
+
+            {/* Rate cards grid */}
+            <div className="oh-sa-cards">
+              {/* Year 1 hero card */}
+              <div className="oh-sa-card oh-sa-card--hero">
+                <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: C.accent, opacity: 0.08, filter: 'blur(20px)' }} />
+                <div className="oh-sa-card-eyebrow">Year 1 Payment-Equivalent*</div>
+                <div className="oh-sa-rate-big">{(yr1?.rate ?? primary.buydown_rate).toFixed(1)}%</div>
+                {yr1Savings > 0 && (
+                  <div className="oh-sa-savings-badge">Save {fmtPrice(yr1Savings)}/mo</div>
+                )}
+                <div className="oh-sa-divider" />
+                {hasPitiSchedule && yr1 ? (
+                  <div>
+                    <div className="oh-sa-piti-label">Estimated Monthly Housing</div>
+                    <div className="oh-sa-piti-val">{fmtPrice(Math.round(yr1.piti))}<span className="oh-sa-mo">/mo</span></div>
+                  </div>
+                ) : primary.buydown_payment > 0 ? (
+                  <div>
+                    <div className="oh-sa-piti-label">Principal &amp; Interest</div>
+                    <div className="oh-sa-piti-val">{fmtPrice(primary.buydown_payment)}<span className="oh-sa-mo">/mo</span></div>
+                  </div>
+                ) : null}
+                <div className="oh-sa-footnote">*First 12 monthly payments · not the note rate</div>
+              </div>
+
+              {/* Year 2 card */}
+              {yr2 && yr2.rate !== (yr3plus?.rate ?? primary.market_rate) && (
+                <div className="oh-sa-card oh-sa-card--secondary">
+                  <div className="oh-sa-card-eyebrow">Year 2 · 12 Payments</div>
+                  <div className="oh-sa-rate-med">{yr2.rate.toFixed(1)}%</div>
+                  {yr2.piti > 0 && (
+                    <>
+                      <div className="oh-sa-divider" />
+                      <div className="oh-sa-piti-label">Estimated Monthly</div>
+                      <div className="oh-sa-piti-sm">{fmtPrice(Math.round(yr2.piti))}/mo</div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Note rate / Year 3+ card */}
+              <div className="oh-sa-card oh-sa-card--market">
+                <div className="oh-sa-card-eyebrow">{hasBuydown ? 'Year 3+ · Permanent Rate' : 'Note Rate'}</div>
+                <div className="oh-sa-rate-med">{primary.market_rate.toFixed(3)}%</div>
+                {(yr3plus?.piti ?? 0) > 0 && (
+                  <>
+                    <div className="oh-sa-divider" />
+                    <div className="oh-sa-piti-label">Estimated Monthly</div>
+                    <div className="oh-sa-piti-sm">{fmtPrice(Math.round(yr3plus!.piti))}/mo</div>
+                  </>
+                )}
+                {!hasPitiSchedule && primary.market_payment > 0 && (
+                  <>
+                    <div className="oh-sa-divider" />
+                    <div className="oh-sa-piti-label">P&amp;I</div>
+                    <div className="oh-sa-piti-sm">{fmtPrice(primary.market_payment)}/mo</div>
+                  </>
+                )}
+                {primary.apr > 0 && (
+                  <div className="oh-sa-apr">APR {primary.apr.toFixed(3)}%</div>
+                )}
+              </div>
+            </div>
+
+            {/* Footnotes */}
+            <div className="oh-rate-disc" style={{ marginTop: 20 }}>
+              {hasBuydown && <>Illustrative temporary buydown · First-year payment uses a subsidized rate · Subject to qualification. </>}
+              Effective {effectiveDate} · Review by {reviewDate}.
+              {totalSubsidy > 0 && <> · {fmtPrice(totalSubsidy)} modeled buydown deposit.</>}
+            </div>
+
+            {/* CTA */}
+            <div style={{ textAlign: 'center', marginTop: 28, width: '100%' }}>
+              <a href="#next-step" className="oh-cta-btn">Show me if this payment fits →</a>
+            </div>
           </div>
         </div>
       )}
@@ -721,7 +738,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         )}
         <p>Owner-occupied primary residence. Credit, income, assets, property, and program eligibility remain subject to review.</p>
         <p>Special financing incentive available. This property may qualify for a reduced interest rate or closing cost credit when financed through NEO Home Loans. Participation is optional; buyers may use any lender of their choice.</p>
-        <p>© {new Date().getFullYear()} NEO Home Loans · NMLS #{page.advisor_nmls || '330511'} · Equal Housing Lender</p>
+        <BetterDisclaimer style={{ marginTop: 16 }} />
       </div>
 
       <style>{`
@@ -794,7 +811,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
 
         /* Rate band */
         .oh-rate-band {
-          background: ${C.navy}; padding: 36px 36px 24px;
+          background: ${C.navy}; padding: 48px 36px 40px;
         }
         .oh-rate-inner {
           max-width: 820px; margin: 0 auto;
@@ -802,62 +819,91 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         }
         .oh-rate-eyebrow {
           font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
-          text-transform: uppercase; color: rgba(255,255,255,0.5);
+          text-transform: uppercase; color: ${C.accent};
           margin-bottom: 6px;
         }
-        .oh-rate-big {
-          font-size: clamp(64px, 12vw, 96px); font-weight: 900; color: ${C.accent};
-          line-height: 1; letter-spacing: -0.03em;
-        }
-        .oh-rate-footnote {
-          font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 8px;
-        }
-        .oh-rate-secondary {
-          display: flex; gap: 32px; flex-wrap: wrap; padding-bottom: 10px;
-        }
-        .oh-rate-sec-item {}
-        .oh-rate-sec-label {
-          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 4px;
-        }
-        .oh-rate-sec-val {
-          font-size: 22px; font-weight: 800; color: rgba(255,255,255,0.75);
-        }
         .oh-rate-disc {
-          max-width: 820px; margin: 16px auto 0; font-size: 9px;
-          color: rgba(255,255,255,0.3); line-height: 1.6;
+          font-size: 9px; color: rgba(255,255,255,0.3); line-height: 1.6;
         }
 
-        /* PITI card */
-        .oh-piti-wrap {
-          background: ${C.navy}; padding: 0 36px 48px;
+        /* SA-style rate cards */
+        .oh-sa-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+          gap: 14px; width: 100%; margin-bottom: 4px;
         }
-        .oh-piti-card {
-          max-width: 820px; margin: 0 auto; background: #fff;
-          border-radius: 16px; padding: 28px 32px; display: flex;
-          flex-direction: column; gap: 0;
+        .oh-sa-card {
+          border-radius: 18px; padding: 24px 22px;
+          position: relative; overflow: hidden;
         }
-        .oh-piti-row {
-          display: flex; justify-content: space-between; align-items: baseline;
-          padding: 10px 0; border-bottom: 1px solid ${C.border};
+        .oh-sa-card--hero {
+          background: linear-gradient(135deg, rgba(91,203,245,0.14) 0%, rgba(10,37,64,0) 100%);
+          border: 1.5px solid rgba(91,203,245,0.5);
+          box-shadow: 0 0 40px rgba(91,203,245,0.1);
         }
-        .oh-piti-row:last-of-type { border-bottom: none; }
-        .oh-piti-label { font-size: 14px; color: ${C.dim}; font-weight: 500; }
-        .oh-piti-val { font-size: 20px; font-weight: 900; color: ${C.navy}; }
-        .oh-piti-mo { font-size: 12px; font-weight: 500; }
-        .oh-piti-includes {
-          font-size: 10px; color: ${C.muted}; margin-top: 10px; line-height: 1.5;
+        .oh-sa-card--secondary {
+          background: rgba(255,255,255,0.05);
+          border: 1.5px solid rgba(255,255,255,0.12);
         }
-        .oh-piti-savings {
-          margin-top: 10px; font-size: 12px; font-weight: 700; color: #16A34A;
-          background: #F0FDF4; border-radius: 6px; padding: 6px 10px;
+        .oh-sa-card--market {
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
         }
-        .oh-piti-subsidy {
-          margin-top: 8px; font-size: 12px; color: ${C.navy}; font-weight: 600;
+        .oh-sa-card-eyebrow {
+          font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
+          text-transform: uppercase; color: ${C.accent}; margin-bottom: 14px;
         }
-        .oh-piti-dates {
-          font-size: 9px; color: ${C.muted}; margin-top: 14px; line-height: 1.5;
+        .oh-sa-card--secondary .oh-sa-card-eyebrow,
+        .oh-sa-card--market .oh-sa-card-eyebrow {
+          color: rgba(255,255,255,0.4);
         }
+        .oh-sa-rate-big {
+          font-size: clamp(52px, 10vw, 76px); font-weight: 900; color: #fff;
+          line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+        }
+        .oh-sa-rate-med {
+          font-size: clamp(32px, 6vw, 46px); font-weight: 900; color: rgba(255,255,255,0.75);
+          line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+        }
+        .oh-sa-savings-badge {
+          display: inline-flex; align-items: center;
+          background: rgba(91,203,245,0.18); border: 1px solid rgba(91,203,245,0.4);
+          border-radius: 20px; padding: 4px 12px; margin: 10px 0;
+          font-size: 12px; font-weight: 800; color: ${C.accent};
+        }
+        .oh-sa-divider {
+          height: 1px; background: rgba(91,203,245,0.15); margin: 14px 0;
+        }
+        .oh-sa-card--secondary .oh-sa-divider,
+        .oh-sa-card--market .oh-sa-divider {
+          background: rgba(255,255,255,0.08);
+        }
+        .oh-sa-piti-label {
+          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 3px;
+        }
+        .oh-sa-piti-val {
+          font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -0.02em;
+          font-variant-numeric: tabular-nums;
+        }
+        .oh-sa-piti-sm {
+          font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.65);
+          font-variant-numeric: tabular-nums;
+        }
+        .oh-sa-mo { font-size: 13px; font-weight: 500; }
+        .oh-sa-apr {
+          font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 10px;
+        }
+        .oh-sa-footnote {
+          font-size: 8.5px; color: rgba(255,255,255,0.25); margin-top: 10px; line-height: 1.5;
+        }
+        .oh-cta-btn {
+          display: inline-block; background: ${C.accent}; color: ${C.navy};
+          font-weight: 800; font-size: 15px; padding: 14px 36px; border-radius: 10px;
+          text-decoration: none; letter-spacing: -0.01em;
+          box-shadow: 0 4px 24px rgba(91,203,245,0.35);
+        }
+        /* Legacy piti-cta class (used in a few places below) */
         .oh-piti-cta {
           display: block; text-align: center; margin-top: 18px;
           background: ${C.accent}; color: ${C.navy}; font-weight: 800;
@@ -1070,9 +1116,9 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           .oh-nav-advisor { margin-left: 0; }
           .oh-hero-img, .oh-hero-placeholder { height: 300px; }
           .oh-hero-content { padding: 24px 20px 24px; }
-          .oh-rate-band { padding: 24px 20px 16px; }
-          .oh-piti-wrap { padding: 0 20px 32px; }
-          .oh-piti-card { padding: 20px 18px; }
+          .oh-rate-band { padding: 28px 20px 32px; }
+          .oh-sa-cards { grid-template-columns: 1fr; gap: 10px; }
+          .oh-sa-rate-big { font-size: 58px; }
           .oh-section-wrap { padding: 32px 20px; }
           .oh-stats-strip { padding: 20px; gap: 16px; }
           .oh-stat { padding: 0 12px; }
