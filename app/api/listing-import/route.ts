@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 
+export const maxDuration = 60
+
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
 // US state abbreviations for URL slug parsing
@@ -96,9 +98,10 @@ export async function POST(req: NextRequest) {
       const jinaRes = await fetch(jinaUrl, {
         headers: {
           'Accept': 'text/plain',
-          'X-Return-Format': 'text',
+          'X-Return-Format': 'markdown',
+          'X-With-Images-Summary': 'true',
         },
-        signal: AbortSignal.timeout(20000),
+        signal: AbortSignal.timeout(25000),
       })
       if (jinaRes.ok) {
         const jinaText = await jinaRes.text()

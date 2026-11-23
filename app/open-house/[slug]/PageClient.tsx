@@ -416,98 +416,94 @@ export default function OpenHousePage({ slug }: { slug: string }) {
       )}
 
       {/* ── Rate & Payment Cards (SA-style) ─────────────────────────────── */}
-      {primary && (
-        <div className="oh-rate-band" style={{ position: 'relative', overflow: 'hidden' }}>
+      {scenarios.length > 0 && (
+        <div className="oh-hero-rate">
           {/* decorative rings */}
-          <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: 900, height: 900, borderRadius: '50%', border: '1px solid rgba(91,203,245,0.04)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%,-50%)', width: 580, height: 580, borderRadius: '50%', border: '1px solid rgba(91,203,245,0.07)', pointerEvents: 'none' }} />
+          <div className="oh-hr-ring oh-hr-ring--lg" />
+          <div className="oh-hr-ring oh-hr-ring--sm" />
 
-          <div className="oh-rate-inner" style={{ position: 'relative', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <div className="oh-hr-inner">
+            {/* NEO logo */}
+            <div className="oh-hr-logo">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="32" height="32" rx="8" fill="rgba(91,203,245,0.15)"/>
+                <path d="M8 22V10l8 9V10M16 10l8 12V10" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>NEO Home Loans</span>
+            </div>
+
+            {/* Pill badge */}
+            <div className="oh-hr-pill">
+              {hasBuydown ? 'NEO Financing Incentive' : 'Financing Overview'}
+            </div>
+
             {/* Headline */}
-            <div style={{ marginBottom: 28 }}>
-              <div className="oh-rate-eyebrow">
-                {hasBuydown ? 'NEO Financing Incentive' : 'Financing Overview'}
+            <h2 className="oh-hr-headline">
+              {hasBuydown
+                ? <>Love the House.<br /><span style={{ color: C.accent }}>Not the Monthly Payment?</span></>
+                : <>Smart Financing<br /><span style={{ color: C.accent }}>For This Home.</span></>}
+            </h2>
+
+            {/* Sub-headline */}
+            {(page.callout_text || hasBuydown) && (
+              <p className="oh-hr-sub">
+                {page.callout_text || 'See how NEO financing compares — built specifically for this property.'}
+              </p>
+            )}
+
+            {/* Price / date meta card */}
+            <div className="oh-hr-meta">
+              <div className="oh-hr-meta-cell">
+                <div className="oh-hr-meta-label">Home Price</div>
+                <div className="oh-hr-meta-val">{fmtPrice(page.list_price)}</div>
               </div>
-              <div style={{ fontSize: 'clamp(24px,4vw,38px)', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: 8, textWrap: 'balance' }}>
-                {hasBuydown
-                  ? <>Love the house. <span style={{ color: C.accent }}>Not the first-year payment.</span></>
-                  : <>Smart financing <span style={{ color: C.accent }}>for this home.</span></>}
+              <div className="oh-hr-meta-div" />
+              <div className="oh-hr-meta-cell">
+                <div className="oh-hr-meta-label">Rates as of</div>
+                <div className="oh-hr-meta-val">{effectiveDate}</div>
               </div>
             </div>
 
-            {/* Rate cards grid */}
-            <div className="oh-sa-cards">
-              {/* Year 1 hero card */}
-              <div className="oh-sa-card oh-sa-card--hero">
-                <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: C.accent, opacity: 0.08, filter: 'blur(20px)' }} />
-                <div className="oh-sa-card-eyebrow">Year 1 Payment-Equivalent*</div>
-                <div className="oh-sa-rate-big">{(yr1?.rate ?? primary.buydown_rate).toFixed(1)}%</div>
-                {yr1Savings > 0 && (
-                  <div className="oh-sa-savings-badge">Save {fmtPrice(yr1Savings)}/mo</div>
-                )}
-                <div className="oh-sa-divider" />
-                {hasPitiSchedule && yr1 ? (
-                  <div>
-                    <div className="oh-sa-piti-label">Estimated Monthly Housing</div>
-                    <div className="oh-sa-piti-val">{fmtPrice(Math.round(yr1.piti))}<span className="oh-sa-mo">/mo</span></div>
+            {/* Scenario comparison cards */}
+            <div className={`oh-hr-cards oh-hr-cards--${Math.min(scenarios.length, 4)}`}>
+              {scenarios.map((s, idx) => {
+                const isFeatured = s.buydown_rate !== s.market_rate
+                const yr1s = s.piti_schedule?.[0]
+                const displayRate = yr1s?.rate ?? (isFeatured ? s.buydown_rate : s.market_rate)
+                const displayPmt = yr1s?.piti ? Math.round(yr1s.piti) : (isFeatured ? s.buydown_payment : s.market_payment)
+                const marketPmt = s.market_payment
+                const savings = isFeatured && marketPmt > 0 && displayPmt > 0 ? Math.round(marketPmt - displayPmt) : 0
+                const annualSavings = savings * 12
+                return (
+                  <div key={idx} className={`oh-hr-card${isFeatured ? ' oh-hr-card--featured' : ''}`}>
+                    {isFeatured && <div className="oh-hr-card-glow" />}
+                    <div className="oh-hr-card-label">{s.label || (isFeatured ? 'Special Financing' : 'Market Rate')}</div>
+                    <div className="oh-hr-card-rate-label">Interest Rate</div>
+                    <div className="oh-hr-card-rate">{displayRate.toFixed(displayRate % 1 === 0 ? 0 : 2)}%</div>
+                    {savings > 0 && (
+                      <div className="oh-hr-card-save">Save {fmtPrice(savings)}/mo</div>
+                    )}
+                    <div className="oh-hr-card-div" />
+                    <div className="oh-hr-card-pmt-label">Monthly Payment</div>
+                    <div className="oh-hr-card-pmt">{displayPmt > 0 ? fmtPrice(displayPmt) : '—'}</div>
+                    {annualSavings > 0 && (
+                      <div className="oh-hr-card-sub">{fmtPrice(annualSavings)}/yr vs. market</div>
+                    )}
+                    {s.apr > 0 && (
+                      <div className="oh-hr-card-apr">APR {s.apr.toFixed(3)}%</div>
+                    )}
+                    {!isFeatured && <div className="oh-hr-card-sub">Standard market financing</div>}
                   </div>
-                ) : primary.buydown_payment > 0 ? (
-                  <div>
-                    <div className="oh-sa-piti-label">Principal &amp; Interest</div>
-                    <div className="oh-sa-piti-val">{fmtPrice(primary.buydown_payment)}<span className="oh-sa-mo">/mo</span></div>
-                  </div>
-                ) : null}
-                <div className="oh-sa-footnote">*First 12 monthly payments · not the note rate</div>
-              </div>
-
-              {/* Year 2 card */}
-              {yr2 && yr2.rate !== (yr3plus?.rate ?? primary.market_rate) && (
-                <div className="oh-sa-card oh-sa-card--secondary">
-                  <div className="oh-sa-card-eyebrow">Year 2 · 12 Payments</div>
-                  <div className="oh-sa-rate-med">{yr2.rate.toFixed(1)}%</div>
-                  {yr2.piti > 0 && (
-                    <>
-                      <div className="oh-sa-divider" />
-                      <div className="oh-sa-piti-label">Estimated Monthly</div>
-                      <div className="oh-sa-piti-sm">{fmtPrice(Math.round(yr2.piti))}/mo</div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Note rate / Year 3+ card */}
-              <div className="oh-sa-card oh-sa-card--market">
-                <div className="oh-sa-card-eyebrow">{hasBuydown ? 'Year 3+ · Permanent Rate' : 'Note Rate'}</div>
-                <div className="oh-sa-rate-med">{primary.market_rate.toFixed(3)}%</div>
-                {(yr3plus?.piti ?? 0) > 0 && (
-                  <>
-                    <div className="oh-sa-divider" />
-                    <div className="oh-sa-piti-label">Estimated Monthly</div>
-                    <div className="oh-sa-piti-sm">{fmtPrice(Math.round(yr3plus!.piti))}/mo</div>
-                  </>
-                )}
-                {!hasPitiSchedule && primary.market_payment > 0 && (
-                  <>
-                    <div className="oh-sa-divider" />
-                    <div className="oh-sa-piti-label">P&amp;I</div>
-                    <div className="oh-sa-piti-sm">{fmtPrice(primary.market_payment)}/mo</div>
-                  </>
-                )}
-                {primary.apr > 0 && (
-                  <div className="oh-sa-apr">APR {primary.apr.toFixed(3)}%</div>
-                )}
-              </div>
+                )
+              })}
             </div>
 
-            {/* Footnotes */}
-            <div className="oh-rate-disc" style={{ marginTop: 20 }}>
-              {hasBuydown && <>Illustrative temporary buydown · First-year payment uses a subsidized rate · Subject to qualification. </>}
-              Effective {effectiveDate} · Review by {reviewDate}.
-              {totalSubsidy > 0 && <> · {fmtPrice(totalSubsidy)} modeled buydown deposit.</>}
-            </div>
-
-            {/* CTA */}
-            <div style={{ textAlign: 'center', marginTop: 28, width: '100%' }}>
+            {/* Disc + CTA */}
+            <div className="oh-hr-foot">
+              <div className="oh-hr-disc">
+                {hasBuydown && 'Illustrative buydown · Subject to qualification. '}
+                Effective {effectiveDate} · Review by {reviewDate}.
+              </div>
               <a href="#next-step" className="oh-cta-btn">Show me if this payment fits →</a>
             </div>
           </div>
@@ -815,92 +811,122 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         }
 
         /* Rate band */
-        .oh-rate-band {
-          background: ${C.navy}; padding: 48px 36px 40px;
+        /* ── Hero rate section ───────────────────────────────────────────── */
+        .oh-hero-rate {
+          background: ${C.navy}; position: relative; overflow: hidden;
+          padding: 56px 24px 64px;
         }
-        .oh-rate-inner {
-          max-width: 820px; margin: 0 auto;
-          display: flex; gap: 48px; align-items: flex-end; flex-wrap: wrap;
+        .oh-hr-ring {
+          position: absolute; border-radius: 50%; pointer-events: none;
+          top: 50%; left: 50%; transform: translate(-50%,-50%);
         }
-        .oh-rate-eyebrow {
-          font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
-          text-transform: uppercase; color: ${C.accent};
-          margin-bottom: 6px;
+        .oh-hr-ring--lg { width: 1000px; height: 1000px; border: 1px solid rgba(91,203,245,0.04); }
+        .oh-hr-ring--sm { width: 620px; height: 620px; border: 1px solid rgba(91,203,245,0.07); }
+        .oh-hr-inner {
+          max-width: 1000px; margin: 0 auto; position: relative;
+          display: flex; flex-direction: column; align-items: center; text-align: center;
         }
-        .oh-rate-disc {
-          font-size: 9px; color: rgba(255,255,255,0.3); line-height: 1.6;
+        .oh-hr-logo {
+          display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
         }
+        .oh-hr-pill {
+          display: inline-flex; align-items: center;
+          border: 1px solid rgba(91,203,245,0.5); border-radius: 999px;
+          padding: 5px 18px; font-size: 10px; font-weight: 800;
+          letter-spacing: 0.14em; text-transform: uppercase; color: ${C.accent};
+          margin-bottom: 20px;
+        }
+        .oh-hr-headline {
+          font-size: clamp(32px, 5.5vw, 60px); font-weight: 900; color: #fff;
+          line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 18px;
+          text-wrap: balance;
+        }
+        .oh-hr-sub {
+          font-size: 15px; color: rgba(255,255,255,0.55); line-height: 1.65;
+          max-width: 540px; margin: 0 0 32px;
+        }
+        .oh-hr-meta {
+          display: inline-flex; align-items: stretch;
+          border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
+          overflow: hidden; margin-bottom: 40px; background: rgba(255,255,255,0.04);
+        }
+        .oh-hr-meta-cell { padding: 12px 24px; text-align: left; }
+        .oh-hr-meta-label {
+          font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
+          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 3px;
+        }
+        .oh-hr-meta-val {
+          font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.01em;
+        }
+        .oh-hr-meta-div { width: 1px; background: rgba(255,255,255,0.1); }
 
-        /* SA-style rate cards */
-        .oh-sa-cards {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-          gap: 14px; width: 100%; margin-bottom: 4px;
+        /* Scenario cards */
+        .oh-hr-cards {
+          display: grid; gap: 14px; width: 100%; margin-bottom: 32px;
         }
-        .oh-sa-card {
-          border-radius: 18px; padding: 24px 22px;
-          position: relative; overflow: hidden;
+        .oh-hr-cards--1 { grid-template-columns: minmax(0,480px); justify-content: center; }
+        .oh-hr-cards--2 { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin-left: auto; margin-right: auto; }
+        .oh-hr-cards--3 { grid-template-columns: repeat(3, 1fr); }
+        .oh-hr-cards--4 { grid-template-columns: repeat(4, 1fr); }
+        .oh-hr-card {
+          border-radius: 18px; padding: 26px 22px; position: relative; overflow: hidden;
+          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
+          text-align: left;
         }
-        .oh-sa-card--hero {
-          background: linear-gradient(135deg, rgba(91,203,245,0.14) 0%, rgba(10,37,64,0) 100%);
-          border: 1.5px solid rgba(91,203,245,0.5);
-          box-shadow: 0 0 40px rgba(91,203,245,0.1);
+        .oh-hr-card--featured {
+          background: linear-gradient(145deg, rgba(91,203,245,0.12) 0%, rgba(10,37,64,0.01) 100%);
+          border: 1.5px solid rgba(91,203,245,0.45);
+          box-shadow: 0 0 48px rgba(91,203,245,0.1);
         }
-        .oh-sa-card--secondary {
-          background: rgba(255,255,255,0.05);
-          border: 1.5px solid rgba(255,255,255,0.12);
+        .oh-hr-card-glow {
+          position: absolute; top: -40px; right: -40px;
+          width: 180px; height: 180px; border-radius: 50%;
+          background: ${C.accent}; opacity: 0.07; filter: blur(24px);
+          pointer-events: none;
         }
-        .oh-sa-card--market {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.08);
-        }
-        .oh-sa-card-eyebrow {
+        .oh-hr-card-label {
           font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
           text-transform: uppercase; color: ${C.accent}; margin-bottom: 14px;
         }
-        .oh-sa-card--secondary .oh-sa-card-eyebrow,
-        .oh-sa-card--market .oh-sa-card-eyebrow {
-          color: rgba(255,255,255,0.4);
+        .oh-hr-card--featured ~ .oh-hr-card .oh-hr-card-label,
+        .oh-hr-card:not(.oh-hr-card--featured) .oh-hr-card-label { color: rgba(255,255,255,0.4); }
+        .oh-hr-card--featured .oh-hr-card-label { color: ${C.accent}; }
+        .oh-hr-card-rate-label {
+          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+          text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 2px;
         }
-        .oh-sa-rate-big {
-          font-size: clamp(52px, 10vw, 76px); font-weight: 900; color: #fff;
+        .oh-hr-card-rate {
+          font-size: clamp(38px, 7vw, 60px); font-weight: 900; color: #fff;
           line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+          margin-bottom: 6px;
         }
-        .oh-sa-rate-med {
-          font-size: clamp(32px, 6vw, 46px); font-weight: 900; color: rgba(255,255,255,0.75);
-          line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
-        }
-        .oh-sa-savings-badge {
+        .oh-hr-card-save {
           display: inline-flex; align-items: center;
           background: rgba(91,203,245,0.18); border: 1px solid rgba(91,203,245,0.4);
-          border-radius: 20px; padding: 4px 12px; margin: 10px 0;
-          font-size: 12px; font-weight: 800; color: ${C.accent};
+          border-radius: 20px; padding: 3px 11px; margin: 8px 0;
+          font-size: 11.5px; font-weight: 800; color: ${C.accent};
         }
-        .oh-sa-divider {
-          height: 1px; background: rgba(91,203,245,0.15); margin: 14px 0;
-        }
-        .oh-sa-card--secondary .oh-sa-divider,
-        .oh-sa-card--market .oh-sa-divider {
-          background: rgba(255,255,255,0.08);
-        }
-        .oh-sa-piti-label {
+        .oh-hr-card-div { height: 1px; background: rgba(255,255,255,0.08); margin: 14px 0; }
+        .oh-hr-card--featured .oh-hr-card-div { background: rgba(91,203,245,0.15); }
+        .oh-hr-card-pmt-label {
           font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 3px;
+          text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 2px;
         }
-        .oh-sa-piti-val {
-          font-size: 26px; font-weight: 900; color: #fff; letter-spacing: -0.02em;
-          font-variant-numeric: tabular-nums;
+        .oh-hr-card-pmt {
+          font-size: 26px; font-weight: 900; color: #fff;
+          letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
         }
-        .oh-sa-piti-sm {
-          font-size: 18px; font-weight: 800; color: rgba(255,255,255,0.65);
-          font-variant-numeric: tabular-nums;
+        .oh-hr-card-sub {
+          font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 5px;
         }
-        .oh-sa-mo { font-size: 13px; font-weight: 500; }
-        .oh-sa-apr {
-          font-size: 10px; color: rgba(255,255,255,0.25); margin-top: 10px;
+        .oh-hr-card-apr {
+          font-size: 10px; color: rgba(255,255,255,0.22); margin-top: 8px;
         }
-        .oh-sa-footnote {
-          font-size: 8.5px; color: rgba(255,255,255,0.25); margin-top: 10px; line-height: 1.5;
+        .oh-hr-foot {
+          display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%;
+        }
+        .oh-hr-disc {
+          font-size: 9px; color: rgba(255,255,255,0.25); line-height: 1.6;
         }
         .oh-cta-btn {
           display: inline-block; background: ${C.accent}; color: ${C.navy};
@@ -908,7 +934,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           text-decoration: none; letter-spacing: -0.01em;
           box-shadow: 0 4px 24px rgba(91,203,245,0.35);
         }
-        /* Legacy piti-cta class (used in a few places below) */
         .oh-piti-cta {
           display: block; text-align: center; margin-top: 18px;
           background: ${C.accent}; color: ${C.navy}; font-weight: 800;
@@ -1123,9 +1148,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           .oh-nav-advisor { margin-left: 0; }
           .oh-hero-img, .oh-hero-placeholder { height: 300px; }
           .oh-hero-content { padding: 24px 20px 24px; }
-          .oh-rate-band { padding: 28px 20px 32px; }
-          .oh-sa-cards { grid-template-columns: 1fr; gap: 10px; }
-          .oh-sa-rate-big { font-size: 58px; }
+          .oh-hero-rate { padding: 36px 20px 44px; }
+          .oh-hr-cards { grid-template-columns: 1fr !important; max-width: 100% !important; }
+          .oh-hr-meta { flex-direction: column; }
+          .oh-hr-meta-div { width: auto; height: 1px; }
           .oh-section-wrap { padding: 32px 20px; }
           .oh-stats-strip { padding: 20px; gap: 16px; }
           .oh-stat { padding: 0 12px; }

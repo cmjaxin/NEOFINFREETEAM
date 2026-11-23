@@ -460,6 +460,8 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoUrlSlot, setPhotoUrlSlot] = useState<number | null>(null)
+  const [photoUrlInput, setPhotoUrlInput] = useState('')
   const [tcaUploading, setTcaUploading] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
   const tcaRef = useRef<HTMLInputElement>(null)
@@ -575,8 +577,11 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
         ...(data.description ? { description: data.description.slice(0, 900) } : {}),
         ...(data.photos?.length > 0 ? { photos: data.photos }                  : {}),
       }))
+      const anyFilled = !!(data.address || data.city || data.list_price || data.beds || data.description || data.photos?.length)
       if (data.partial && data.hint) {
         setImportError(data.hint)
+      } else if (!anyFilled) {
+        setImportError('Could not extract listing details — the page may be blocked or require login. Try pasting the URL again or fill in manually.')
       } else {
         setShowImport(false)
         setImportUrl('')
@@ -871,13 +876,51 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 11, fontWeight: 600, color: i === 0 ? C.navy : C.muted, marginBottom: 4 }}>{labels[i]}</div>
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <button onClick={() => triggerSlotUpload(i)} disabled={photoUploading}
                           style={{ padding: '5px 12px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.dim, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
                           {photoUploading ? '…' : url ? 'Replace' : 'Upload'}
                         </button>
+                        <button onClick={() => { setPhotoUrlSlot(i); setPhotoUrlInput(url) }}
+                          style={{ padding: '5px 12px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.dim, fontSize: 12, cursor: 'pointer', fontWeight: 500 }}>
+                          URL
+                        </button>
                         {url && <button onClick={() => { const p = [...(form.photos as string[])]; p[i] = ''; set('photos', p) }} style={{ padding: '5px 10px', border: 'none', borderRadius: 6, background: '#FEF2F2', color: '#DC2626', fontSize: 12, cursor: 'pointer' }}>Remove</button>}
                       </div>
+                      {photoUrlSlot === i && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                          <input
+                            value={photoUrlInput}
+                            onChange={e => setPhotoUrlInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && photoUrlInput.trim()) {
+                                const p = [...(form.photos as string[])]
+                                p[i] = photoUrlInput.trim()
+                                set('photos', p)
+                                setPhotoUrlSlot(null)
+                                setPhotoUrlInput('')
+                              }
+                            }}
+                            placeholder="Paste image URL…"
+                            style={{ flex: 1, padding: '5px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 12 }}
+                            autoFocus
+                          />
+                          <button onClick={() => {
+                            if (!photoUrlInput.trim()) return
+                            const p = [...(form.photos as string[])]
+                            p[i] = photoUrlInput.trim()
+                            set('photos', p)
+                            setPhotoUrlSlot(null)
+                            setPhotoUrlInput('')
+                          }} style={{ padding: '5px 12px', background: C.navy, color: '#fff', border: 'none', borderRadius: 6, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                            Set
+                          </button>
+                          <button onClick={() => { setPhotoUrlSlot(null); setPhotoUrlInput('') }}
+                            style={{ padding: '5px 10px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.muted, fontSize: 12, cursor: 'pointer' }}>
+                            ✕
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
@@ -1248,11 +1291,11 @@ function CreateOpenHouseModal({ listing, editing, onClose, onCreated }: { listin
             style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', boxSizing: 'border-box' }} />
         </div>
         <div style={{ marginBottom: 24 }}>
-          <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Callout Banner Text</label>
-          <input type="text" value={form.callout_text} placeholder="e.g. See how a 5.25% interest rate could impact your payment"
+          <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Rate Section Subheading</label>
+          <input type="text" value={form.callout_text} placeholder="e.g. This home qualifies for a lender-paid buydown — no seller contribution required."
             onChange={e => set('callout_text', e.target.value)}
             style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.navy, outline: 'none', boxSizing: 'border-box' }} />
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Leave blank to hide the banner. Include a % rate to auto-populate APR.</div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>Appears below the headline in the financing section. Leave blank for a default.</div>
         </div>
 
         {msg && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#DC2626' }}>{msg}</div>}
