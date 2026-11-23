@@ -575,7 +575,7 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
         ...(data.lot_size   ? { lot_size:   data.lot_size }                    : {}),
         ...(data.year_built != null ? { year_built: String(data.year_built) }  : {}),
         ...(data.description ? { description: data.description.slice(0, 900) } : {}),
-        ...(data.photos?.length > 0 ? { photos: data.photos }                  : {}),
+        ...(data.photos?.length > 0 ? { photos: [...new Set(data.photos as string[])] } : {}),
       }))
       const anyFilled = !!(data.address || data.city || data.list_price || data.beds || data.description || data.photos?.length)
       if (data.partial && data.hint) {
@@ -871,7 +871,23 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
                 ]
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 80, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `2px solid ${i === 0 ? C.accent : C.border}`, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div
+                      style={{ width: 80, height: 56, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: `2px solid ${i === 0 ? C.accent : C.border}`, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onDragOver={e => { e.preventDefault(); (e.currentTarget as HTMLDivElement).style.border = `2px solid ${C.accent}` }}
+                      onDragLeave={e => { (e.currentTarget as HTMLDivElement).style.border = `2px solid ${i === 0 ? C.accent : C.border}` }}
+                      onDrop={e => {
+                        e.preventDefault();
+                        (e.currentTarget as HTMLDivElement).style.border = `2px solid ${i === 0 ? C.accent : C.border}`
+                        const srcIdx = Number(e.dataTransfer.getData('photoIndex'))
+                        if (isNaN(srcIdx)) return
+                        const p = [...(form.photos as string[])]
+                        const dragged = p[srcIdx]
+                        const prev = p[i] ?? ''
+                        p[i] = dragged
+                        if (prev) p[srcIdx] = prev; else p.splice(srcIdx, 1)
+                        set('photos', p)
+                      }}
+                    >
                       {url ? <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <span style={{ fontSize: 20, opacity: 0.3 }}>🏠</span>}
                     </div>
                     <div style={{ flex: 1 }}>
@@ -926,10 +942,14 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
                 )
               })}
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Additional Gallery Photos</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Additional Gallery Photos</div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Drag any photo into a slot above to set it as hero or flyer photo.</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {(form.photos as string[]).slice(4).map((url, i) => (
-                <div key={i + 4} style={{ position: 'relative' }}>
+                <div key={i + 4} style={{ position: 'relative', cursor: 'grab' }}
+                  draggable
+                  onDragStart={e => e.dataTransfer.setData('photoIndex', String(i + 4))}
+                >
                   <img src={url} style={{ width: 72, height: 52, objectFit: 'cover', borderRadius: 7, border: `1px solid ${C.border}` }} alt="" />
                   <button onClick={() => { const p = [...(form.photos as string[])]; p.splice(4 + i, 1); set('photos', p) }}
                     style={{ position: 'absolute', top: -5, right: -5, width: 16, height: 16, background: C.red, border: 'none', borderRadius: '50%', color: '#fff', fontSize: 9, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>

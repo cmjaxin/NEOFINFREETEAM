@@ -354,7 +354,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
       )}
       {/* ── Sticky nav ──────────────────────────────────────────────────── */}
       <header className="oh-sticky-nav">
-        <a href="#next-step" className="oh-nav-homes">Homes with Special Financing →</a>
+        <img src="/neo-logo.png" alt="NEO Home Loans" className="oh-nav-logo" />
         <span className="oh-nav-date">
           <span className="oh-nav-dot" />
           Effective {effectiveDate}
@@ -368,52 +368,56 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <div className="oh-hero">
-        {(page.photos ?? []).length > 0
-          ? <img src={page.photos[0]} alt={page.address} className="oh-hero-img" />
-          : <div className="oh-hero-placeholder" />
-        }
-        <div className="oh-hero-overlay" />
-        <div className="oh-hero-content">
-          <div className="oh-hero-badge">
+      {/* ── Split hero: photo left, property info right ───────────────── */}
+      <div className="oh-split-hero">
+        {/* Photo side */}
+        <div className="oh-split-photo">
+          {(page.photos ?? []).length > 0
+            ? <img src={page.photos[0]} alt={page.address} className="oh-split-img" />
+            : <div className="oh-split-placeholder" />
+          }
+          <div className="oh-split-photo-badge">
             <span className="oh-hero-badge-line" />
             Special Financing for This Home
           </div>
-          <div className="oh-hero-address">{page.address}</div>
-          <div className="oh-hero-city">{[page.city, page.state, page.zip].filter(Boolean).join(', ')}</div>
+        </div>
+
+        {/* Property info card */}
+        <div className="oh-split-info">
+          <div className="oh-split-address">{page.address}</div>
+          <div className="oh-split-city">{[page.city, page.state, page.zip].filter(Boolean).join(', ')}</div>
           {Number(page.list_price) > 0 && (
-            <div className="oh-hero-price">{fmtPrice(page.list_price)}</div>
+            <div className="oh-split-price">{fmtPrice(page.list_price)}</div>
+          )}
+
+          {/* Stats chips */}
+          {(page.beds || page.baths || page.sqft || page.lot_size || page.year_built || Number(page.hoa_monthly) > 0) && (
+            <div className="oh-split-stats">
+              {[
+                { label: 'Beds', val: page.beds },
+                { label: 'Baths', val: page.baths },
+                { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
+                { label: 'Lot', val: page.lot_size || null },
+                { label: 'Year Built', val: page.year_built || null },
+                { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
+              ].filter(r => r.val).map(r => (
+                <div key={r.label} className="oh-split-stat">
+                  <div className="oh-split-stat-val">{r.val}</div>
+                  <div className="oh-split-stat-label">{r.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Description */}
+          {page.description && (
+            <div className="oh-split-desc-wrap">
+              <div className="oh-split-desc-eyebrow">About This Property</div>
+              <div className="oh-split-desc">{page.description}</div>
+            </div>
           )}
         </div>
       </div>
-
-      {/* ── Property stats strip ─────────────────────────────────────────── */}
-      {(page.beds || page.baths || page.sqft || page.lot_size || page.year_built || Number(page.hoa_monthly) > 0) && (
-        <div className="oh-stats-strip">
-          {[
-            { label: 'Beds', val: page.beds },
-            { label: 'Baths', val: page.baths },
-            { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
-            { label: 'Lot', val: page.lot_size || null },
-            { label: 'Year Built', val: page.year_built || null },
-            { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
-          ].filter(r => r.val).map(r => (
-            <div key={r.label} className="oh-stat">
-              <div className="oh-stat-label">{r.label}</div>
-              <div className="oh-stat-val">{r.val}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Description ──────────────────────────────────────────────────── */}
-      {page.description && (
-        <div className="oh-section-wrap">
-          <div className="oh-section-eyebrow">About This Property</div>
-          <div className="oh-desc">{page.description}</div>
-        </div>
-      )}
 
       {/* ── Rate & Payment Cards (SA-style) ─────────────────────────────── */}
       {scenarios.length > 0 && (
@@ -425,11 +429,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           <div className="oh-hr-inner">
             {/* NEO logo */}
             <div className="oh-hr-logo">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="32" height="32" rx="8" fill="rgba(91,203,245,0.15)"/>
-                <path d="M8 22V10l8 9V10M16 10l8 12V10" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>NEO Home Loans</span>
+              <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 36, filter: 'brightness(0) invert(1)' }} />
             </div>
 
             {/* Pill badge */}
@@ -778,36 +778,72 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           color: ${C.accent}; text-decoration: none; white-space: nowrap;
         }
 
-        /* Hero */
-        .oh-hero {
-          position: relative; width: 100%; overflow: hidden;
-          background: ${C.navy};
+        /* Nav logo */
+        .oh-nav-logo { height: 28px; filter: brightness(0) invert(1); flex-shrink: 0; }
+
+        /* Split hero */
+        .oh-split-hero {
+          display: grid; grid-template-columns: 1fr 1fr;
+          min-height: 560px; background: ${C.navy};
         }
-        .oh-hero-img { width: 100%; height: 520px; object-fit: cover; display: block; }
-        .oh-hero-placeholder { width: 100%; height: 520px; background: #1a3a5c; }
-        .oh-hero-overlay {
-          position: absolute; inset: 0;
-          background: linear-gradient(to top, rgba(10,37,64,0.92) 0%, rgba(10,37,64,0.3) 55%, transparent 100%);
+        .oh-split-photo {
+          position: relative; overflow: hidden;
         }
-        .oh-hero-content {
-          position: absolute; bottom: 0; left: 0; right: 0;
-          padding: 48px 36px 36px; max-width: 820px; margin: 0 auto;
-        }
-        .oh-hero-badge {
+        .oh-split-img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 420px; }
+        .oh-split-placeholder { width: 100%; height: 100%; min-height: 420px; background: #1a3a5c; }
+        .oh-split-photo-badge {
+          position: absolute; bottom: 24px; left: 24px;
           display: inline-flex; align-items: center; gap: 10px;
-          font-size: 10px; font-weight: 800; letter-spacing: 0.18em;
-          text-transform: uppercase; color: ${C.accent}; margin-bottom: 14px;
+          font-size: 9px; font-weight: 800; letter-spacing: 0.18em;
+          text-transform: uppercase; color: ${C.accent};
         }
         .oh-hero-badge-line {
-          display: inline-block; width: 28px; height: 2px; background: ${C.accent};
+          display: inline-block; width: 24px; height: 2px; background: ${C.accent};
         }
-        .oh-hero-address {
-          font-size: clamp(28px, 5vw, 52px); font-weight: 900; color: #fff;
-          line-height: 1.1; letter-spacing: -0.02em; text-wrap: balance;
+        .oh-split-info {
+          display: flex; flex-direction: column; padding: 40px 36px;
+          background: ${C.navy}; border-left: 1px solid rgba(91,203,245,0.1);
+          overflow-y: auto;
         }
-        .oh-hero-city { font-size: 16px; color: rgba(255,255,255,0.65); margin-top: 6px; }
-        .oh-hero-price {
-          margin-top: 12px; font-size: 22px; font-weight: 800; color: ${C.accent};
+        .oh-split-address {
+          font-size: clamp(22px, 3.5vw, 36px); font-weight: 900; color: #fff;
+          line-height: 1.1; letter-spacing: -0.02em;
+        }
+        .oh-split-city { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 6px; }
+        .oh-split-price {
+          margin-top: 12px; font-size: 26px; font-weight: 900; color: ${C.accent};
+          letter-spacing: -0.02em;
+        }
+        .oh-split-stats {
+          display: flex; flex-wrap: wrap; gap: 0;
+          border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
+          overflow: hidden; margin-top: 24px;
+        }
+        .oh-split-stat {
+          flex: 1 1 80px; padding: 12px 16px; text-align: center;
+          border-right: 1px solid rgba(255,255,255,0.1);
+        }
+        .oh-split-stat:last-child { border-right: none; }
+        .oh-split-stat-val {
+          font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -0.01em;
+        }
+        .oh-split-stat-label {
+          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-top: 2px;
+        }
+        .oh-split-desc-wrap {
+          margin-top: 24px; padding-top: 24px;
+          border-top: 1px solid rgba(255,255,255,0.08);
+          flex: 1;
+        }
+        .oh-split-desc-eyebrow {
+          font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
+          text-transform: uppercase; color: ${C.accent}; margin-bottom: 10px;
+        }
+        .oh-split-desc {
+          font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.75;
+          display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
+          overflow: hidden;
         }
 
         /* Rate band */
@@ -1148,6 +1184,9 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           .oh-nav-advisor { margin-left: 0; }
           .oh-hero-img, .oh-hero-placeholder { height: 300px; }
           .oh-hero-content { padding: 24px 20px 24px; }
+          .oh-split-hero { grid-template-columns: 1fr; }
+          .oh-split-info { padding: 24px 20px; }
+          .oh-split-img, .oh-split-placeholder { min-height: 300px; height: 300px; }
           .oh-hero-rate { padding: 36px 20px 44px; }
           .oh-hr-cards { grid-template-columns: 1fr !important; max-width: 100% !important; }
           .oh-hr-meta { flex-direction: column; }

@@ -14,7 +14,8 @@ export interface ScenarioInputs {
   noteRate: number       // e.g. 7.375 (percent)
   termYears: number      // 30
   buydownType: 'none' | '1-0' | '2-1' | '3-2-1' | 'permanent'
-  permanentRate?: number // used only when buydownType === 'permanent'
+  permanentRate?: number   // used only when buydownType === 'permanent'
+  customBuydownRate?: number // override year-1 rate for temp buydowns
   // PITI extras
   monthlyTax: number
   monthlyInsurance: number
@@ -95,6 +96,10 @@ export function calculateScenario(inputs: ScenarioInputs): ScenarioResult {
   const extras = monthlyTax + monthlyInsurance + monthlyHoa + mi
 
   const rates = yearRates(noteRate, buydownType, permanentRate)
+  // Override year-1 rate if advisor specified a custom buydown rate
+  if (inputs.customBuydownRate != null && buydownType !== 'none' && buydownType !== 'permanent') {
+    rates[0] = inputs.customBuydownRate
+  }
   const marketPI = monthlyPI(loanAmount, noteRate, termYears)
   const marketPITI = marketPI + extras
 
