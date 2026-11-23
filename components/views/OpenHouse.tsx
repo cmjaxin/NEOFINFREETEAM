@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useApp } from '@/lib/appContext'
 import { slugify } from '@/lib/openHouseMath'
 import { renderRateGraphic } from '@/lib/rateGraphicCanvas'
+import ScenarioBuilder from '@/components/ScenarioBuilder'
 
 interface MarketingPartner {
   id: string; name: string; title: string; company: string
@@ -467,6 +468,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [showScenarioBuilder, setShowScenarioBuilder] = useState(false)
 
   useEffect(() => {
     if (!profile?.email) return
@@ -557,7 +559,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
         body: JSON.stringify({ url: importUrl.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) { setImportError(data.error ?? 'Import failed'); return }
+      if (!res.ok && !data.partial) { setImportError(data.error ?? 'Import failed'); return }
       setForm(f => ({
         ...f,
         ...(data.address    ? { address:    data.address }                     : {}),
@@ -573,8 +575,12 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
         ...(data.description ? { description: data.description.slice(0, 900) } : {}),
         ...(data.photos?.length > 0 ? { photos: data.photos }                  : {}),
       }))
-      setShowImport(false)
-      setImportUrl('')
+      if (data.partial && data.hint) {
+        setImportError(data.hint)
+      } else {
+        setShowImport(false)
+        setImportUrl('')
+      }
     } catch (e) {
       setImportError(e instanceof Error ? e.message : 'Network error')
     } finally {
@@ -767,6 +773,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
   }
 
   return (
+    <>
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: C.bg, borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
@@ -886,6 +893,25 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
               </button>
             </div>
             <input ref={photoRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={e => e.target.files && uploadPhotos(Array.from(e.target.files))} />
+          </section>
+
+          {/* Financing Scenarios */}
+          <section>
+            <SectionHead title="Financing Scenarios" sub="Build rate scenarios with live PITI math — they appear on the buyer-facing listing page." />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 13.5, color: C.text, fontWeight: 600 }}>
+                {form.rate_scenarios?.length
+                  ? `${form.rate_scenarios.length} scenario${form.rate_scenarios.length !== 1 ? 's' : ''} built`
+                  : 'No scenarios yet'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowScenarioBuilder(true)}
+                style={{ padding: '8px 16px', background: C.navy, border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+              >
+                {form.rate_scenarios?.length ? 'Edit Scenarios' : '+ Build Scenarios'}
+              </button>
+            </div>
           </section>
 
           {/* TCA Link + Screenshot */}
@@ -1044,6 +1070,16 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; on
         </div>
       </div>
     </div>
+
+    {showScenarioBuilder && (
+      <ScenarioBuilder
+        listPrice={Number(form.list_price) || 0}
+        existingScenarios={form.rate_scenarios ?? []}
+        onSave={(scenarios) => set('rate_scenarios', scenarios)}
+        onClose={() => setShowScenarioBuilder(false)}
+      />
+    )}
+  </>
   )
 }
 

@@ -3,6 +3,71 @@ import Anthropic from '@anthropic-ai/sdk'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
 
+// US state abbreviations for URL slug parsing
+const US_STATES = new Set([
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY',
+  'LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND',
+  'OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC',
+])
+
+/**
+ * Parse address fields from a Zillow/Realtor.com/Redfin URL slug.
+ * Example slug: "14496-S-Fox-Creek-Dr-Herriman-UT-84096"
+ * Returns partial fields — price/beds/baths/sqft will still be null.
+ */
+function parseFromUrl(rawUrl: string): Record<string, string | null> {
+  try {
+    const u = new URL(rawUrl)
+    const host = u.hostname.replace('www.', '')
+    let slug = ''
+
+    if (host === 'zillow.com') {
+      // /homedetails/SLUG/zpid/
+      const m = u.pathname.match(/\/homedetails\/([^/]+)/)
+      if (m) slug = m[1]
+    } else if (host === 'realtor.com') {
+      // /realestateandhomes-detail/SLUG
+      const m = u.pathname.match(/\/realestateandhomes-detail\/([^/]+)/)
+      if (m) slug = m[1]
+    } else if (host === 'redfin.com') {
+      // /STATE/City/ADDR/home/id  — take last path segment before /home
+      const parts = u.pathname.split('/').filter(Boolean)
+      const homeIdx = parts.indexOf('home')
+      if (homeIdx > 0) slug = parts.slice(0, homeIdx).join('-')
+    }
+
+    if (!slug) return {}
+
+    // Slug is dash-separated tokens. Find the state token.
+    const tokens = slug.split('-')
+    let stateIdx = -1
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      if (US_STATES.has(tokens[i].toUpperCase())) { stateIdx = i; break }
+    }
+    if (stateIdx < 1) return {}
+
+    const state = tokens[stateIdx].toUpperCase()
+    // Zip is usually right after the state
+    const zip = /^\d{5}$/.test(tokens[stateIdx + 1] ?? '') ? tokens[stateIdx + 1] : null
+    // City is the token(s) right before the state — scan back for multi-word cities
+    // Heuristic: city tokens start with uppercase (title-cased in slug is just first letter)
+    // We take 1–3 tokens before state as city
+    const cityTokens: string[] = []
+    for (let i = stateIdx - 1; i >= Math.max(0, stateIdx - 3); i--) {
+      if (/^\d/.test(tokens[i])) break  // hit street number, stop
+      cityTokens.unshift(tokens[i])
+    }
+    const city = cityTokens.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(' ') || null
+    // Address is everything before city tokens
+    const addrTokens = tokens.slice(0, stateIdx - cityTokens.length)
+    const address = addrTokens.map(t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase()).join(' ') || null
+
+    return { address, city, state, zip }
+  } catch {
+    return {}
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { url } = await req.json()
@@ -21,6 +86,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URL must be http or https' }, { status: 400 })
     }
 
+    const isZillow = parsedUrl.hostname.includes('zillow.com')
+
     // Fetch the listing page — realistic browser headers bypass most soft blocks
     const pageRes = await fetch(url, {
       headers: {
@@ -37,9 +104,26 @@ export async function POST(req: NextRequest) {
     })
 
     if (!pageRes.ok) {
+      // Zillow always blocks server-side fetches. Parse what we can from the URL and
+      // return a partial result with a friendly hint instead of a hard error.
+      const urlParsed = parseFromUrl(url)
+      const hasPartial = !!(urlParsed.address || urlParsed.city)
+      const hint = isZillow
+        ? 'Zillow blocks automated requests. Address pre-filled from URL — finish filling in the details, or try Realtor.com or Redfin for full auto-fill.'
+        : `Could not fetch listing page (${pageRes.status}). Try Realtor.com or Redfin for best results.`
+
       return NextResponse.json(
-        { error: `Could not fetch listing page (${pageRes.status}). Try pasting the data manually.` },
-        { status: 422 }
+        {
+          partial: true,
+          hint,
+          address: urlParsed.address ?? null,
+          city: urlParsed.city ?? null,
+          state: urlParsed.state ?? null,
+          zip: urlParsed.zip ?? null,
+          list_price: null, beds: null, baths: null, sqft: null,
+          lot_size: null, year_built: null, description: null, photos: [],
+        },
+        { status: hasPartial ? 200 : 422 }
       )
     }
 
