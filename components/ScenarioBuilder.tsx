@@ -81,11 +81,15 @@ interface Props {
   existingScenarios: any[]
   onSave: (scenarios: any[]) => void
   onClose: () => void
+  zip?: string
+  state?: string
 }
 
-export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, onClose }: Props) {
+export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, onClose, zip, state }: Props) {
   const [shared, setShared] = useState<SharedCosts>({ monthlyTax: '', monthlyInsurance: '', monthlyHoa: '0' })
   const [price, setPrice] = useState(String(listPrice || ''))
+  const [estimating, setEstimating] = useState(false)
+  const [estimateNote, setEstimateNote] = useState('')
   const [draft, setDraft] = useState<ScenarioDraft>(DEFAULT_DRAFT)
   const [scenarios, setScenarios] = useState<any[]>(existingScenarios ?? [])
   const [preview, setPreview] = useState<ReturnType<typeof calculateScenario> | null>(null)
@@ -93,6 +97,26 @@ export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, 
 
   function set(field: keyof ScenarioDraft, val: string) {
     setDraft(d => ({ ...d, [field]: val }))
+  }
+
+  async function estimateFromZip() {
+    const p = parseFloat(price) || listPrice
+    if (!p) { setEstimateNote('Enter a purchase price first.'); return }
+    setEstimating(true); setEstimateNote('')
+    try {
+      const res = await fetch('/api/estimate-costs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ zip, state, listPrice: p }),
+      })
+      const data = await res.json()
+      if (data.monthlyTax) setShared(s => ({ ...s, monthlyTax: String(Math.round(data.monthlyTax)) }))
+      if (data.monthlyInsurance) setShared(s => ({ ...s, monthlyInsurance: String(Math.round(data.monthlyInsurance)) }))
+      setEstimateNote(data.note ?? 'Estimated from state averages.')
+    } catch {
+      setEstimateNote('Could not estimate. Enter manually.')
+    }
+    setEstimating(false)
   }
 
   // Live preview calculation
@@ -170,8 +194,21 @@ export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, 
 
             {/* Shared costs — set once */}
             <div style={{ background: C.bg, borderRadius: 12, padding: 16, border: `1px solid ${C.border}` }}>
-              <div style={{ fontWeight: 700, fontSize: 13, color: C.navy, marginBottom: 4 }}>Shared Property Costs</div>
-              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Set once — flows through every scenario</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: C.navy }}>Shared Property Costs</div>
+                {(zip || state) && (
+                  <button
+                    onClick={estimateFromZip}
+                    disabled={estimating}
+                    style={{ fontSize: 11, fontWeight: 700, color: C.accent, background: 'rgba(91,203,245,0.1)', border: `1px solid rgba(91,203,245,0.3)`, borderRadius: 6, padding: '4px 10px', cursor: 'pointer', opacity: estimating ? 0.6 : 1 }}
+                  >
+                    {estimating ? 'Estimating…' : '⚡ Estimate from zip'}
+                  </button>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>
+                Set once — flows through every scenario{estimateNote && <span style={{ color: C.green, marginLeft: 8 }}>{estimateNote}</span>}
+              </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <InputRow label="Monthly Taxes" note="e.g. annual tax ÷ 12">
                   <NumInput value={shared.monthlyTax} onChange={v => setShared(s => ({ ...s, monthlyTax: v }))} prefix="$" step="10" />

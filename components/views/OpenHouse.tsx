@@ -1181,6 +1181,8 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
         existingScenarios={form.rate_scenarios ?? []}
         onSave={(scenarios) => set('rate_scenarios', scenarios)}
         onClose={() => setShowScenarioBuilder(false)}
+        zip={form.zip}
+        state={form.state}
       />
     )}
   </>

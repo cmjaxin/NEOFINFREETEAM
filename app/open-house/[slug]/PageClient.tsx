@@ -498,34 +498,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
               </div>
             )}
 
-            {/* Scenario comparison (when multiple scenarios) */}
-            {scenarios.length > 1 && (
-              <div className="oh-fin-compare">
-                <div className={`oh-hr-cards oh-hr-cards--${Math.min(scenarios.length, 4)}`} style={{ marginBottom: 0 }}>
-                  {scenarios.map((s, idx) => {
-                    const isFeatured = s.buydown_rate !== s.market_rate
-                    const yr1s = s.piti_schedule?.[0]
-                    const displayRate = yr1s?.rate ?? (isFeatured ? s.buydown_rate : s.market_rate)
-                    const displayPmt = yr1s?.piti ? Math.round(yr1s.piti) : (isFeatured ? s.buydown_payment : s.market_payment)
-                    const savings = isFeatured && s.market_payment > 0 && displayPmt > 0 ? Math.round(s.market_payment - displayPmt) : 0
-                    return (
-                      <div key={idx} className={`oh-hr-card${isFeatured ? ' oh-hr-card--featured' : ''}`}>
-                        {isFeatured && <div className="oh-hr-card-glow" />}
-                        <div className="oh-hr-card-label">{s.label || (isFeatured ? 'Special Financing' : 'Market Rate')}</div>
-                        <div className="oh-hr-card-rate-label">Interest Rate</div>
-                        <div className="oh-hr-card-rate">{displayRate.toFixed(displayRate % 1 === 0 ? 0 : 3)}%</div>
-                        {savings > 0 && <div className="oh-hr-card-save">Save {fmtPrice(savings)}/mo</div>}
-                        <div className="oh-hr-card-div" />
-                        <div className="oh-hr-card-pmt-label">Monthly Payment</div>
-                        <div className="oh-hr-card-pmt">{displayPmt > 0 ? fmtPrice(displayPmt) : '—'}</div>
-                        {s.apr > 0 && <div className="oh-hr-card-apr">APR {s.apr.toFixed(3)}%</div>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
-
             {/* CTA buttons */}
             <div className="oh-fin-ctas">
               <a href="#next-step" className="oh-fin-cta-primary">See if this fits my budget →</a>
@@ -625,30 +597,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           <iframe src={page.tca_url} className="oh-iframe-tca"
             style={{ width: '100%', border: 'none', borderRadius: 10, display: 'block' }}
             title="Total Cost Analysis" allow="fullscreen" />
-        </div>
-      )}
-
-      {/* ── Other scenarios ───────────────────────────────────────────────── */}
-      {scenarios.length > 1 && (
-        <div className="oh-section-wrap oh-section-wrap--gray">
-          <div className="oh-section-eyebrow">All Financing Scenarios</div>
-          <div className="oh-section-title">More options for this home.</div>
-          <div className="oh-scenarios-grid">
-            {scenarios.map((s, i) => {
-              const hasBd = s.buydown_rate !== s.market_rate
-              const savings = s.market_payment - s.buydown_payment
-              return (
-                <div key={i} className="oh-scen-card">
-                  <div className="oh-scen-label">{s.label}</div>
-                  <div className="oh-scen-rate">{s.buydown_rate.toFixed(3)}%</div>
-                  {hasBd && <div className="oh-scen-note-rate">{s.market_rate.toFixed(3)}% note rate</div>}
-                  <div className="oh-scen-payment">{fmtPrice(s.buydown_payment)}/mo</div>
-                  {hasBd && savings > 0 && <div className="oh-scen-savings">{fmtPrice(savings)}/mo savings</div>}
-                  {s.apr > 0 && <div className="oh-scen-apr">APR {s.apr.toFixed(3)}%</div>}
-                </div>
-              )
-            })}
-          </div>
         </div>
       )}
 
@@ -822,10 +770,10 @@ export default function OpenHousePage({ slug }: { slug: string }) {
 
         /* Property info below photo */
         .oh-prop-info {
-          padding: 28px 36px 24px; max-width: 900px; margin: 0 auto;
+          padding: 28px 36px 24px; max-width: 900px; margin: 0 auto; text-align: center;
         }
         .oh-prop-badge {
-          display: flex; align-items: center; gap: 12px;
+          display: flex; align-items: center; justify-content: center; gap: 12px;
           font-size: 9px; font-weight: 800; letter-spacing: 0.16em;
           text-transform: uppercase; color: ${C.muted}; margin-bottom: 14px;
         }
@@ -837,9 +785,8 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         }
         .oh-prop-city { font-size: 16px; color: ${C.muted}; margin-bottom: 20px; }
         .oh-prop-stats {
-          display: flex; flex-wrap: wrap; gap: 0;
-          border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden;
-          display: inline-flex;
+          gap: 0; border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden;
+          display: inline-flex; justify-content: center;
         }
         .oh-prop-stat {
           display: flex; flex-direction: column; padding: 10px 20px;
@@ -856,7 +803,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         .oh-fin-band {
           background: ${C.navy}; padding: 40px 24px 32px;
         }
-        .oh-fin-inner { max-width: 900px; margin: 0 auto; }
+        .oh-fin-inner { max-width: 900px; margin: 0 auto; text-align: left; }
         .oh-fin-layout {
           display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;
           margin-bottom: 32px;
