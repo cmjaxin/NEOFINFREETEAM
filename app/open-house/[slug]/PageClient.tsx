@@ -447,7 +447,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
 
                   {hasBuydown && (
                     <div className="oh-fin-bd-note">
-                      Illustrative {primary.buydownType ?? 'temporary'} buydown · funding &amp; eligibility require confirmation
+                      Illustrative temporary buydown · funding &amp; eligibility require confirmation
                     </div>
                   )}
                 </div>
