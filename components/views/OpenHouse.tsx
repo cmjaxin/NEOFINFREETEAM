@@ -966,19 +966,55 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
           {/* Financing Scenarios */}
           <section>
             <SectionHead title="Financing Scenarios" sub="Build rate scenarios with live PITI math — they appear on the buyer-facing listing page." />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 13.5, color: C.text, fontWeight: 600 }}>
-                {form.rate_scenarios?.length
-                  ? `${form.rate_scenarios.length} scenario${form.rate_scenarios.length !== 1 ? 's' : ''} built`
-                  : 'No scenarios yet'}
-              </span>
+
+            {/* Existing scenarios list with edit/delete */}
+            {(form.rate_scenarios ?? []).length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                {(form.rate_scenarios as any[]).map((s: any, i: number) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.bg, borderRadius: 8, border: `1px solid ${C.border}` }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>{s.label || `Scenario ${i + 1}`}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>
+                        {s.market_rate?.toFixed(3)}% note · {s.buydown_rate !== s.market_rate ? `${s.buydown_rate?.toFixed(3)}% yr1 · ` : ''}
+                        {s.loan_type} {s.down_pct}% down
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowScenarioBuilder(true) }}
+                      style={{ padding: '5px 12px', border: `1px solid ${C.border}`, borderRadius: 6, background: C.white, color: C.dim, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updated = [...(form.rate_scenarios as any[])]
+                        updated.splice(i, 1)
+                        set('rate_scenarios', updated)
+                      }}
+                      style={{ padding: '5px 10px', border: 'none', borderRadius: 6, background: '#FEF2F2', color: '#DC2626', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button
                 type="button"
                 onClick={() => setShowScenarioBuilder(true)}
                 style={{ padding: '8px 16px', background: C.navy, border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
               >
-                {form.rate_scenarios?.length ? 'Edit Scenarios' : '+ Build Scenarios'}
+                {(form.rate_scenarios ?? []).length ? '+ Add Scenario' : '+ Build Scenarios'}
               </button>
+              {form.tca_url && (
+                <TcaImportBtn
+                  tcaUrl={form.tca_url}
+                  listPrice={Number(form.list_price) || 0}
+                  onImport={(scenarios) => set('rate_scenarios', scenarios)}
+                />
+              )}
             </div>
           </section>
 
@@ -1148,6 +1184,46 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
       />
     )}
   </>
+  )
+}
+
+// ─── TCA Import Button ───────────────────────────────────────────────────────
+function TcaImportBtn({ tcaUrl, listPrice, onImport }: { tcaUrl: string; listPrice: number; onImport: (s: any[]) => void }) {
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function run() {
+    setLoading(true); setErr('')
+    try {
+      const res = await fetch('/api/tca-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: tcaUrl }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? 'Import failed'); return }
+      if (!data.scenarios?.length) { setErr('No scenarios found in TCA'); return }
+      // Merge list_price from form if TCA didn't get it
+      const scenarios = data.scenarios.map((s: any) => ({
+        ...s,
+        list_price: s.list_price || listPrice || null,
+      }))
+      onImport(scenarios)
+    } catch (e: any) {
+      setErr(e.message ?? 'Error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      <button type="button" onClick={run} disabled={loading}
+        style={{ padding: '8px 16px', background: loading ? C.muted : '#0E6E9E', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: loading ? 'default' : 'pointer' }}>
+        {loading ? 'Scanning TCA…' : '⚡ Build from TCA'}
+      </button>
+      {err && <div style={{ fontSize: 11, color: '#DC2626', marginTop: 4 }}>{err}</div>}
+    </div>
   )
 }
 

@@ -368,143 +368,177 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         </div>
       </header>
 
-      {/* ── Split hero: photo left, property info right ───────────────── */}
-      <div className="oh-split-hero">
-        {/* Photo side */}
-        <div className="oh-split-photo">
-          {(page.photos ?? []).length > 0
-            ? <img src={page.photos[0]} alt={page.address} className="oh-split-img" />
-            : <div className="oh-split-placeholder" />
-          }
-          <div className="oh-split-photo-badge">
-            <span className="oh-hero-badge-line" />
-            Special Financing for This Home
-          </div>
-        </div>
-
-        {/* Property info card */}
-        <div className="oh-split-info">
-          <div className="oh-split-address">{page.address}</div>
-          <div className="oh-split-city">{[page.city, page.state, page.zip].filter(Boolean).join(', ')}</div>
-          {Number(page.list_price) > 0 && (
-            <div className="oh-split-price">{fmtPrice(page.list_price)}</div>
-          )}
-
-          {/* Stats chips */}
-          {(page.beds || page.baths || page.sqft || page.lot_size || page.year_built || Number(page.hoa_monthly) > 0) && (
-            <div className="oh-split-stats">
-              {[
-                { label: 'Beds', val: page.beds },
-                { label: 'Baths', val: page.baths },
-                { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
-                { label: 'Lot', val: page.lot_size || null },
-                { label: 'Year Built', val: page.year_built || null },
-                { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
-              ].filter(r => r.val).map(r => (
-                <div key={r.label} className="oh-split-stat">
-                  <div className="oh-split-stat-val">{r.val}</div>
-                  <div className="oh-split-stat-label">{r.label}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Description */}
-          {page.description && (
-            <div className="oh-split-desc-wrap">
-              <div className="oh-split-desc-eyebrow">About This Property</div>
-              <div className="oh-split-desc">{page.description}</div>
-            </div>
-          )}
-        </div>
+      {/* ── Full-bleed hero photo ───────────────────────────────────────── */}
+      <div className="oh-hero">
+        {(page.photos ?? []).length > 0
+          ? <img src={page.photos[0]} alt={page.address} className="oh-hero-img" />
+          : <div className="oh-hero-placeholder" />
+        }
       </div>
 
-      {/* ── Rate & Payment Cards (SA-style) ─────────────────────────────── */}
+      {/* ── Property info below photo ────────────────────────────────────── */}
+      <div className="oh-prop-info">
+        <div className="oh-prop-badge">
+          <span className="oh-prop-badge-line" />
+          Special Financing for This Home
+        </div>
+        <h1 className="oh-prop-address">{page.address}</h1>
+        <div className="oh-prop-city">{[page.city, page.state, page.zip].filter(Boolean).join(', ')}</div>
+        {(page.beds || page.baths || page.sqft || page.lot_size || page.year_built) && (
+          <div className="oh-prop-stats">
+            {[
+              { label: 'Beds', val: page.beds },
+              { label: 'Baths', val: page.baths },
+              { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
+              { label: 'Lot', val: page.lot_size || null },
+              { label: 'Year Built', val: page.year_built || null },
+              { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
+            ].filter(r => r.val).map(r => (
+              <div key={r.label} className="oh-prop-stat">
+                <span className="oh-prop-stat-val">{r.val}</span>
+                <span className="oh-prop-stat-label">{r.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Financing section (MMS-style) ────────────────────────────────── */}
       {scenarios.length > 0 && (
-        <div className="oh-hero-rate">
-          {/* decorative rings */}
-          <div className="oh-hr-ring oh-hr-ring--lg" />
-          <div className="oh-hr-ring oh-hr-ring--sm" />
+        <div className="oh-fin-band">
+          <div className="oh-fin-inner">
+            {hasBuydown && primary ? (
+              <div className="oh-fin-layout">
+                {/* Left: big rate + year grid */}
+                <div className="oh-fin-left">
+                  <div className="oh-fin-eyebrow">Year 1 Payment-Equivalent*</div>
+                  <div className="oh-fin-rate-big">{(yr1?.rate ?? primary.buydown_rate).toFixed(3)}%</div>
+                  <div className="oh-fin-rate-note">*Not the mortgage interest rate · first 12 monthly payments</div>
 
-          <div className="oh-hr-inner">
-            {/* NEO logo */}
-            <div className="oh-hr-logo">
-              <img src="/neo-logo.png" alt="NEO Home Loans" style={{ height: 36, filter: 'brightness(0) invert(1)' }} />
-            </div>
+                  {/* Year grid */}
+                  <div className="oh-fin-year-grid">
+                    {yr2 && yr2.rate !== primary.market_rate && (
+                      <div className="oh-fin-year-cell">
+                        <div className="oh-fin-year-label">Year 2 Payment-Equivalent*</div>
+                        <div className="oh-fin-year-rate">{yr2.rate.toFixed(3)}%</div>
+                        <div className="oh-fin-year-sub">12 monthly payments</div>
+                      </div>
+                    )}
+                    {yr3plus && yr3plus.rate !== primary.market_rate && (
+                      <div className="oh-fin-year-cell">
+                        <div className="oh-fin-year-label">Year 3 Payment-Equivalent*</div>
+                        <div className="oh-fin-year-rate">{yr3plus.rate.toFixed(3)}%</div>
+                        <div className="oh-fin-year-sub">12 monthly payments</div>
+                      </div>
+                    )}
+                    <div className="oh-fin-year-cell">
+                      <div className="oh-fin-year-label">Permanent Note Rate</div>
+                      <div className="oh-fin-year-rate">{primary.market_rate.toFixed(3)}%</div>
+                      <div className="oh-fin-year-sub">for {primary.term_years * 12} months</div>
+                    </div>
+                    {primary.apr > 0 && (
+                      <div className="oh-fin-year-cell">
+                        <div className="oh-fin-year-label">Annual Percentage Rate (APR)</div>
+                        <div className="oh-fin-year-rate">{primary.apr.toFixed(3)}%</div>
+                        <div className="oh-fin-year-sub">&nbsp;</div>
+                      </div>
+                    )}
+                  </div>
 
-            {/* Pill badge */}
-            <div className="oh-hr-pill">
-              {hasBuydown ? 'NEO Financing Incentive' : 'Financing Overview'}
-            </div>
+                  {hasBuydown && (
+                    <div className="oh-fin-bd-note">
+                      Illustrative {primary.buydownType ?? 'temporary'} buydown · funding &amp; eligibility require confirmation
+                    </div>
+                  )}
+                </div>
 
-            {/* Headline */}
-            <h2 className="oh-hr-headline">
-              {hasBuydown
-                ? <>Love the House.<br /><span style={{ color: C.accent }}>Not the Monthly Payment?</span></>
-                : <>Smart Financing<br /><span style={{ color: C.accent }}>For This Home.</span></>}
-            </h2>
-
-            {/* Sub-headline */}
-            {(page.callout_text || hasBuydown) && (
-              <p className="oh-hr-sub">
-                {page.callout_text || 'See how NEO financing compares — built specifically for this property.'}
-              </p>
+                {/* Right: PITI table + subsidy callout */}
+                <div className="oh-fin-right">
+                  {hasPitiSchedule && primary.piti_schedule && (
+                    <div className="oh-fin-piti-card">
+                      <div className="oh-fin-piti-title">Estimated monthly housing payments</div>
+                      {primary.piti_schedule.slice(0, 4).map((yr, i) => (
+                        <div key={i} className="oh-fin-piti-row">
+                          <span className="oh-fin-piti-period">
+                            {i < 3 ? `Year ${i + 1} · 12 payments` : `Year ${i + 1}+ · through month ${primary.term_years * 12}`}
+                          </span>
+                          <span className="oh-fin-piti-amt">{fmtPrice(Math.round(yr.piti))}/mo</span>
+                        </div>
+                      ))}
+                      <div className="oh-fin-piti-note">Includes estimated taxes, homeowners insurance, mortgage insurance and HOA when applicable. These amounts may change.</div>
+                    </div>
+                  )}
+                  {totalSubsidy > 0 && (
+                    <div className="oh-fin-subsidy">
+                      <strong>{fmtPrice(totalSubsidy)} modeled subsidy deposit.</strong> Confirm the deposit allocation separately from any broader contribution budgets.
+                    </div>
+                  )}
+                  {page.callout_text && (
+                    <div className="oh-fin-callout">{page.callout_text}</div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* No buydown — simple scenario cards */
+              <div className={`oh-hr-cards oh-hr-cards--${Math.min(scenarios.length, 3)}`} style={{ marginBottom: 0 }}>
+                {scenarios.map((s, idx) => {
+                  const displayPmt = s.piti_schedule?.[0]?.piti ? Math.round(s.piti_schedule[0].piti) : s.market_payment
+                  return (
+                    <div key={idx} className="oh-hr-card" style={{ textAlign: 'left' }}>
+                      <div className="oh-hr-card-label">{s.label || 'Scenario'}</div>
+                      <div className="oh-hr-card-rate-label">Interest Rate</div>
+                      <div className="oh-hr-card-rate">{s.market_rate.toFixed(3)}%</div>
+                      <div className="oh-hr-card-div" />
+                      <div className="oh-hr-card-pmt-label">Monthly Payment</div>
+                      <div className="oh-hr-card-pmt">{displayPmt > 0 ? fmtPrice(displayPmt) : '—'}</div>
+                      {s.apr > 0 && <div className="oh-hr-card-apr">APR {s.apr.toFixed(3)}%</div>}
+                    </div>
+                  )
+                })}
+              </div>
             )}
 
-            {/* Price / date meta card */}
-            <div className="oh-hr-meta">
-              <div className="oh-hr-meta-cell">
-                <div className="oh-hr-meta-label">Home Price</div>
-                <div className="oh-hr-meta-val">{fmtPrice(page.list_price)}</div>
+            {/* Scenario comparison (when multiple scenarios) */}
+            {scenarios.length > 1 && (
+              <div className="oh-fin-compare">
+                <div className={`oh-hr-cards oh-hr-cards--${Math.min(scenarios.length, 4)}`} style={{ marginBottom: 0 }}>
+                  {scenarios.map((s, idx) => {
+                    const isFeatured = s.buydown_rate !== s.market_rate
+                    const yr1s = s.piti_schedule?.[0]
+                    const displayRate = yr1s?.rate ?? (isFeatured ? s.buydown_rate : s.market_rate)
+                    const displayPmt = yr1s?.piti ? Math.round(yr1s.piti) : (isFeatured ? s.buydown_payment : s.market_payment)
+                    const savings = isFeatured && s.market_payment > 0 && displayPmt > 0 ? Math.round(s.market_payment - displayPmt) : 0
+                    return (
+                      <div key={idx} className={`oh-hr-card${isFeatured ? ' oh-hr-card--featured' : ''}`}>
+                        {isFeatured && <div className="oh-hr-card-glow" />}
+                        <div className="oh-hr-card-label">{s.label || (isFeatured ? 'Special Financing' : 'Market Rate')}</div>
+                        <div className="oh-hr-card-rate-label">Interest Rate</div>
+                        <div className="oh-hr-card-rate">{displayRate.toFixed(displayRate % 1 === 0 ? 0 : 3)}%</div>
+                        {savings > 0 && <div className="oh-hr-card-save">Save {fmtPrice(savings)}/mo</div>}
+                        <div className="oh-hr-card-div" />
+                        <div className="oh-hr-card-pmt-label">Monthly Payment</div>
+                        <div className="oh-hr-card-pmt">{displayPmt > 0 ? fmtPrice(displayPmt) : '—'}</div>
+                        {s.apr > 0 && <div className="oh-hr-card-apr">APR {s.apr.toFixed(3)}%</div>}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-              <div className="oh-hr-meta-div" />
-              <div className="oh-hr-meta-cell">
-                <div className="oh-hr-meta-label">Rates as of</div>
-                <div className="oh-hr-meta-val">{effectiveDate}</div>
-              </div>
+            )}
+
+            {/* CTA buttons */}
+            <div className="oh-fin-ctas">
+              <a href="#next-step" className="oh-fin-cta-primary">See if this fits my budget →</a>
+              {page.schedule_url && (
+                <a href={page.schedule_url} target="_blank" rel="noopener noreferrer" className="oh-fin-cta-secondary">
+                  Book time with {page.advisor_name?.split(' ')[0] ?? 'your advisor'} +
+                </a>
+              )}
             </div>
 
-            {/* Scenario comparison cards */}
-            <div className={`oh-hr-cards oh-hr-cards--${Math.min(scenarios.length, 4)}`}>
-              {scenarios.map((s, idx) => {
-                const isFeatured = s.buydown_rate !== s.market_rate
-                const yr1s = s.piti_schedule?.[0]
-                const displayRate = yr1s?.rate ?? (isFeatured ? s.buydown_rate : s.market_rate)
-                const displayPmt = yr1s?.piti ? Math.round(yr1s.piti) : (isFeatured ? s.buydown_payment : s.market_payment)
-                const marketPmt = s.market_payment
-                const savings = isFeatured && marketPmt > 0 && displayPmt > 0 ? Math.round(marketPmt - displayPmt) : 0
-                const annualSavings = savings * 12
-                return (
-                  <div key={idx} className={`oh-hr-card${isFeatured ? ' oh-hr-card--featured' : ''}`}>
-                    {isFeatured && <div className="oh-hr-card-glow" />}
-                    <div className="oh-hr-card-label">{s.label || (isFeatured ? 'Special Financing' : 'Market Rate')}</div>
-                    <div className="oh-hr-card-rate-label">Interest Rate</div>
-                    <div className="oh-hr-card-rate">{displayRate.toFixed(displayRate % 1 === 0 ? 0 : 2)}%</div>
-                    {savings > 0 && (
-                      <div className="oh-hr-card-save">Save {fmtPrice(savings)}/mo</div>
-                    )}
-                    <div className="oh-hr-card-div" />
-                    <div className="oh-hr-card-pmt-label">Monthly Payment</div>
-                    <div className="oh-hr-card-pmt">{displayPmt > 0 ? fmtPrice(displayPmt) : '—'}</div>
-                    {annualSavings > 0 && (
-                      <div className="oh-hr-card-sub">{fmtPrice(annualSavings)}/yr vs. market</div>
-                    )}
-                    {s.apr > 0 && (
-                      <div className="oh-hr-card-apr">APR {s.apr.toFixed(3)}%</div>
-                    )}
-                    {!isFeatured && <div className="oh-hr-card-sub">Standard market financing</div>}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Disc + CTA */}
-            <div className="oh-hr-foot">
-              <div className="oh-hr-disc">
-                {hasBuydown && 'Illustrative buydown · Subject to qualification. '}
-                Effective {effectiveDate} · Review by {reviewDate}.
-              </div>
-              <a href="#next-step" className="oh-cta-btn">Show me if this payment fits →</a>
+            <div className="oh-fin-disc">
+              The temporary subsidy changes the amount paid during the first 2 years, not the mortgage note rate. Qualification uses the full note rate payment.
+              {' '}Effective {effectiveDate} · Review by {reviewDate}.
             </div>
           </div>
         </div>
@@ -781,69 +815,140 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         /* Nav logo */
         .oh-nav-logo { height: 28px; filter: brightness(0) invert(1); flex-shrink: 0; }
 
-        /* Split hero */
-        .oh-split-hero {
-          display: grid; grid-template-columns: 1fr 1fr;
-          min-height: 560px; background: ${C.navy};
+        /* Full-bleed hero */
+        .oh-hero { width: 100%; overflow: hidden; background: #1a3a5c; }
+        .oh-hero-img { width: 100%; height: 480px; object-fit: cover; display: block; }
+        .oh-hero-placeholder { width: 100%; height: 480px; background: #1a3a5c; }
+
+        /* Property info below photo */
+        .oh-prop-info {
+          padding: 28px 36px 24px; max-width: 900px; margin: 0 auto;
         }
-        .oh-split-photo {
-          position: relative; overflow: hidden;
+        .oh-prop-badge {
+          display: flex; align-items: center; gap: 12px;
+          font-size: 9px; font-weight: 800; letter-spacing: 0.16em;
+          text-transform: uppercase; color: ${C.muted}; margin-bottom: 14px;
         }
-        .oh-split-img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 420px; }
-        .oh-split-placeholder { width: 100%; height: 100%; min-height: 420px; background: #1a3a5c; }
-        .oh-split-photo-badge {
-          position: absolute; bottom: 24px; left: 24px;
-          display: inline-flex; align-items: center; gap: 10px;
-          font-size: 9px; font-weight: 800; letter-spacing: 0.18em;
-          text-transform: uppercase; color: ${C.accent};
+        .oh-prop-badge-line { display: inline-block; width: 24px; height: 2px; background: ${C.muted}; flex-shrink: 0; }
+        .oh-hero-badge-line { display: inline-block; width: 24px; height: 2px; background: ${C.accent}; }
+        .oh-prop-address {
+          font-size: clamp(28px, 5vw, 48px); font-weight: 900; color: ${C.navy};
+          line-height: 1.1; letter-spacing: -0.025em; margin: 0 0 6px;
         }
-        .oh-hero-badge-line {
-          display: inline-block; width: 24px; height: 2px; background: ${C.accent};
-        }
-        .oh-split-info {
-          display: flex; flex-direction: column; padding: 40px 36px;
-          background: ${C.navy}; border-left: 1px solid rgba(91,203,245,0.1);
-          overflow-y: auto;
-        }
-        .oh-split-address {
-          font-size: clamp(22px, 3.5vw, 36px); font-weight: 900; color: #fff;
-          line-height: 1.1; letter-spacing: -0.02em;
-        }
-        .oh-split-city { font-size: 14px; color: rgba(255,255,255,0.5); margin-top: 6px; }
-        .oh-split-price {
-          margin-top: 12px; font-size: 26px; font-weight: 900; color: ${C.accent};
-          letter-spacing: -0.02em;
-        }
-        .oh-split-stats {
+        .oh-prop-city { font-size: 16px; color: ${C.muted}; margin-bottom: 20px; }
+        .oh-prop-stats {
           display: flex; flex-wrap: wrap; gap: 0;
-          border: 1px solid rgba(255,255,255,0.1); border-radius: 12px;
-          overflow: hidden; margin-top: 24px;
+          border: 1px solid ${C.border}; border-radius: 10px; overflow: hidden;
+          display: inline-flex;
         }
-        .oh-split-stat {
-          flex: 1 1 80px; padding: 12px 16px; text-align: center;
-          border-right: 1px solid rgba(255,255,255,0.1);
+        .oh-prop-stat {
+          display: flex; flex-direction: column; padding: 10px 20px;
+          border-right: 1px solid ${C.border};
         }
-        .oh-split-stat:last-child { border-right: none; }
-        .oh-split-stat-val {
-          font-size: 18px; font-weight: 900; color: #fff; letter-spacing: -0.01em;
-        }
-        .oh-split-stat-label {
+        .oh-prop-stat:last-child { border-right: none; }
+        .oh-prop-stat-val { font-size: 17px; font-weight: 800; color: ${C.navy}; }
+        .oh-prop-stat-label {
           font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-top: 2px;
+          text-transform: uppercase; color: ${C.muted}; margin-top: 2px;
         }
-        .oh-split-desc-wrap {
-          margin-top: 24px; padding-top: 24px;
-          border-top: 1px solid rgba(255,255,255,0.08);
-          flex: 1;
+
+        /* Financing band */
+        .oh-fin-band {
+          background: ${C.navy}; padding: 40px 24px 32px;
         }
-        .oh-split-desc-eyebrow {
-          font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
-          text-transform: uppercase; color: ${C.accent}; margin-bottom: 10px;
+        .oh-fin-inner { max-width: 900px; margin: 0 auto; }
+        .oh-fin-layout {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start;
+          margin-bottom: 32px;
         }
-        .oh-split-desc {
-          font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.75;
-          display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
-          overflow: hidden;
+        /* Left column */
+        .oh-fin-eyebrow {
+          font-size: 9px; font-weight: 800; letter-spacing: 0.16em;
+          text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 6px;
+        }
+        .oh-fin-rate-big {
+          font-size: clamp(56px, 11vw, 86px); font-weight: 900; color: #fff;
+          line-height: 0.95; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
+          margin-bottom: 6px;
+        }
+        .oh-fin-rate-note {
+          font-size: 10px; color: rgba(255,255,255,0.3); margin-bottom: 24px;
+          line-height: 1.4;
+        }
+        .oh-fin-year-grid {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+          border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden;
+          margin-bottom: 16px;
+        }
+        .oh-fin-year-cell {
+          padding: 14px 16px; border-right: 1px solid rgba(255,255,255,0.08);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .oh-fin-year-cell:nth-child(even) { border-right: none; }
+        .oh-fin-year-cell:nth-last-child(-n+2) { border-bottom: none; }
+        .oh-fin-year-label {
+          font-size: 8.5px; font-weight: 800; letter-spacing: 0.12em;
+          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 4px;
+        }
+        .oh-fin-year-rate {
+          font-size: 26px; font-weight: 900; color: #fff;
+          letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+        }
+        .oh-fin-year-sub { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+        .oh-fin-bd-note {
+          font-size: 9.5px; color: rgba(255,255,255,0.3); line-height: 1.5;
+        }
+        /* Right column */
+        .oh-fin-piti-card {
+          background: rgba(255,255,255,0.06); border-radius: 12px; padding: 18px 20px;
+          border: 1px solid rgba(255,255,255,0.1); margin-bottom: 12px;
+        }
+        .oh-fin-piti-title {
+          font-size: 9px; font-weight: 800; letter-spacing: 0.12em;
+          text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 12px;
+        }
+        .oh-fin-piti-row {
+          display: flex; justify-content: space-between; align-items: baseline;
+          padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .oh-fin-piti-row:last-of-type { border-bottom: none; }
+        .oh-fin-piti-period { font-size: 11px; color: rgba(255,255,255,0.55); }
+        .oh-fin-piti-amt {
+          font-size: 14px; font-weight: 800; color: #fff;
+          font-variant-numeric: tabular-nums;
+        }
+        .oh-fin-piti-note {
+          font-size: 9px; color: rgba(255,255,255,0.25); line-height: 1.5; margin-top: 10px;
+        }
+        .oh-fin-subsidy {
+          background: rgba(91,203,245,0.12); border: 1px solid rgba(91,203,245,0.3);
+          border-radius: 10px; padding: 12px 16px; font-size: 11px;
+          color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 12px;
+        }
+        .oh-fin-subsidy strong { color: ${C.accent}; }
+        .oh-fin-callout {
+          background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px 16px;
+          font-size: 12px; color: rgba(255,255,255,0.6); line-height: 1.6;
+          border: 1px solid rgba(255,255,255,0.08);
+        }
+        /* Scenario compare strip */
+        .oh-fin-compare { margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+        /* CTAs */
+        .oh-fin-ctas {
+          display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+        }
+        .oh-fin-cta-primary {
+          display: inline-block; background: ${C.accent}; color: ${C.navy};
+          font-weight: 800; font-size: 14px; padding: 13px 28px; border-radius: 8px;
+          text-decoration: none; letter-spacing: -0.01em;
+        }
+        .oh-fin-cta-secondary {
+          display: inline-block; background: transparent; color: #fff;
+          font-weight: 700; font-size: 14px; padding: 13px 28px; border-radius: 8px;
+          text-decoration: none; border: 1.5px solid rgba(255,255,255,0.3);
+        }
+        .oh-fin-disc {
+          font-size: 9px; color: rgba(255,255,255,0.25); line-height: 1.6;
         }
 
         /* Rate band */
@@ -1184,10 +1289,12 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           .oh-nav-advisor { margin-left: 0; }
           .oh-hero-img, .oh-hero-placeholder { height: 300px; }
           .oh-hero-content { padding: 24px 20px 24px; }
-          .oh-split-hero { grid-template-columns: 1fr; }
-          .oh-split-info { padding: 24px 20px; }
-          .oh-split-img, .oh-split-placeholder { min-height: 300px; height: 300px; }
-          .oh-hero-rate { padding: 36px 20px 44px; }
+          .oh-hero-img, .oh-hero-placeholder { height: 280px; }
+          .oh-prop-info { padding: 20px; }
+          .oh-prop-stats { flex-wrap: wrap; }
+          .oh-fin-band { padding: 28px 20px; }
+          .oh-fin-layout { grid-template-columns: 1fr; gap: 24px; }
+          .oh-fin-rate-big { font-size: 64px; }
           .oh-hr-cards { grid-template-columns: 1fr !important; max-width: 100% !important; }
           .oh-hr-meta { flex-direction: column; }
           .oh-hr-meta-div { width: auto; height: 1px; }
