@@ -214,33 +214,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // Overlay wrapper for modals
-function ModalOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(10,37,64,0.55)',
-        zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        overflowY: 'auto', padding: '24px 16px',
-      }}
-    >
-      <div style={{ position: 'relative', width: '100%', maxWidth: 760, background: C.white, borderRadius: 16, boxShadow: '0 8px 40px rgba(10,37,64,0.18)' }}>
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute', top: 14, right: 14, zIndex: 10,
-            width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`,
-            background: C.white, cursor: 'pointer', fontSize: 18, lineHeight: 1,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.dim,
-          }}
-        >
-          ×
-        </button>
-        {children}
-      </div>
-    </div>
-  )
-}
 
 export default function Properties() {
   const { supabase, profile } = useApp()
@@ -507,41 +480,36 @@ export default function Properties() {
         </>
       )}
 
-      {/* ── Inline Modals ── */}
+      {/* ── Inline Modals — each form renders its own fixed backdrop ── */}
       {modalState?.type === 'listing' && (
-        <ModalOverlay onClose={closeModal}>
-          <ListingModal
-            editing={modalState.editing as Parameters<typeof ListingModal>[0]['editing']}
-            onClose={closeModal}
-            onSaved={handleSaved}
-          />
-        </ModalOverlay>
+        <ListingModal
+          editing={modalState.editing as Parameters<typeof ListingModal>[0]['editing']}
+          onClose={closeModal}
+          onSaved={handleSaved}
+        />
       )}
-
       {modalState?.type === 'ohEvent' && (
-        <ModalOverlay onClose={closeModal}>
-          <OHEventModal
-            editing={modalState.editing as Parameters<typeof OHEventModal>[0]['editing']}
-            onClose={closeModal}
-            onSaved={handleSaved}
-          />
-        </ModalOverlay>
+        <OHEventModal
+          editing={modalState.editing as Parameters<typeof OHEventModal>[0]['editing']}
+          onClose={closeModal}
+          onSaved={handleSaved}
+        />
       )}
-
       {modalState?.type === 'signRider' && (
-        <ModalOverlay onClose={closeModal}>
-          <SignRiderModal
-            editing={modalState.editing as Parameters<typeof SignRiderModal>[0]['editing']}
-            onClose={closeModal}
-            onSaved={handleSaved}
-          />
-        </ModalOverlay>
+        <SignRiderModal
+          editing={modalState.editing as Parameters<typeof SignRiderModal>[0]['editing']}
+          onClose={closeModal}
+          onSaved={handleSaved}
+        />
       )}
-
       {modalState?.type === 'sa' && (
-        <ModalOverlay onClose={closeModal}>
-          <SAModal />
-        </ModalOverlay>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,37,64,0.55)', zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: '24px 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) closeModal() }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 760, background: C.white, borderRadius: 16, boxShadow: '0 8px 40px rgba(10,37,64,0.18)' }}>
+            <button onClick={closeModal} style={{ position: 'absolute', top: 14, right: 14, zIndex: 10, width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`, background: C.white, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.dim }}>×</button>
+            <SAModal />
+          </div>
+        </div>
       )}
     </div>
   )

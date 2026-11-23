@@ -388,7 +388,11 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | n
                     {importLoading ? 'Scanning…' : 'Fill it in →'}
                   </button>
                 </div>
-                {importError && <div style={{ marginTop: 8, fontSize: 12, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 6, padding: '7px 10px' }}>{importError}</div>}
+                {importError && <div style={{ marginTop: 8, fontSize: 12, borderRadius: 6, padding: '7px 10px',
+  color: importError.startsWith('⚠') ? '#92400E' : '#B0504A',
+  background: importError.startsWith('⚠') ? '#FFFBEB' : '#FBF1F0',
+  border: `1px solid ${importError.startsWith('⚠') ? '#FCD34D' : '#EAD6D1'}`,
+}}>{importError}</div>}
                 <div style={{ marginTop: 7, fontSize: 10.5, color: '#9CA3AF' }}>AI scans the page and fills address, price, beds, baths, sqft, description, and photos. Review before saving.</div>
               </div>
             )}

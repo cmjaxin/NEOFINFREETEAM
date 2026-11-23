@@ -713,7 +713,11 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | 
                   </button>
                 </div>
                 {importError && (
-                  <div style={{ marginTop: 8, fontSize: 12, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 6, padding: '7px 10px' }}>
+                  <div style={{ marginTop: 8, fontSize: 12, borderRadius: 6, padding: '7px 10px',
+                    color: importError.startsWith('⚠') ? '#92400E' : '#B0504A',
+                    background: importError.startsWith('⚠') ? '#FFFBEB' : '#FBF1F0',
+                    border: `1px solid ${importError.startsWith('⚠') ? '#FCD34D' : '#EAD6D1'}`,
+                  }}>
                     {importError}
                   </div>
                 )}
