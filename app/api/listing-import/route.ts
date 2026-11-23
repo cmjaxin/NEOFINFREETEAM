@@ -86,54 +86,65 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URL must be http or https' }, { status: 400 })
     }
 
-    const isZillow = parsedUrl.hostname.includes('zillow.com')
+    // Try Jina.ai reader first — it handles JS-rendered pages and bypasses bot blocks.
+    // Free tier, no key required. Returns clean text/markdown.
+    let trimmed = ''
+    let fetchedViaJina = false
 
-    // Fetch the listing page — realistic browser headers bypass most soft blocks
-    const pageRes = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Cache-Control': 'no-cache',
-      },
-      signal: AbortSignal.timeout(12000),
-    })
-
-    if (!pageRes.ok) {
-      // Many listing sites block server-side fetches. Parse what we can from the URL slug
-      // and return a partial result with a friendly hint instead of a hard error.
-      const urlParsed = parseFromUrl(url)
-      const hasPartial = !!(urlParsed.address || urlParsed.city)
-      const isRateLimited = pageRes.status === 429 || pageRes.status === 403
-      const siteName = isZillow ? 'Zillow' : parsedUrl.hostname.replace('www.', '')
-      const hint = isRateLimited
-        ? `${siteName} is blocking automated requests right now. ${hasPartial ? 'Address pre-filled from URL — ' : ''}Fill in the remaining details manually, or try again in a few minutes.`
-        : `Could not fetch listing page (${pageRes.status}). Try pasting the URL again or fill in details manually.`
-
-      return NextResponse.json(
-        {
-          partial: true,
-          hint,
-          address: urlParsed.address ?? null,
-          city: urlParsed.city ?? null,
-          state: urlParsed.state ?? null,
-          zip: urlParsed.zip ?? null,
-          list_price: null, beds: null, baths: null, sqft: null,
-          lot_size: null, year_built: null, description: null, photos: [],
+    try {
+      const jinaUrl = `https://r.jina.ai/${url}`
+      const jinaRes = await fetch(jinaUrl, {
+        headers: {
+          'Accept': 'text/plain',
+          'X-Return-Format': 'text',
         },
-        { status: hasPartial ? 200 : 422 }
-      )
-    }
+        signal: AbortSignal.timeout(20000),
+      })
+      if (jinaRes.ok) {
+        const jinaText = await jinaRes.text()
+        // Jina returns clean markdown-ish text — trim to 60k chars for the prompt
+        trimmed = jinaText.length > 60_000 ? jinaText.slice(0, 60_000) : jinaText
+        fetchedViaJina = true
+      }
+    } catch { /* fall through to direct fetch */ }
 
-    // Trim HTML to stay within context — keep head (JSON-LD lives here) + first 40kb of body
-    const rawHtml = await pageRes.text()
-    const trimmed = rawHtml.length > 80_000
-      ? rawHtml.slice(0, 40_000) + '\n<!-- ...truncated... -->\n' + rawHtml.slice(-8_000)
-      : rawHtml
+    // Fall back: direct fetch with browser headers
+    if (!fetchedViaJina) {
+      const pageRes = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Cache-Control': 'no-cache',
+        },
+        signal: AbortSignal.timeout(12000),
+      }).catch(() => null)
+
+      if (!pageRes?.ok) {
+        // Both methods failed — parse what we can from the URL slug
+        const urlParsed = parseFromUrl(url)
+        const hasPartial = !!(urlParsed.address || urlParsed.city)
+        const siteName = parsedUrl.hostname.replace('www.', '')
+        const hint = `${siteName} is blocking automated requests. ${hasPartial ? 'Address pre-filled from URL — ' : ''}Fill in the remaining details manually.`
+        return NextResponse.json(
+          {
+            partial: true, hint,
+            address: urlParsed.address ?? null,
+            city: urlParsed.city ?? null,
+            state: urlParsed.state ?? null,
+            zip: urlParsed.zip ?? null,
+            list_price: null, beds: null, baths: null, sqft: null,
+            lot_size: null, year_built: null, description: null, photos: [],
+          },
+          { status: hasPartial ? 200 : 422 }
+        )
+      }
+
+      const rawHtml = await pageRes.text()
+      trimmed = rawHtml.length > 80_000
+        ? rawHtml.slice(0, 40_000) + '\n<!-- ...truncated... -->\n' + rawHtml.slice(-8_000)
+        : rawHtml
+    }
 
     const prompt = `You are extracting real estate listing data from an HTML page. Return ONLY valid JSON with these exact keys — no markdown, no commentary.
 
