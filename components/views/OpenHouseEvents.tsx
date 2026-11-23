@@ -12,6 +12,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useApp } from '@/lib/appContext'
 import { slugify } from '@/lib/openHouseMath'
+import ScenarioBuilder from '@/components/ScenarioBuilder'
 
 interface MarketingPartner {
   id: string; name: string; title: string; company: string
@@ -338,6 +339,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
   const [msg, setMsg] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const [tcaUploading, setTcaUploading] = useState(false)
+  const [showScenarioBuilder, setShowScenarioBuilder] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
   const tcaRef = useRef<HTMLInputElement>(null)
   const [marketingPartners, setMarketingPartners] = useState<MarketingPartner[]>([])
@@ -625,7 +627,7 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
     onSaved()
   }
 
-  return (
+  return (<>
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: C.bg, borderRadius: 16, width: '100%', maxWidth: 680, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
@@ -761,10 +763,31 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
 
           {/* Loan Scenario + TCA */}
           <section>
-            <SectionHead title="Loan Scenario & TCA" sub="Describe the loan scenario for buyers. Add the TCA URL and/or screenshot for the flyer." />
+            <SectionHead title="Financing Scenarios" sub="Build scenarios in-app with live PITI math, or paste a TCA link to override." />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* TCA URL */}
-              <Field label="TCA Embed URL" name="tca_url" placeholder="https://report.mortgagecoach.com/v2/classic/#…" value={form.tca_url} onChange={set} />
+
+              {/* Build Scenarios button */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', background: '#F0F9FF', borderRadius: 10, border: '1px solid #BAE6FD' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.navy }}>
+                    {form.rate_scenarios?.length ? `${form.rate_scenarios.length} scenario${form.rate_scenarios.length !== 1 ? 's' : ''} built` : 'No scenarios yet'}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>P&I + taxes + insurance + HOA · Year-by-year breakdown</div>
+                </div>
+                <button
+                  onClick={() => setShowScenarioBuilder(true)}
+                  style={{ padding: '8px 16px', background: C.navy, border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                >
+                  Build Scenarios
+                </button>
+              </div>
+
+              {/* TCA URL — override */}
+              <div>
+                <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>TCA Link (Override)</label>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>Paste a MortgageCoach or MCEdge URL to embed instead of built scenarios.</div>
+                <Field label="" name="tca_url" placeholder="https://mcedge.tv/… or https://report.mortgagecoach.com/…" value={form.tca_url} onChange={set} />
+              </div>
               {/* TCA Screenshot */}
               <div>
                 <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>TCA Screenshot</label>
@@ -929,6 +952,15 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
         </div>
       </div>
     </div>
+    {showScenarioBuilder && (
+      <ScenarioBuilder
+        listPrice={parseFloat(form.list_price) || 0}
+        existingScenarios={form.rate_scenarios ?? []}
+        onSave={(scenarios) => set('rate_scenarios', scenarios)}
+        onClose={() => setShowScenarioBuilder(false)}
+      />
+    )}
+    </>
   )
 }
 
