@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react'
 import LeadCaptureModal from '@/components/LeadCaptureModal'
 import { createClient } from '@/lib/supabase/client'
-import { BetterDisclaimer } from '@/lib/disclaimer'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -182,7 +181,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 interface PageData {
-  id: string; slug: string; created_by?: string; address: string; city: string; state: string; zip: string
+  id: string; slug: string; address: string; city: string; state: string; zip: string
   beds: number; baths: number; sqft: number; lot_size: string; year_built: number
   description: string; photos: string[]; list_price: number; hoa_monthly: number
   loan_description: string | null
@@ -209,18 +208,9 @@ export default function OpenHousePage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [dbError, setDbError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'overview' | 'contact'>('overview')
   const [showLead, setShowLead] = useState(false)
   const leadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Inline lead form — must be declared here (before any conditional returns) per React rules
-  const [leadName, setLeadName] = useState('')
-  const [leadEmail, setLeadEmail] = useState('')
-  const [leadPhone, setLeadPhone] = useState('')
-  const [leadNote, setLeadNote] = useState('')
-  const [leadDone, setLeadDone] = useState(false)
-  const [leadErr, setLeadErr] = useState('')
-  const [leadSubmitting, setLeadSubmitting] = useState(false)
-  const inlineIframeRef = useRef<HTMLIFrameElement>(null)
-  const inlineFormRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -292,54 +282,14 @@ export default function OpenHousePage({ slug }: { slug: string }) {
     </div>
   )
 
-  const loomId = page.loom_url ? loomIdFromUrl(page.loom_url) : null
-
-  // ─── Derived financing data ────────────────────────────────────────────────
-  type RawScenario = {
-    label: string; down_pct: number; market_rate: number; buydown_rate: number
-    market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number
-    piti_schedule?: Array<{ year: number; rate: number; pi: number; piti: number }>
-    final_piti?: number
-    total_subsidy?: number
-  }
-  const scenarios: RawScenario[] = page.rate_scenarios ?? []
-  // Pick the primary scenario: prefer one with a buydown, else first
-  const primary: RawScenario | null = scenarios.find(s => s.buydown_rate !== s.market_rate) ?? scenarios[0] ?? null
-  const hasPitiSchedule = !!(primary?.piti_schedule && primary.piti_schedule.length > 0)
-  const yr1 = hasPitiSchedule ? primary!.piti_schedule![0] : null
-  const yr2 = hasPitiSchedule ? primary!.piti_schedule![1] : null
-  const yr3plus = hasPitiSchedule ? primary!.piti_schedule![3] ?? primary!.piti_schedule![2] : null
-  const totalSubsidy = primary?.total_subsidy ?? 0
-  const finalPiti = primary?.final_piti ?? 0
-  const yr1Savings = (yr1 && yr3plus) ? Math.round(yr3plus.piti - yr1.piti) : 0
-  const hasBuydown = !!(primary && primary.buydown_rate !== primary.market_rate)
-  const effectiveDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-  const reviewDate = new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-
-  async function handleInlineLead(e: React.FormEvent) {
-    e.preventDefault()
-    if (!leadName.trim() || !leadEmail.includes('@') || leadPhone.replace(/\D/g, '').length < 10) {
-      setLeadErr('Please fill in all fields correctly.')
-      return
-    }
-    setLeadErr('')
-    setLeadSubmitting(true)
-    if (inlineFormRef.current) inlineFormRef.current.submit()
-    try {
-      const sb = createClient()
-      await sb.from('page_leads').insert({
-        page_id: page?.id, page_type: 'open_house',
-        advisor_user_id: page?.created_by ?? null,
-        name: leadName.trim(), email: leadEmail.trim().toLowerCase(),
-        phone: leadPhone.trim(), address: page?.address ?? '',
-        source: `Inline form — ${page?.address ?? ''}${leadNote ? ' — ' + leadNote : ''}`,
-      })
-    } catch { /* non-blocking */ }
-    setTimeout(() => { setLeadDone(true); setLeadSubmitting(false) }, 1200)
-  }
+    const loomId = page.loom_url ? loomIdFromUrl(page.loom_url) : null
+  const TABS: { id: 'overview' | 'contact'; label: string }[] = [
+    { id: 'overview', label: 'Property Info' },
+    { id: 'contact', label: 'Contact' },
+  ]
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fff', fontFamily: "'Montserrat', system-ui, sans-serif" }}>
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: "'Montserrat', system-ui, sans-serif" }}>
       {showLead && (
         <LeadCaptureModal
           address={page.address + (page.city ? ', ' + page.city : '')}
@@ -347,817 +297,358 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
           callout={page.callout_text}
+          scheduleUrl={page.schedule_url}
           pageId={page.id}
           pageType="open_house"
-          advisorUserId={(page as unknown as { created_by?: string }).created_by ?? null}
         />
       )}
-      {/* ── Sticky nav ──────────────────────────────────────────────────── */}
-      <header className="oh-sticky-nav">
-        <a href="#next-step" className="oh-nav-homes">Homes with Special Financing →</a>
-        <span className="oh-nav-date">
-          <span className="oh-nav-dot" />
-          Effective {effectiveDate}
-        </span>
-        <div className="oh-nav-advisor">
-          {page.advisor_name && <span>Your Advisor · <strong>{page.advisor_name}</strong></span>}
-          <div className="oh-nav-btns">
-            {page.advisor_phone && <a href={`tel:${page.advisor_phone}`} className="oh-nav-btn">Call</a>}
-            {page.advisor_phone && <a href={`sms:${page.advisor_phone}`} className="oh-nav-btn">Text</a>}
+      {/* Header */}
+      <header style={{ background: C.navy, padding: '14px 0' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          {page.partner_logo ? (
+            <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 52, maxWidth: 180, objectFit: 'contain' }} />
+          ) : <div />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
+            {page.apply_url && (
+              <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                style={{ background: C.accent, color: C.navy, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                Apply Now →
+              </a>
+            )}
           </div>
         </div>
       </header>
 
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
-      <div className="oh-hero">
-        {(page.photos ?? []).length > 0
-          ? <img src={page.photos[0]} alt={page.address} className="oh-hero-img" />
-          : <div className="oh-hero-placeholder" />
-        }
-        <div className="oh-hero-overlay" />
-        <div className="oh-hero-content">
-          <div className="oh-hero-badge">
-            <span className="oh-hero-badge-line" />
-            Special Financing for This Home
-          </div>
-          <div className="oh-hero-address">{page.address}</div>
-          <div className="oh-hero-city">{[page.city, page.state, page.zip].filter(Boolean).join(', ')}</div>
-          {Number(page.list_price) > 0 && (
-            <div className="oh-hero-price">{fmtPrice(page.list_price)}</div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Property stats strip ─────────────────────────────────────────── */}
-      {(page.beds || page.baths || page.sqft || page.lot_size || page.year_built || Number(page.hoa_monthly) > 0) && (
-        <div className="oh-stats-strip">
-          {[
-            { label: 'Beds', val: page.beds },
-            { label: 'Baths', val: page.baths },
-            { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
-            { label: 'Lot', val: page.lot_size || null },
-            { label: 'Year Built', val: page.year_built || null },
-            { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
-          ].filter(r => r.val).map(r => (
-            <div key={r.label} className="oh-stat">
-              <div className="oh-stat-label">{r.label}</div>
-              <div className="oh-stat-val">{r.val}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Description ──────────────────────────────────────────────────── */}
-      {page.description && (
-        <div className="oh-section-wrap">
-          <div className="oh-section-eyebrow">About This Property</div>
-          <div className="oh-desc">{page.description}</div>
-        </div>
-      )}
-
-      {/* ── Rate & Payment Cards (SA-style) ─────────────────────────────── */}
-      {scenarios.length > 0 && (
-        <div className="oh-hero-rate">
-          {/* decorative rings */}
-          <div className="oh-hr-ring oh-hr-ring--lg" />
-          <div className="oh-hr-ring oh-hr-ring--sm" />
-
-          <div className="oh-hr-inner">
-            {/* NEO logo */}
-            <div className="oh-hr-logo">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="32" height="32" rx="8" fill="rgba(91,203,245,0.15)"/>
-                <path d="M8 22V10l8 9V10M16 10l8 12V10" stroke={C.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: '0.08em', textTransform: 'uppercase' }}>NEO Home Loans</span>
-            </div>
-
-            {/* Pill badge */}
-            <div className="oh-hr-pill">
-              {hasBuydown ? 'NEO Financing Incentive' : 'Financing Overview'}
-            </div>
-
-            {/* Headline */}
-            <h2 className="oh-hr-headline">
-              {hasBuydown
-                ? <>Love the House.<br /><span style={{ color: C.accent }}>Not the Monthly Payment?</span></>
-                : <>Smart Financing<br /><span style={{ color: C.accent }}>For This Home.</span></>}
-            </h2>
-
-            {/* Sub-headline */}
-            {(page.callout_text || hasBuydown) && (
-              <p className="oh-hr-sub">
-                {page.callout_text || 'See how NEO financing compares — built specifically for this property.'}
-              </p>
-            )}
-
-            {/* Price / date meta card */}
-            <div className="oh-hr-meta">
-              <div className="oh-hr-meta-cell">
-                <div className="oh-hr-meta-label">Home Price</div>
-                <div className="oh-hr-meta-val">{fmtPrice(page.list_price)}</div>
+      {(() => {
+        const ctRate = page.callout_text?.match(/([\d.]+)%/)?.[1] ?? null
+        const scenarios = page.rate_scenarios ?? []
+        const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : null
+        const rate = ctRate
+        const apr = matched?.apr ? matched.apr.toFixed(3) : null
+        if (!page.callout_text) return null
+        return (
+          <div style={{ background: 'linear-gradient(135deg, #0077B6 0%, #00B4D8 100%)', padding: '28px 20px' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>📣</div>
+              <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
+                {rate ? <>See how a {rate}% interest rate could impact your estimated payment</> : page.callout_text}
               </div>
-              <div className="oh-hr-meta-div" />
-              <div className="oh-hr-meta-cell">
-                <div className="oh-hr-meta-label">Rates as of</div>
-                <div className="oh-hr-meta-val">{effectiveDate}</div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', marginTop: 8, fontStyle: 'italic' }}>
+                {apr && <>{apr}% APR &nbsp;·&nbsp; </>}Subject to financing qualifications and applicable incentive terms.
               </div>
             </div>
-
-            {/* Scenario comparison cards */}
-            <div className={`oh-hr-cards oh-hr-cards--${Math.min(scenarios.length, 4)}`}>
-              {scenarios.map((s, idx) => {
-                const isFeatured = s.buydown_rate !== s.market_rate
-                const yr1s = s.piti_schedule?.[0]
-                const displayRate = yr1s?.rate ?? (isFeatured ? s.buydown_rate : s.market_rate)
-                const displayPmt = yr1s?.piti ? Math.round(yr1s.piti) : (isFeatured ? s.buydown_payment : s.market_payment)
-                const marketPmt = s.market_payment
-                const savings = isFeatured && marketPmt > 0 && displayPmt > 0 ? Math.round(marketPmt - displayPmt) : 0
-                const annualSavings = savings * 12
-                return (
-                  <div key={idx} className={`oh-hr-card${isFeatured ? ' oh-hr-card--featured' : ''}`}>
-                    {isFeatured && <div className="oh-hr-card-glow" />}
-                    <div className="oh-hr-card-label">{s.label || (isFeatured ? 'Special Financing' : 'Market Rate')}</div>
-                    <div className="oh-hr-card-rate-label">Interest Rate</div>
-                    <div className="oh-hr-card-rate">{displayRate.toFixed(displayRate % 1 === 0 ? 0 : 2)}%</div>
-                    {savings > 0 && (
-                      <div className="oh-hr-card-save">Save {fmtPrice(savings)}/mo</div>
-                    )}
-                    <div className="oh-hr-card-div" />
-                    <div className="oh-hr-card-pmt-label">Monthly Payment</div>
-                    <div className="oh-hr-card-pmt">{displayPmt > 0 ? fmtPrice(displayPmt) : '—'}</div>
-                    {annualSavings > 0 && (
-                      <div className="oh-hr-card-sub">{fmtPrice(annualSavings)}/yr vs. market</div>
-                    )}
-                    {s.apr > 0 && (
-                      <div className="oh-hr-card-apr">APR {s.apr.toFixed(3)}%</div>
-                    )}
-                    {!isFeatured && <div className="oh-hr-card-sub">Standard market financing</div>}
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* Disc + CTA */}
-            <div className="oh-hr-foot">
-              <div className="oh-hr-disc">
-                {hasBuydown && 'Illustrative buydown · Subject to qualification. '}
-                Effective {effectiveDate} · Review by {reviewDate}.
-              </div>
-              <a href="#next-step" className="oh-cta-btn">Show me if this payment fits →</a>
-            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
-      {/* ── Payment progression ──────────────────────────────────────────── */}
-      {hasPitiSchedule && primary?.piti_schedule && (
-        <div className="oh-section-wrap">
-          <div className="oh-section-eyebrow">Complete Payment Progression</div>
-          <div className="oh-section-title">See how the payment changes by year.</div>
-          <div className="oh-prog-grid">
-            {primary.piti_schedule.slice(0, 4).map((yr, i) => {
-              const isBuydown = yr.rate < primary.market_rate
-              return (
-                <div key={i} className={`oh-prog-card${isBuydown ? ' oh-prog-card--buydown' : ''}`}>
-                  <div className="oh-prog-year">Year {i < 3 ? i + 1 : `${i + 1}+`}</div>
-                  <div className="oh-prog-rate">{yr.rate.toFixed(2)}%</div>
-                  <div className="oh-prog-piti">{fmtPrice(Math.round(yr.piti))}/mo</div>
-                  <div className="oh-prog-pi">P&I {fmtPrice(Math.round(yr.pi))}</div>
-                </div>
-              )
-            })}
-          </div>
-          <div className="oh-prog-explain">
-            <strong>How it works:</strong> A temporary buydown is funded upfront at closing. For each year of the buydown period, the difference between the note-rate payment and the buydown-rate payment is covered by the deposit. When the buydown period ends, your payment steps up to the full note-rate payment where it stays for the life of the loan.
-          </div>
-        </div>
-      )}
+      <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 60px' }}>
 
-      {/* ── Full loan details ────────────────────────────────────────────── */}
-      {primary && (
-        <div className="oh-section-wrap oh-section-wrap--gray">
-          <div className="oh-section-eyebrow">Full Loan Details</div>
-          <div className="oh-section-title">Every number behind this scenario.</div>
-          <div className="oh-details-table">
+        {/* Photos */}
+        <PhotoGallery photos={page.photos ?? []} address={page.address} />
+
+        {/* Price + Address + Stats */}
+        <div style={{ marginTop: 20 }}>
+          <div className="oh-price" style={{ fontWeight: 800, color: C.navy, lineHeight: 1 }}>
+            {Number(page.list_price) > 0 ? fmtPrice(page.list_price) : 'Price Upon Request'}
+          </div>
+          <div style={{ fontSize: 16, color: C.dim, marginTop: 6, fontWeight: 600 }}>{page.address}</div>
+          <div style={{ fontSize: 14, color: C.muted }}>{page.city}{page.city && page.state ? ', ' : ''}{page.state} {page.zip}</div>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 16, padding: '14px 0', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
             {[
-              ['Note Rate', `${primary.market_rate.toFixed(3)}%`],
-              primary.apr > 0 ? ['APR', `${primary.apr.toFixed(3)}%`] : null,
-              hasPitiSchedule && yr1 ? ['Year 1 PITI', `${fmtPrice(Math.round(yr1.piti))}/mo`] : null,
-              ['Loan Program', `${primary.loan_type} ${primary.term_years}yr`],
-              Number(page.list_price) > 0 ? ['Home Price', fmtPrice(page.list_price)] : null,
-              [`Down Payment`, `${primary.down_pct}%`],
-              Number(page.list_price) > 0 ? ['Base Loan Amount', fmtPrice(Math.round(page.list_price * (1 - primary.down_pct / 100)))] : null,
-              totalSubsidy > 0 ? ['Modeled Buydown Subsidy', fmtPrice(totalSubsidy)] : null,
-              hasPitiSchedule && yr3plus ? ['Full Note-Rate P+I', `${fmtPrice(Math.round(yr3plus.pi))}/mo`] : ['Full Note-Rate P+I', `${fmtPrice(primary.market_payment)}/mo`],
-              ['Effective Date', effectiveDate],
-              ['Review-by Date', reviewDate],
-            ].filter(Boolean).map((row, i) => (
-              <div key={i} className="oh-details-row">
-                <span className="oh-details-label">{(row as string[])[0]}</span>
-                <span className="oh-details-val">{(row as string[])[1]}</span>
+              { label: 'Beds', val: page.beds },
+              { label: 'Baths', val: page.baths },
+              { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
+              { label: 'Lot', val: page.lot_size || null },
+              { label: 'Year Built', val: page.year_built || null },
+              { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
+            ].filter(r => r.val).map(r => (
+              <div key={r.label}>
+                <div style={{ fontSize: 11, color: C.muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{r.label}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.navy, marginTop: 2 }}>{r.val}</div>
               </div>
             ))}
           </div>
-          {totalSubsidy > 0 && (
-            <div className="oh-details-note">Payment Progression: Shown above for every scheduled buydown year.</div>
-          )}
-          <a href="#next-step" className="oh-piti-cta" style={{ marginTop: 20 }}>Check this option against my numbers →</a>
         </div>
-      )}
 
-      {/* ── Loom video ───────────────────────────────────────────────────── */}
-      {loomId && (
-        <div className="oh-section-wrap">
-          <div className="oh-section-eyebrow">Video Walkthrough</div>
-          <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', borderRadius: 12, overflow: 'hidden' }}>
-            <iframe src={`https://www.loom.com/embed/${loomId}`}
-              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
-              title="Video Walkthrough" allow="autoplay; fullscreen" allowFullScreen />
-          </div>
-        </div>
-      )}
+        {/* Contact cards — partner first, then advisor */}
+        <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', margin: '20px 0' }}>
 
-      {/* ── TCA embed ────────────────────────────────────────────────────── */}
-      {page.tca_url && (
-        <div className="oh-section-wrap">
-          <div className="oh-section-eyebrow">Total Cost Analysis</div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
-            <a href={page.tca_url} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: 12, color: C.navy, fontWeight: 600, textDecoration: 'none' }}>
-              Open Full Screen ↗
-            </a>
-          </div>
-          <iframe src={page.tca_url} className="oh-iframe-tca"
-            style={{ width: '100%', border: 'none', borderRadius: 10, display: 'block' }}
-            title="Total Cost Analysis" allow="fullscreen" />
-        </div>
-      )}
-
-      {/* ── Other scenarios ───────────────────────────────────────────────── */}
-      {scenarios.length > 1 && (
-        <div className="oh-section-wrap oh-section-wrap--gray">
-          <div className="oh-section-eyebrow">All Financing Scenarios</div>
-          <div className="oh-section-title">More options for this home.</div>
-          <div className="oh-scenarios-grid">
-            {scenarios.map((s, i) => {
-              const hasBd = s.buydown_rate !== s.market_rate
-              const savings = s.market_payment - s.buydown_payment
-              return (
-                <div key={i} className="oh-scen-card">
-                  <div className="oh-scen-label">{s.label}</div>
-                  <div className="oh-scen-rate">{s.buydown_rate.toFixed(3)}%</div>
-                  {hasBd && <div className="oh-scen-note-rate">{s.market_rate.toFixed(3)}% note rate</div>}
-                  <div className="oh-scen-payment">{fmtPrice(s.buydown_payment)}/mo</div>
-                  {hasBd && savings > 0 && <div className="oh-scen-savings">{fmtPrice(savings)}/mo savings</div>}
-                  {s.apr > 0 && <div className="oh-scen-apr">APR {s.apr.toFixed(3)}%</div>}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Strategy team ─────────────────────────────────────────────────── */}
-      <div className="oh-section-wrap">
-        <div className="oh-section-eyebrow">Presented By</div>
-        <div className="oh-section-title oh-team-title">Your property strategy team.</div>
-        <div className="oh-section-sub">One team for the home, the financing, and the questions that connect them.</div>
-        <div className="oh-team-grid">
+          {/* Partner card */}
           {page.partner_name && (
-            <div className="oh-team-card">
-              <div className="oh-team-role">Listing Agent</div>
-              <div className="oh-team-person">
+            <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Listing Agent</div>
+                {page.partner_logo && <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 52, maxWidth: 160, objectFit: 'contain' }} />}
+              </div>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                 {page.partner_photo
-                  ? <img src={page.partner_photo} alt={page.partner_name} className="oh-team-photo" />
-                  : <div className="oh-team-init">{page.partner_name[0]}</div>
+                  ? <img src={page.partner_photo} alt={page.partner_name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.bg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.navy, fontWeight: 800, flexShrink: 0 }}>{page.partner_name[0]}</div>
                 }
                 <div>
-                  <div className="oh-team-name">{page.partner_name}</div>
-                  <div className="oh-team-title-role">{page.partner_title || 'Real Estate Professional'}</div>
-                  {page.partner_nmls && <div className="oh-team-nmls">NMLS {page.partner_nmls}</div>}
-                  <div className="oh-team-actions">
-                    {page.partner_phone && <a href={`tel:${page.partner_phone}`} className="oh-team-action">Call</a>}
-                    {page.partner_email && <a href={`mailto:${page.partner_email}`} className="oh-team-action">Email</a>}
+                  <div style={{ fontWeight: 800, fontSize: 14, color: C.navy }}>{page.partner_name}</div>
+                  <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{page.partner_title || 'Listing Agent'}</div>
+                  {page.partner_nmls && <div style={{ fontSize: 11, color: C.muted }}>NMLS# {page.partner_nmls}</div>}
+                  <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    {page.partner_phone && <a href={`tel:${page.partner_phone}`} style={{ fontSize: 12, color: C.navy, fontWeight: 600, textDecoration: 'none' }}>{page.partner_phone}</a>}
+                    {page.partner_email && <a href={`mailto:${page.partner_email}`} style={{ fontSize: 11, color: C.muted, textDecoration: 'none', wordBreak: 'break-all' }}>{page.partner_email}</a>}
                   </div>
                 </div>
               </div>
-              {page.partner_logo && <img src={page.partner_logo} alt="" className="oh-team-logo" />}
             </div>
           )}
-          <div className="oh-team-card">
-            <div className="oh-team-role">Mortgage Advisor</div>
-            <div className="oh-team-person">
+
+          {/* Advisor card */}
+          <div style={{ flex: '1 1 200px', background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Loan Advisor</div>
+              <img src="https://8blocks.s3-us-west-1.amazonaws.com/neo/images/logo-big.jpg" alt="NEO Home Loans" style={{ maxHeight: 36, maxWidth: 110, objectFit: 'contain' }} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               {page.advisor_photo
-                ? <img src={page.advisor_photo} alt={page.advisor_name} className="oh-team-photo" />
-                : <div className="oh-team-init">{page.advisor_name?.[0] ?? 'M'}</div>
+                ? <img src={page.advisor_photo} alt={page.advisor_name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: C.accent, fontWeight: 800, flexShrink: 0 }}>{page.advisor_name?.[0] ?? '?'}</div>
               }
               <div>
-                <div className="oh-team-name">{page.advisor_name || 'Your Advisor'}</div>
-                <div className="oh-team-title-role">{page.advisor_title || 'Mortgage Advisor'} at NEO Home Loans</div>
-                {page.advisor_nmls && <div className="oh-team-nmls">NMLS {page.advisor_nmls}</div>}
-                <div className="oh-team-actions">
-                  {page.advisor_phone && <a href={`tel:${page.advisor_phone}`} className="oh-team-action">Call</a>}
-                  {page.advisor_email && <a href={`mailto:${page.advisor_email}`} className="oh-team-action">Email</a>}
+                <div style={{ fontWeight: 800, fontSize: 14, color: C.navy }}>{page.advisor_name || 'Loan Advisor'}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 1 }}>{page.advisor_title || 'Mortgage Advisor'}</div>
+                {page.advisor_nmls && <div style={{ fontSize: 11, color: C.muted }}>NMLS# {page.advisor_nmls}</div>}
+                <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {page.advisor_phone && <a href={`tel:${page.advisor_phone}`} style={{ fontSize: 12, color: C.navy, fontWeight: 600, textDecoration: 'none' }}>{page.advisor_phone}</a>}
+                  {page.advisor_email && <a href={`mailto:${page.advisor_email}?subject=Open House — ${page.address}`} style={{ fontSize: 11, color: C.muted, textDecoration: 'none', wordBreak: 'break-all' }}>{page.advisor_email}</a>}
                 </div>
               </div>
             </div>
-            <img src="https://8blocks.s3-us-west-1.amazonaws.com/neo/images/logo-big.jpg" alt="NEO Home Loans" className="oh-team-logo" />
-          </div>
-        </div>
-      </div>
-
-      {/* ── Inline lead capture ───────────────────────────────────────────── */}
-      <div className="oh-section-wrap oh-lead-wrap" id="next-step">
-        <div className="oh-section-eyebrow">Next Step</div>
-        <div className="oh-section-title">See whether this payment path fits your budget.</div>
-        <div className="oh-lead-bullets">
-          <div className="oh-lead-bullet">✓ Get a personalized payment comparison run for you</div>
-          <div className="oh-lead-bullet">✓ Your advisor will reach out within 1 business day</div>
-        </div>
-        {!leadDone ? (
-          <>
-            <iframe ref={inlineIframeRef} name="bnt_inline_iframe" style={{ display: 'none' }} title="BNTouch Submit" />
-            <form ref={inlineFormRef} method="post"
-              action="https://www.bntouchmortgage.net/api/webform/"
-              target="bnt_inline_iframe" style={{ display: 'none' }}>
-              <input type="hidden" name="added_source" value={`Inline — ${page.address}`} />
-              <input type="hidden" name="RETURNTIMEOUT" value="10" />
-              <input type="hidden" name="USERID" value={page.bntouch_user_id || '10543'} />
-              <input type="hidden" name="GROUPID" value="1" />
-              <input type="hidden" name="SEQUENCEID" value="1" />
-              <input type="hidden" name="WEBFORMID" value="5524" />
-              <input type="hidden" name="PROCESSTYPE" value="mortgage" />
-              <input type="hidden" name="name_1" value={leadName} />
-              <input type="hidden" name="email" value={leadEmail} />
-              <input type="hidden" name="phone_cell" value={leadPhone} />
-            </form>
-          <form onSubmit={handleInlineLead} className="oh-lead-form">
-            <div className="oh-lead-row2">
-              <input className="oh-lead-input" type="text" placeholder="First name" value={leadName.split(' ')[0]} onChange={e => setLeadName(e.target.value + (leadName.includes(' ') ? ' ' + leadName.split(' ').slice(1).join(' ') : ''))} required />
-              <input className="oh-lead-input" type="text" placeholder="Last name" value={leadName.includes(' ') ? leadName.split(' ').slice(1).join(' ') : ''} onChange={e => setLeadName((leadName.split(' ')[0] ?? '') + (e.target.value ? ' ' + e.target.value : ''))} />
-            </div>
-            <input className="oh-lead-input" type="email" placeholder="Email address" value={leadEmail} onChange={e => setLeadEmail(e.target.value)} required />
-            <input className="oh-lead-input" type="tel" placeholder="Mobile number" value={leadPhone} onChange={e => setLeadPhone(e.target.value)} required />
-            <textarea className="oh-lead-input oh-lead-textarea" placeholder="Working with an agent? Any questions? (optional)" value={leadNote} onChange={e => setLeadNote(e.target.value)} rows={2} />
-            {leadErr && <div className="oh-lead-err">{leadErr}</div>}
-            <button type="submit" className="oh-lead-submit" disabled={leadSubmitting}>
-              {leadSubmitting ? 'Sending…' : 'Request my comparison →'}
-            </button>
-            <div className="oh-lead-tcpa">
-              By submitting you consent to be contacted by NEO Home Loans and their agents via phone, email, or text. Message &amp; data rates may apply. Participation is voluntary and you may opt out at any time.
-            </div>
-          </form>
-          </>
-        ) : (
-          <div className="oh-lead-done">
-            <div className="oh-lead-done-icon">✓</div>
-            <div className="oh-lead-done-title">Request received!</div>
-            <div className="oh-lead-done-sub">
-              {page.schedule_url ? 'Pick a time below and your advisor will be ready for you.' : 'Your advisor will be in touch within 1 business day.'}
-            </div>
             {page.schedule_url && (
-              <iframe
-                src={page.schedule_url.includes('?') ? page.schedule_url + '&noframe=true' : page.schedule_url + '?noframe=true'}
-                style={{ width: '100%', minHeight: 580, border: 'none', marginTop: 16, borderRadius: 12, background: 'transparent' }}
-                title="Schedule a time"
-                allowTransparency={true}
-              />
+              <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'block', marginTop: 14, textAlign: 'center', background: C.accent, color: C.navy, fontWeight: 700, fontSize: 13, padding: '10px 0', borderRadius: 9, textDecoration: 'none' }}>
+                Schedule a Time to Talk →
+              </a>
+            )}
+          </div>
+
+        </div>
+
+        {/* Loan Scenarios — always visible, above tabs */}
+        {((page.rate_scenarios && page.rate_scenarios.length > 0) || loomId || page.tca_url) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
+
+            {/* Auto-extracted Rate Cards */}
+            {page.rate_scenarios && page.rate_scenarios.length > 0 && (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                {page.seller_contribution ? (
+                  <div style={{ background: C.navy, padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />
+                    <div style={{ color: '#fff', fontSize: 13, lineHeight: 1.5 }}>
+                      <strong>Seller-Paid Rate Reduction</strong> — closing costs have been negotiated to buy down your rate. The payments below already include it.
+                    </div>
+                  </div>
+                ) : null}
+                <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                  {page.rate_scenarios.map((s, i) => {
+                    const hasBuydown = s.buydown_rate !== s.market_rate
+                    const savings = s.market_payment - s.buydown_payment
+                    const displayLabel = !hasBuydown ? 'Illustrative Comparison Rate' : s.label
+                    return (
+                      <div key={i} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.navy, marginBottom: 8 }}>{displayLabel}</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+                          {hasBuydown && (
+                            <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>
+                          )}
+                          <span style={{ fontSize: 22, fontWeight: 900, color: C.navy }}>{s.buydown_rate.toFixed(3)}%</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                          {hasBuydown && (
+                            <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>${s.market_payment.toLocaleString()}</span>
+                          )}
+                          <span style={{ fontSize: 26, fontWeight: 900, color: C.navy }}>${s.buydown_payment.toLocaleString()}<span style={{ fontSize: 13, fontWeight: 600 }}>/mo</span></span>
+                        </div>
+                        {hasBuydown && savings > 0 && (
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Est. Payment Difference: ${savings.toLocaleString()}/mo</div>
+                            <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 3, lineHeight: 1.5 }}>vs. illustrative comparison at {s.market_rate.toFixed(3)}% ({s.market_payment > 0 ? `$${s.market_payment.toLocaleString()}/mo` : 'see TCA'})</div>
+                          </div>
+                        )}
+                        {s.apr > 0 && (
+                          <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>APR {s.apr.toFixed(3)}%</div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ padding: '10px 20px', borderTop: `1px solid ${C.border}` }}>
+                  <p style={{ fontSize: 9, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
+                    Rates and payments are estimates, not a commitment to lend. Based on {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} pricing. Actual rate, payment, and costs depend on credit, down payment, and property details at time of application.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Loom Video */}
+            {loomId && (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', background: C.navy, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Video Walkthrough</div>
+                  {page.loom_url && (
+                    <a href={page.loom_url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: C.accent, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                      Open Full Screen ↗
+                    </a>
+                  )}
+                </div>
+                <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%' }}>
+                  <iframe
+                    src={`https://www.loom.com/embed/${loomId}`}
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    title="Video Walkthrough"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* TCA Embed */}
+            {page.tca_url ? (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', background: C.navy }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Total Cost Analysis</div>
+                    <a href={page.tca_url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: C.accent, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+                      Open Full Screen ↗
+                    </a>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <svg width="14" height="16" viewBox="0 0 40 44" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0, marginTop: 1 }}><path d="M5 20L20 7L35 20V40H26V29H14V40H5V20Z" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" fill="none"/><line x1="14" y1="25" x2="26" y2="25" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/><line x1="14" y1="30" x2="26" y2="30" stroke="rgba(255,255,255,0.5)" strokeWidth="2"/></svg>
+                    <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', lineHeight: 1.6 }}>Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details.</div>
+                  </div>
+                </div>
+                <iframe
+                  src={page.tca_url}
+                  className="oh-iframe-tca"
+                  style={{ width: '100%', border: 'none', display: 'block' }}
+                  title="Total Cost Analysis"
+                  allow="fullscreen"
+                />
+              </div>
+            ) : null}
+
+          </div>
+        )}
+
+        {/* Tabs — Property Info + Contact */}
+        <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${C.border}`, marginBottom: 28 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setActiveTab(t.id as 'overview' | 'contact')}
+              className="oh-tab-btn"
+              style={{ border: 'none', background: 'transparent', cursor: 'pointer',
+                fontWeight: activeTab === t.id ? 700 : 500,
+                color: activeTab === t.id ? C.navy : C.muted,
+                borderBottom: `2px solid ${activeTab === t.id ? C.navy : 'transparent'}`, marginBottom: -2 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Property Info Tab */}
+        {activeTab === 'overview' && (
+          <div>
+            {page.description ? (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 24 }}>
+                <div style={{ fontWeight: 700, fontSize: 16, color: C.navy, marginBottom: 10 }}>About This Property</div>
+                <div style={{ fontSize: 14, color: C.dim, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{page.description}</div>
+              </div>
+            ) : (
+              <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: 32, textAlign: 'center', color: C.muted }}>
+                No property description provided.
+              </div>
             )}
           </div>
         )}
+
+        {/* Contact Tab */}
+        {activeTab === 'contact' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {page.apply_url && (
+              <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Ready to move forward?</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 6 }}>Get Fully Underwritten Approval Today</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Start your mortgage application online in minutes.</div>
+                <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 36px', borderRadius: 10, textDecoration: 'none' }}>
+                  Get Approved →
+                </a>
+              </div>
+            )}
+            <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 20 }}>
+                Schedule a time to talk with {page.advisor_name?.split(' ')[0] || 'your advisor'}
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 28, textAlign: 'left', flexWrap: 'wrap' }}>
+                {[
+                  { num: '01', text: 'Walk through the loan scenario and payment breakdown in detail' },
+                  { num: '02', text: 'Help you secure below-market interest rates on your next home purchase' },
+                ].map(r => (
+                  <div key={r.num} style={{ flex: '1 1 200px', background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, marginTop: 1 }}>{r.num}</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{r.text}</div>
+                  </div>
+                ))}
+              </div>
+              {page.schedule_url && (
+                <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none' }}>
+                  Schedule a Free Consultation →
+                </a>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Disclaimers ───────────────────────────────────────────────────── */}
-      <div className="oh-disc-wrap">
-        <div className="oh-disc-title">Planning assumptions and required disclosures</div>
-        <p>Effective {effectiveDate}. Expires {reviewDate}.</p>
-        <p>This is a planning illustration, not a commitment to lend. Rates, APR, costs, credits, payments, and program availability must be confirmed for the buyer and property.</p>
-        <p>Property value and appreciation are assumptions, not guarantees. Taxes, insurance, mortgage insurance, HOA dues, and selling costs may change.</p>
-        {primary?.buydown_rate !== primary?.market_rate && (
-          <p>Temporary buydown payments are funded from a closing deposit. The note rate and qualifying payment do not change, and the payment increases on schedule until it reaches the full note-rate payment.</p>
-        )}
-        <p>Owner-occupied primary residence. Credit, income, assets, property, and program eligibility remain subject to review.</p>
-        <p>Special financing incentive available. This property may qualify for a reduced interest rate or closing cost credit when financed through NEO Home Loans. Participation is optional; buyers may use any lender of their choice.</p>
-        <BetterDisclaimer style={{ marginTop: 16 }} />
+      {/* Legal Disclaimer Footer */}
+      <div style={{ background: '#F1F5F9', borderTop: '1px solid #E4E8EC', padding: '20px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 9, color: '#94A3B8', lineHeight: 1.7 }}>
+          {(() => {
+            const ctRate = page.callout_text?.match(/([\d.]+)%/)?.[1] ?? null
+            const scenarios = page.rate_scenarios ?? []
+            const matched = ctRate ? scenarios.find((s:any) => Math.abs(s.buydown_rate - parseFloat(ctRate)) < 0.01) : null
+            const rate = ctRate
+            const apr = matched?.apr ? matched.apr.toFixed(3) : null
+            return (
+              <>
+                <strong style={{ color: '#64748B' }}>Special Financing Incentive &amp; Mortgage Disclosures</strong><br />
+                Special financing incentive available. This property may qualify for a reduced interest rate or closing cost credit when financed through NEO Home Loans. Financing incentives are subject to availability, borrower qualifications, loan approval, and applicable program requirements. Participation is optional, and buyers may use any lender of their choice.<br />
+                {(rate || apr) && <>Advertised Interest Rate: {rate ?? 'N/A'}% | Annual Percentage Rate (APR): {apr ?? 'N/A'}%.<br /></>}
+                Advertised rates and financing scenarios are illustrative and subject to change without notice. Actual rates, APRs, payments, fees, and financing terms may vary based on borrower qualifications, credit profile, loan program, property eligibility, and market conditions. Advertised rates are not guaranteed and may require discount points, seller contributions, or other financing incentives.<br />
+                Loan Scenario &amp; Payment Estimates: The mortgage scenarios displayed on this page are generated using Mortgage Coach Total Cost Analysis (TCA). The TCA provides additional information regarding the assumptions used in each scenario, including applicable loan amounts, down payments, repayment terms, estimated payments, and closing costs. Payment estimates may exclude property taxes, homeowners insurance, mortgage insurance, HOA dues, or other applicable expenses unless expressly included. Actual monthly payments and total borrowing costs may be higher.<br />
+                Rate Comparisons: Any comparison rates are illustrative unless otherwise identified and substantiated. Comparisons are intended to demonstrate how different financing assumptions may affect estimated payments and borrowing costs and do not necessarily represent prevailing market rates or financing terms available to all borrowers.<br />
+                Financing Incentives: Any advertised reduced interest rate or closing cost credit is subject to the terms of the applicable financing incentive. Incentives may be funded by the seller, lender, or another permitted party, as applicable, and may be subject to contribution limits and other restrictions. Incentives are not guaranteed and may not be combined with other offers. Buyers are not required to use NEO Home Loans or any particular lender to purchase this property.<br />
+                This advertisement is not a commitment to lend or a guarantee of loan approval. All loans are subject to underwriting approval, applicable program requirements, and satisfactory property evaluation. Contact the lender for current financing terms and eligibility requirements.<br /><br />
+                <strong style={{ color: '#64748B' }}>Copyright, Licensing &amp; Corporate Disclosures</strong><br />
+                &copy; 2026 Better Home &amp; Finance Holding Company and/or its affiliates. All rights reserved. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc. (California License #02164055) provide real estate services; Better Cover, LLC offers insurance products; Better Settlement Services, LLC provides title and settlement services; and Better Inspect, LLC provides home inspection services. Home lending products are offered by Better Mortgage Corporation, a direct lender. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Better Mortgage Corporation operates under the name Better BMC in New York. Loans made or arranged pursuant to a California Finance Lenders Law License. Licensed by the California Department of Financial Protection and Innovation under the California Residential Mortgage Lending Act. Products are not available in all states. Equal Housing Lender. NMLS Consumer Access: www.nmlsconsumeraccess.org. Better Real Estate, LLC, doing business as BRE, Better Home Services, BRE Services, LLC, and Better Real Estate, operates in California through its wholly owned subsidiary Better Real Estate California Inc. Better Real Estate, LLC maintains its corporate headquarters at 325&ndash;41 Chestnut Street, Suite 826, Philadelphia, PA 19106, and provides access to real estate brokerage services through its nationwide network of partner brokerages and real estate agents. Equal Housing Opportunity. New York State Housing and Anti-Discrimination Notice | New York Standard Operating Procedures | Texas Real Estate Commission: Information About Brokerage Services | Consumer Protection Notice. Better Settlement Services, LLC, 325&ndash;41 Chestnut Street, Suite 803, Philadelphia, PA 19106. Homeowners insurance products are offered through Better Cover, LLC, a Pennsylvania Resident Producer Agency, License #881593, 325&ndash;41 Chestnut Street, Suite 807, Philadelphia, PA 19106. Better Inspect, LLC maintains its corporate headquarters at 325&ndash;41 Chestnut Street, Suite 846, Philadelphia, PA 19106. Better Mortgage Corporation, Better Real Estate, LLC, Better Settlement Services, LLC, Better Cover, LLC, Better Connect, and Better Inspect, LLC are separate operating subsidiaries of Better Home &amp; Finance Holding Company. Each company is a separate legal entity, operated and managed under its own governance structure and applicable legal and regulatory requirements. All trademarks, service marks, trade names, logos, icons, and domain names are proprietary to Better Home &amp; Finance Holding Company or their respective owners. Unauthorized use of proprietary intellectual property is prohibited.
+              </>
+            )
+          })()}
+        </div>
       </div>
 
       <style>{`
         * { box-sizing: border-box; }
         body { margin: 0; font-family: 'Montserrat', system-ui, sans-serif; }
         a { color: inherit; }
-
-        /* Sticky nav */
-        .oh-sticky-nav {
-          position: sticky; top: 0; z-index: 100;
-          background: ${C.navy}; display: flex; align-items: center;
-          gap: 16px; padding: 10px 24px; flex-wrap: wrap;
-          border-bottom: 1px solid rgba(91,203,245,0.15);
-        }
-        .oh-nav-homes {
-          font-size: 12px; font-weight: 700; color: ${C.accent};
-          text-decoration: none; white-space: nowrap;
-        }
-        .oh-nav-date {
-          font-size: 11px; color: rgba(255,255,255,0.65);
-          display: flex; align-items: center; gap: 6px; white-space: nowrap;
-        }
-        .oh-nav-dot {
-          width: 7px; height: 7px; border-radius: 50%;
-          background: #22c55e; flex-shrink: 0;
-        }
-        .oh-nav-advisor {
-          margin-left: auto; display: flex; align-items: center; gap: 12px;
-          font-size: 11px; color: rgba(255,255,255,0.65);
-        }
-        .oh-nav-advisor strong { color: #fff; }
-        .oh-nav-btns { display: flex; gap: 6px; }
-        .oh-nav-btn {
-          font-size: 11px; font-weight: 700; padding: 5px 12px;
-          border: 1px solid rgba(91,203,245,0.4); border-radius: 6px;
-          color: ${C.accent}; text-decoration: none; white-space: nowrap;
-        }
-
-        /* Hero */
-        .oh-hero {
-          position: relative; width: 100%; overflow: hidden;
-          background: ${C.navy};
-        }
-        .oh-hero-img { width: 100%; height: 520px; object-fit: cover; display: block; }
-        .oh-hero-placeholder { width: 100%; height: 520px; background: #1a3a5c; }
-        .oh-hero-overlay {
-          position: absolute; inset: 0;
-          background: linear-gradient(to top, rgba(10,37,64,0.92) 0%, rgba(10,37,64,0.3) 55%, transparent 100%);
-        }
-        .oh-hero-content {
-          position: absolute; bottom: 0; left: 0; right: 0;
-          padding: 48px 36px 36px; max-width: 820px; margin: 0 auto;
-        }
-        .oh-hero-badge {
-          display: inline-flex; align-items: center; gap: 10px;
-          font-size: 10px; font-weight: 800; letter-spacing: 0.18em;
-          text-transform: uppercase; color: ${C.accent}; margin-bottom: 14px;
-        }
-        .oh-hero-badge-line {
-          display: inline-block; width: 28px; height: 2px; background: ${C.accent};
-        }
-        .oh-hero-address {
-          font-size: clamp(28px, 5vw, 52px); font-weight: 900; color: #fff;
-          line-height: 1.1; letter-spacing: -0.02em; text-wrap: balance;
-        }
-        .oh-hero-city { font-size: 16px; color: rgba(255,255,255,0.65); margin-top: 6px; }
-        .oh-hero-price {
-          margin-top: 12px; font-size: 22px; font-weight: 800; color: ${C.accent};
-        }
-
-        /* Rate band */
-        /* ── Hero rate section ───────────────────────────────────────────── */
-        .oh-hero-rate {
-          background: ${C.navy}; position: relative; overflow: hidden;
-          padding: 56px 24px 64px;
-        }
-        .oh-hr-ring {
-          position: absolute; border-radius: 50%; pointer-events: none;
-          top: 50%; left: 50%; transform: translate(-50%,-50%);
-        }
-        .oh-hr-ring--lg { width: 1000px; height: 1000px; border: 1px solid rgba(91,203,245,0.04); }
-        .oh-hr-ring--sm { width: 620px; height: 620px; border: 1px solid rgba(91,203,245,0.07); }
-        .oh-hr-inner {
-          max-width: 1000px; margin: 0 auto; position: relative;
-          display: flex; flex-direction: column; align-items: center; text-align: center;
-        }
-        .oh-hr-logo {
-          display: flex; align-items: center; gap: 10px; margin-bottom: 24px;
-        }
-        .oh-hr-pill {
-          display: inline-flex; align-items: center;
-          border: 1px solid rgba(91,203,245,0.5); border-radius: 999px;
-          padding: 5px 18px; font-size: 10px; font-weight: 800;
-          letter-spacing: 0.14em; text-transform: uppercase; color: ${C.accent};
-          margin-bottom: 20px;
-        }
-        .oh-hr-headline {
-          font-size: clamp(32px, 5.5vw, 60px); font-weight: 900; color: #fff;
-          line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 18px;
-          text-wrap: balance;
-        }
-        .oh-hr-sub {
-          font-size: 15px; color: rgba(255,255,255,0.55); line-height: 1.65;
-          max-width: 540px; margin: 0 0 32px;
-        }
-        .oh-hr-meta {
-          display: inline-flex; align-items: stretch;
-          border: 1px solid rgba(255,255,255,0.12); border-radius: 14px;
-          overflow: hidden; margin-bottom: 40px; background: rgba(255,255,255,0.04);
-        }
-        .oh-hr-meta-cell { padding: 12px 24px; text-align: left; }
-        .oh-hr-meta-label {
-          font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
-          text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 3px;
-        }
-        .oh-hr-meta-val {
-          font-size: 17px; font-weight: 800; color: #fff; letter-spacing: -0.01em;
-        }
-        .oh-hr-meta-div { width: 1px; background: rgba(255,255,255,0.1); }
-
-        /* Scenario cards */
-        .oh-hr-cards {
-          display: grid; gap: 14px; width: 100%; margin-bottom: 32px;
-        }
-        .oh-hr-cards--1 { grid-template-columns: minmax(0,480px); justify-content: center; }
-        .oh-hr-cards--2 { grid-template-columns: repeat(2, 1fr); max-width: 760px; margin-left: auto; margin-right: auto; }
-        .oh-hr-cards--3 { grid-template-columns: repeat(3, 1fr); }
-        .oh-hr-cards--4 { grid-template-columns: repeat(4, 1fr); }
-        .oh-hr-card {
-          border-radius: 18px; padding: 26px 22px; position: relative; overflow: hidden;
-          background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.09);
-          text-align: left;
-        }
-        .oh-hr-card--featured {
-          background: linear-gradient(145deg, rgba(91,203,245,0.12) 0%, rgba(10,37,64,0.01) 100%);
-          border: 1.5px solid rgba(91,203,245,0.45);
-          box-shadow: 0 0 48px rgba(91,203,245,0.1);
-        }
-        .oh-hr-card-glow {
-          position: absolute; top: -40px; right: -40px;
-          width: 180px; height: 180px; border-radius: 50%;
-          background: ${C.accent}; opacity: 0.07; filter: blur(24px);
-          pointer-events: none;
-        }
-        .oh-hr-card-label {
-          font-size: 9px; font-weight: 800; letter-spacing: 0.14em;
-          text-transform: uppercase; color: ${C.accent}; margin-bottom: 14px;
-        }
-        .oh-hr-card--featured ~ .oh-hr-card .oh-hr-card-label,
-        .oh-hr-card:not(.oh-hr-card--featured) .oh-hr-card-label { color: rgba(255,255,255,0.4); }
-        .oh-hr-card--featured .oh-hr-card-label { color: ${C.accent}; }
-        .oh-hr-card-rate-label {
-          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 2px;
-        }
-        .oh-hr-card-rate {
-          font-size: clamp(38px, 7vw, 60px); font-weight: 900; color: #fff;
-          line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums;
-          margin-bottom: 6px;
-        }
-        .oh-hr-card-save {
-          display: inline-flex; align-items: center;
-          background: rgba(91,203,245,0.18); border: 1px solid rgba(91,203,245,0.4);
-          border-radius: 20px; padding: 3px 11px; margin: 8px 0;
-          font-size: 11.5px; font-weight: 800; color: ${C.accent};
-        }
-        .oh-hr-card-div { height: 1px; background: rgba(255,255,255,0.08); margin: 14px 0; }
-        .oh-hr-card--featured .oh-hr-card-div { background: rgba(91,203,245,0.15); }
-        .oh-hr-card-pmt-label {
-          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: rgba(255,255,255,0.3); margin-bottom: 2px;
-        }
-        .oh-hr-card-pmt {
-          font-size: 26px; font-weight: 900; color: #fff;
-          letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
-        }
-        .oh-hr-card-sub {
-          font-size: 11px; color: rgba(255,255,255,0.3); margin-top: 5px;
-        }
-        .oh-hr-card-apr {
-          font-size: 10px; color: rgba(255,255,255,0.22); margin-top: 8px;
-        }
-        .oh-hr-foot {
-          display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%;
-        }
-        .oh-hr-disc {
-          font-size: 9px; color: rgba(255,255,255,0.25); line-height: 1.6;
-        }
-        .oh-cta-btn {
-          display: inline-block; background: ${C.accent}; color: ${C.navy};
-          font-weight: 800; font-size: 15px; padding: 14px 36px; border-radius: 10px;
-          text-decoration: none; letter-spacing: -0.01em;
-          box-shadow: 0 4px 24px rgba(91,203,245,0.35);
-        }
-        .oh-piti-cta {
-          display: block; text-align: center; margin-top: 18px;
-          background: ${C.accent}; color: ${C.navy}; font-weight: 800;
-          font-size: 14px; padding: 14px 0; border-radius: 10px;
-          text-decoration: none; font-family: inherit;
-          border: none; cursor: pointer; width: 100%;
-        }
-
-        /* Payment progression */
-        .oh-section-wrap {
-          max-width: 820px; margin: 0 auto; padding: 48px 36px;
-        }
-        .oh-section-wrap--gray { background: ${C.bg}; max-width: 100%; }
-        .oh-section-wrap--gray > * { max-width: 820px; margin-left: auto; margin-right: auto; }
-        .oh-section-eyebrow {
-          font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
-          text-transform: uppercase; color: ${C.accent}; margin-bottom: 8px;
-          text-align: center;
-        }
-        .oh-section-title {
-          font-size: 24px; font-weight: 900; color: ${C.navy};
-          line-height: 1.2; margin-bottom: 6px; text-wrap: balance;
-          text-align: center;
-        }
-        .oh-section-sub { font-size: 14px; color: ${C.muted}; margin-bottom: 24px; text-align: center; }
-        .oh-prog-grid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-          gap: 12px; margin-bottom: 20px;
-        }
-        .oh-prog-card {
-          background: #fff; border: 1.5px solid ${C.border}; border-radius: 12px;
-          padding: 18px 16px; text-align: center;
-        }
-        .oh-prog-card--buydown { border-color: ${C.accent}; }
-        .oh-prog-year {
-          font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: ${C.muted}; margin-bottom: 8px;
-        }
-        .oh-prog-rate {
-          font-size: 28px; font-weight: 900; color: ${C.navy}; line-height: 1;
-        }
-        .oh-prog-piti {
-          font-size: 15px; font-weight: 800; color: ${C.navy}; margin-top: 6px;
-        }
-        .oh-prog-pi { font-size: 11px; color: ${C.muted}; margin-top: 3px; }
-        .oh-prog-explain {
-          font-size: 12px; color: ${C.dim}; line-height: 1.7;
-          background: #F8FAFC; border-radius: 10px; padding: 16px 18px;
-        }
-
-        /* Loan details table */
-        .oh-details-table {
-          border: 1px solid ${C.border}; border-radius: 12px; overflow: hidden;
-          margin: 16px 0; width: 100%;
-        }
-        .oh-details-row {
-          display: flex; justify-content: space-between;
-          padding: 12px 18px; border-bottom: 1px solid ${C.border};
-          font-size: 13px;
-        }
-        .oh-details-row:last-child { border-bottom: none; }
-        .oh-details-label { color: ${C.muted}; }
-        .oh-details-val { font-weight: 700; color: ${C.navy}; font-variant-numeric: tabular-nums; }
-        .oh-details-note {
-          font-size: 10px; color: ${C.muted}; margin-top: 10px; line-height: 1.5;
-        }
-
-        /* Description */
-        .oh-desc {
-          font-size: 15px; color: ${C.dim}; line-height: 1.8;
-          white-space: pre-wrap;
-        }
-
-        /* Stats strip */
-        .oh-stats-strip {
-          background: ${C.navy}; display: flex; gap: 0; flex-wrap: wrap;
-          padding: 24px 36px; justify-content: center;
-        }
-        .oh-stat {
-          text-align: center; padding: 0 24px;
-          border-right: 1px solid rgba(91,203,245,0.15);
-        }
-        .oh-stat:last-child { border-right: none; }
-        .oh-stat-label {
-          font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
-          text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 4px;
-        }
-        .oh-stat-val { font-size: 18px; font-weight: 800; color: #fff; }
-
-        /* Scenarios grid */
-        .oh-scenarios-grid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 12px; margin-top: 20px;
-        }
-        .oh-scen-card {
-          background: #fff; border: 1px solid ${C.border}; border-radius: 12px;
-          padding: 18px 16px;
-        }
-        .oh-scen-label {
-          font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
-          text-transform: uppercase; color: ${C.navy}; margin-bottom: 8px;
-        }
-        .oh-scen-rate {
-          font-size: 26px; font-weight: 900; color: ${C.navy}; line-height: 1;
-        }
-        .oh-scen-note-rate { font-size: 11px; color: ${C.muted}; margin-top: 2px; }
-        .oh-scen-payment { font-size: 18px; font-weight: 800; color: ${C.navy}; margin-top: 6px; }
-        .oh-scen-savings { font-size: 11px; color: #16A34A; font-weight: 700; margin-top: 4px; }
-        .oh-scen-apr { font-size: 10px; color: ${C.muted}; margin-top: 4px; }
-
-        /* Team */
-        .oh-team-title { margin-bottom: 4px; }
-        .oh-team-grid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-          gap: 16px; margin-top: 24px;
-        }
-        .oh-team-card {
-          background: #fff; border: 1px solid ${C.border}; border-radius: 16px;
-          padding: 24px 22px; display: flex; flex-direction: column; gap: 16px;
-        }
-        .oh-team-role {
-          font-size: 9px; font-weight: 700; letter-spacing: 0.14em;
-          text-transform: uppercase; color: ${C.accent};
-        }
-        .oh-team-person { display: flex; gap: 14px; align-items: flex-start; }
-        .oh-team-photo {
-          width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
-          flex-shrink: 0; border: 2px solid ${C.border};
-        }
-        .oh-team-init {
-          width: 56px; height: 56px; border-radius: 50%; background: ${C.navy};
-          color: ${C.accent}; font-size: 20px; font-weight: 900;
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-        }
-        .oh-team-name { font-size: 16px; font-weight: 800; color: ${C.navy}; }
-        .oh-team-title-role { font-size: 12px; color: ${C.muted}; margin-top: 2px; }
-        .oh-team-nmls { font-size: 11px; color: ${C.muted}; margin-top: 2px; }
-        .oh-team-actions { display: flex; gap: 10px; margin-top: 10px; }
-        .oh-team-action {
-          font-size: 12px; font-weight: 700; color: ${C.navy};
-          text-decoration: none; border-bottom: 1.5px solid ${C.accent};
-          padding-bottom: 1px;
-        }
-        .oh-team-logo {
-          max-height: 36px; max-width: 140px; object-fit: contain;
-          align-self: flex-end;
-        }
-
-        /* Lead form */
-        .oh-lead-wrap { background: ${C.bg}; max-width: 100%; }
-        .oh-lead-wrap > * { max-width: 820px; margin-left: auto; margin-right: auto; }
-        .oh-lead-bullets {
-          display: flex; flex-direction: column; gap: 6px;
-          margin: 12px auto 20px; font-size: 13px; color: ${C.dim};
-        }
-        .oh-lead-bullet::before { content: ''; }
-        .oh-lead-form {
-          background: #fff; border-radius: 16px; padding: 28px 28px;
-          display: flex; flex-direction: column; gap: 12px;
-          max-width: 540px;
-        }
-        .oh-lead-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .oh-lead-input {
-          width: 100%; padding: 12px 14px; font-size: 14px; font-family: inherit;
-          border: 1.5px solid ${C.border}; border-radius: 9px; color: ${C.text};
-          outline: none; box-sizing: border-box; transition: border-color 0.15s;
-        }
-        .oh-lead-textarea { resize: none; }
-        .oh-lead-input:focus { border-color: ${C.accent}; }
-        .oh-lead-err {
-          font-size: 12px; color: #B0504A; background: #FBF1F0;
-          border: 1px solid #EAD6D1; border-radius: 8px; padding: 9px 12px;
-        }
-        .oh-lead-submit {
-          background: ${C.accent}; color: ${C.navy}; border: none; border-radius: 10px;
-          padding: 14px 0; font-size: 15px; font-weight: 800; cursor: pointer;
-          font-family: inherit; width: 100%; transition: opacity 0.15s;
-        }
-        .oh-lead-submit:disabled { opacity: 0.6; cursor: default; }
-        .oh-lead-tcpa {
-          font-size: 9.5px; color: ${C.muted}; line-height: 1.6; text-align: center;
-        }
-        .oh-lead-done {
-          background: #fff; border-radius: 16px; padding: 40px 28px;
-          text-align: center; max-width: 400px;
-        }
-        .oh-lead-done-icon {
-          width: 52px; height: 52px; border-radius: 50%; background: #DCFCE7;
-          color: #16A34A; font-size: 24px; display: flex; align-items: center;
-          justify-content: center; margin: 0 auto 16px; font-weight: 900;
-        }
-        .oh-lead-done-title { font-size: 20px; font-weight: 800; color: ${C.navy}; }
-        .oh-lead-done-sub { font-size: 14px; color: ${C.muted}; margin-top: 8px; line-height: 1.6; }
-
-        /* Disclaimers */
-        .oh-disc-wrap {
-          background: ${C.bg}; border-top: 1px solid ${C.border};
-          padding: 28px 36px; max-width: 100%;
-        }
-        .oh-disc-title {
-          font-size: 11px; font-weight: 700; color: #64748B; margin-bottom: 10px;
-        }
-        .oh-disc-wrap p {
-          font-size: 9px; color: #94A3B8; line-height: 1.7; margin: 0 0 6px;
-          max-width: 820px;
-        }
-
+        .oh-gallery-img { width: 100%; height: 420px; object-fit: cover; display: block; }
+        .oh-price { font-size: 30px; }
+        .oh-tab-btn { padding: 10px 22px; font-size: 14px; }
         .oh-iframe-tca { height: 820px; }
-
         @media (max-width: 600px) {
-          .oh-sticky-nav { flex-wrap: wrap; gap: 8px; padding: 10px 16px; }
-          .oh-nav-advisor { margin-left: 0; }
-          .oh-hero-img, .oh-hero-placeholder { height: 300px; }
-          .oh-hero-content { padding: 24px 20px 24px; }
-          .oh-hero-rate { padding: 36px 20px 44px; }
-          .oh-hr-cards { grid-template-columns: 1fr !important; max-width: 100% !important; }
-          .oh-hr-meta { flex-direction: column; }
-          .oh-hr-meta-div { width: auto; height: 1px; }
-          .oh-section-wrap { padding: 32px 20px; }
-          .oh-stats-strip { padding: 20px; gap: 16px; }
-          .oh-stat { padding: 0 12px; }
-          .oh-lead-form { padding: 20px 18px; }
-          .oh-lead-row2 { grid-template-columns: 1fr; }
-          .oh-disc-wrap { padding: 20px; }
+          .oh-gallery-img { height: 240px; }
+          .oh-price { font-size: 22px; }
+          .oh-tab-btn { padding: 8px 12px; font-size: 12px; }
           .oh-iframe-tca { height: 500px; }
         }
       `}</style>

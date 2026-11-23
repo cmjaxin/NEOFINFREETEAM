@@ -17,6 +17,7 @@ import SellerAdvantageLp from '@/components/views/SellerAdvantageLp'
 import AffordabilityLp from '@/components/views/AffordabilityLp'
 import EmployeeProfile from '@/components/views/EmployeeProfile'
 import Properties from '@/components/views/Properties'
+import Partners from '@/components/views/Partners'
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal'
 import SettingsModal from '@/components/modals/SettingsModal'
 import { useApp } from '@/lib/appContext'
@@ -149,6 +150,7 @@ function Shell() {
           {view === 'sellerlp' && <SellerAdvantageLp />}
           {view === 'affordabilitylp' && <AffordabilityLp />}
           {view === 'properties' && <Properties />}
+          {view === 'partners' && <Partners />}
         </div>{/* end main-content */}
       </main>
 

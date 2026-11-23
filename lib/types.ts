@@ -99,3 +99,20 @@ export interface ChecklistSection {
   tech?: boolean
   items: ChecklistItem[]
 }
+
+export interface Partner {
+  id: string
+  created_by: string | null
+  name: string
+  title: string | null
+  brokerage: string | null
+  email: string | null
+  phone: string | null
+  nmls: string | null
+  photo_url: string | null
+  logo_url: string | null
+  slug: string
+  bio: string | null
+  created_at: string
+  updated_at: string
+}

@@ -11,9 +11,10 @@ interface Props {
   pageId?: string | null
   pageType?: string | null
   advisorUserId?: string | null
+  scheduleUrl?: string | null
 }
 
-export default function LeadCaptureModal({ address, advisorName, bntouchUserId, onDismiss, callout, pageId, pageType, advisorUserId }: Props) {
+export default function LeadCaptureModal({ address, advisorName, bntouchUserId, onDismiss, callout, pageId, pageType, advisorUserId, scheduleUrl }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -203,9 +204,22 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
             <div style={{ textAlign: 'center', padding: '12px 0 8px' }}>
               <div style={{ fontSize: 44, marginBottom: 12 }}>🎉</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#0A2540', marginBottom: 8 }}>You&apos;re all set!</div>
-              <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: 24 }}>
+              <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: scheduleUrl ? 16 : 24 }}>
                 Thanks for your info. Your advisor will be in touch soon. Enjoy the full presentation!
               </div>
+              {scheduleUrl && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0A2540', marginBottom: 10 }}>
+                    Want to pick a time now?
+                  </div>
+                  <iframe
+                    src={scheduleUrl.includes('?') ? scheduleUrl + '&noframe=true' : scheduleUrl + '?noframe=true'}
+                    style={{ width: '100%', minHeight: 520, border: 'none', borderRadius: 10 }}
+                    title="Schedule a time"
+                    allowTransparency={true}
+                  />
+                </div>
+              )}
               <button
                 onClick={handleDone}
                 style={{

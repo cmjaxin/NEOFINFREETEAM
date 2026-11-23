@@ -34,7 +34,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const AFFORDABILITY_ALLOWED: string[] = []
   const canAffordabilityLp = isAdmin
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp' | 'properties') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp' | 'properties' | 'partners') {
     setView(id)
     onClose()
   }
@@ -45,6 +45,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'production' as const,  label: 'Production' },
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
+    { id: 'partners' as const,    label: 'Partners' },
     { id: 'properties' as const,  label: 'Properties' },
     { id: 'openhouse' as const,   label: '  › Listing Pages' },
     { id: 'ohevents' as const,    label: '  › Open Houses' },
@@ -67,6 +68,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     ...((profile?.can_production  ?? true)  ? [{ id: 'production' as const, label: 'Production' }] : []),
     ...((profile?.can_wins        ?? true)  ? [{ id: 'wins'       as const, label: 'Monthly Wins' }] : []),
     ...((profile?.can_marketing   ?? true)  ? [{ id: 'marketing'  as const, label: 'Marketing' }] : []),
+    ...[{ id: 'partners' as const, label: 'Partners' }],
     ...(canProperties                        ? [{ id: 'properties' as const, label: 'Properties' }] : []),
     ...((profile?.can_open_houses ?? true) && !canProperties ? [{ id: 'ohevents'  as const, label: 'Open Houses' }] : []),
     ...(profile?.can_listings              && !canProperties ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
