@@ -70,8 +70,8 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     ...(canProperties                        ? [{ id: 'properties' as const, label: 'Properties' }] : []),
     ...((profile?.can_open_houses ?? true) && !canProperties ? [{ id: 'ohevents'  as const, label: 'Open Houses' }] : []),
     ...(profile?.can_listings              && !canProperties ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
-    ...(profile?.can_sign_riders           && !canProperties ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
-    ...(!canProperties                       ? [{ id: 'sellerlp' as const, label: 'Seller Advantage LP' }] : []),
+    ...(profile?.can_sign_riders           ?? true           ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
+    ...[{ id: 'sellerlp' as const, label: 'Seller Advantage LP' }],
     ...(canAffordabilityLp ? [{ id: 'affordabilitylp' as const, label: 'Affordability LP' }] : []),
     ...(profile?.can_splice                 ? [{ id: 'reels'      as const, label: 'Splice' }] : []),
   ]
