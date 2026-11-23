@@ -227,7 +227,7 @@ export default function Properties() {
     if (!profile?.id) return
     const [ohRes, saRes] = await Promise.all([
       supabase.from('open_house_pages')
-        .select('id,slug,address,city,state,zip,list_price,beds,baths,sqft,status,page_type,created_at,photos,advisor_name,rate_scenarios,callout_text')
+        .select('*')
         .eq('status', 'active').eq('created_by', profile.id).order('created_at', { ascending: false }),
       supabase.from('seller_advantage_pages')
         .select('id,slug,sales_price,quote_date,updated_at,address')
