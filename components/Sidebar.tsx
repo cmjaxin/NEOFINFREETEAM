@@ -58,6 +58,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
 
   const PROPERTIES_BETA: string[] = [
     'colin.jenson@neohomeloans.com',
+    'skyler.ford@neohomeloans.com',
     // add testers here before full rollout
   ]
   const canProperties = isAdmin || PROPERTIES_BETA.includes(profile?.email?.toLowerCase() ?? '')
