@@ -173,6 +173,31 @@ function PropertyRow({
             onAction={() => hasOH ? onEdit(group.openHouses[0], 'ohEvent') : onCreate('ohEvent', group.address)}
             actionLabel={hasOH ? `Edit${group.openHouses.length > 1 ? ` (${group.openHouses.length})` : ''}` : '+ Add'}
           />
+          {hasOH && (
+            <a
+              href={`/open-house/${group.openHouses[0].slug}/agent`}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                flex: 1, minWidth: 130, display: 'flex', flexDirection: 'column', gap: 7,
+                background: C.navy + '0D', border: `1px solid ${C.navy}33`,
+                borderRadius: 10, padding: '10px 12px', textDecoration: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.navy, flexShrink: 0 }} />
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: C.navy, letterSpacing: '0.03em' }}>Agent Hub</span>
+              </div>
+              <div style={{
+                width: '100%', padding: '5px 0', border: `1px solid ${C.navy}44`,
+                borderRadius: 7, fontSize: 11.5, fontWeight: 700,
+                background: C.white, color: C.navy, textAlign: 'center',
+              }}>
+                Open ↗
+              </div>
+            </a>
+          )}
           <AssetTile
             label="Seller Adv." color={C.purple} exists={hasSA}
             slug={saPages[0]?.slug} route="seller-advantage"
