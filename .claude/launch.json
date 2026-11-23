@@ -3,6 +3,7 @@
   "configurations": [
     {
       "name": "finfree-team-hq",
+      "cwd": "finfree-team-hq",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
       "port": 3001

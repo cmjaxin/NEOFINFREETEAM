@@ -717,11 +717,16 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           <div className="oh-lead-done">
             <div className="oh-lead-done-icon">✓</div>
             <div className="oh-lead-done-title">Request received!</div>
-            <div className="oh-lead-done-sub">Your advisor will be in touch within 1 business day.</div>
+            <div className="oh-lead-done-sub">
+              {page.schedule_url ? 'Pick a time below and your advisor will be ready for you.' : 'Your advisor will be in touch within 1 business day.'}
+            </div>
             {page.schedule_url && (
-              <a href={page.schedule_url} target="_blank" rel="noopener noreferrer" className="oh-piti-cta">
-                Schedule a time now →
-              </a>
+              <iframe
+                src={page.schedule_url.includes('?') ? page.schedule_url + '&noframe=true' : page.schedule_url + '?noframe=true'}
+                style={{ width: '100%', minHeight: 580, border: 'none', marginTop: 16, borderRadius: 12, background: 'transparent' }}
+                title="Schedule a time"
+                allowTransparency={true}
+              />
             )}
           </div>
         )}
@@ -921,12 +926,14 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         .oh-section-eyebrow {
           font-size: 10px; font-weight: 800; letter-spacing: 0.16em;
           text-transform: uppercase; color: ${C.accent}; margin-bottom: 8px;
+          text-align: center;
         }
         .oh-section-title {
           font-size: 24px; font-weight: 900; color: ${C.navy};
           line-height: 1.2; margin-bottom: 6px; text-wrap: balance;
+          text-align: center;
         }
-        .oh-section-sub { font-size: 14px; color: ${C.muted}; margin-bottom: 24px; }
+        .oh-section-sub { font-size: 14px; color: ${C.muted}; margin-bottom: 24px; text-align: center; }
         .oh-prog-grid {
           display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
           gap: 12px; margin-bottom: 20px;
