@@ -4,7 +4,7 @@ import { createClient } from './supabase/client'
 import { Employee, EmployeeChild, CoachingNote, Win, ChecklistCompletion, Profile, OnboardingRole } from './types'
 import { sectionsFor, allItemsFor } from './checklist'
 
-type View = 'dashboard' | 'directory' | 'terminated' | 'profile' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp'
+type View = 'dashboard' | 'directory' | 'terminated' | 'profile' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp' | 'properties'
 
 interface AppState {
   profile: Profile | null
@@ -24,6 +24,8 @@ interface AppState {
   search: string
   dirSearch: string
   roleFilter: string
+  pendingEditId: string | null
+  pendingEditType: string | null
 }
 
 interface AppContextValue extends AppState {
@@ -37,6 +39,7 @@ interface AppContextValue extends AppState {
   setSearch: (v: string) => void
   setDirSearch: (v: string) => void
   setRoleFilter: (v: string) => void
+  setPendingEdit: (id: string | null, type: string | null) => void
   reload: () => Promise<void>
   reloadEmployee: (id: string) => Promise<void>
   progress: (emp: Employee) => { total: number; done: number; pct: number }
@@ -65,6 +68,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
     view: (() => { try { return (sessionStorage.getItem('hq_view') as View) ?? 'production' } catch { return 'production' } })(),
     selectedId: null, profileTab: 'profile', profileFrom: 'dashboard',
     showAdd: false, showSettings: false, search: '', dirSearch: '', roleFilter: 'all',
+    pendingEditId: null, pendingEditType: null,
   })
 
   const reload = useCallback(async () => {
@@ -172,6 +176,7 @@ export function AppProvider({ profile, children }: { profile: Profile; children:
     setSearch: (v) => setState(s => ({ ...s, search: v })),
     setDirSearch: (v) => setState(s => ({ ...s, dirSearch: v })),
     setRoleFilter: (v) => setState(s => ({ ...s, roleFilter: v })),
+    setPendingEdit: (id, type) => setState(s => ({ ...s, pendingEditId: id, pendingEditType: type })),
     reload,
     reloadEmployee,
     progress,

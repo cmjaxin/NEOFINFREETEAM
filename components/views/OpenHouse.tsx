@@ -1433,7 +1433,7 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function OpenHouseView() {
-  const { supabase, profile } = useApp()
+  const { supabase, profile, pendingEditId, pendingEditType, setPendingEdit } = useApp()
   const [pages, setPages] = useState<OHPage[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -1447,6 +1447,15 @@ export default function OpenHouseView() {
   }
 
   useEffect(() => { load() }, [profile?.id])
+
+  useEffect(() => {
+    if (!pendingEditId || pendingEditType !== 'listing') return
+    const match = pages.find(p => p.id === pendingEditId)
+    if (match) {
+      setEditingPage(match)
+      setPendingEdit(null, null)
+    }
+  }, [pendingEditId, pendingEditType, pages])
 
   async function deletePage(page: OHPage) {
     setPages(prev => prev.filter(p => p.id !== page.id))

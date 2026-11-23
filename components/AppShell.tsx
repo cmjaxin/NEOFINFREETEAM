@@ -16,6 +16,7 @@ import SignRiders from '@/components/views/SignRiders'
 import SellerAdvantageLp from '@/components/views/SellerAdvantageLp'
 import AffordabilityLp from '@/components/views/AffordabilityLp'
 import EmployeeProfile from '@/components/views/EmployeeProfile'
+import Properties from '@/components/views/Properties'
 import AddEmployeeModal from '@/components/modals/AddEmployeeModal'
 import SettingsModal from '@/components/modals/SettingsModal'
 import { useApp } from '@/lib/appContext'
@@ -147,6 +148,7 @@ function Shell() {
           {view === 'signriders' && <SignRiders />}
           {view === 'sellerlp' && <SellerAdvantageLp />}
           {view === 'affordabilitylp' && <AffordabilityLp />}
+          {view === 'properties' && <Properties />}
         </div>{/* end main-content */}
       </main>
 

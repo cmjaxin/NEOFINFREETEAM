@@ -34,7 +34,7 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
   const AFFORDABILITY_ALLOWED: string[] = []
   const canAffordabilityLp = isAdmin
 
-  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp') {
+  function handleNav(id: 'dashboard' | 'directory' | 'terminated' | 'templates' | 'production' | 'wins' | 'marketing' | 'reels' | 'openhouse' | 'ohevents' | 'signriders' | 'sellerlp' | 'affordabilitylp' | 'properties') {
     setView(id)
     onClose()
   }
@@ -45,24 +45,32 @@ export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose:
     { id: 'production' as const,  label: 'Production' },
     { id: 'wins' as const,        label: 'Monthly Wins' },
     { id: 'marketing' as const,   label: 'Marketing' },
-    { id: 'openhouse' as const,   label: 'Listing Presentations' },
-    { id: 'ohevents' as const,    label: 'Open Houses' },
-    { id: 'signriders' as const,  label: 'Sign Riders' },
-    { id: 'sellerlp' as const,    label: 'Seller Advantage LP' },
+    { id: 'properties' as const,  label: 'Properties' },
+    { id: 'openhouse' as const,   label: '  › Listing Pages' },
+    { id: 'ohevents' as const,    label: '  › Open Houses' },
+    { id: 'signriders' as const,  label: '  › Sign Riders' },
+    { id: 'sellerlp' as const,    label: '  › Seller Advantage' },
     { id: 'affordabilitylp' as const, label: 'Affordability LP' },
     { id: 'reels' as const,       label: 'Splice' },
     { id: 'terminated' as const,  label: 'Terminated' },
     { id: 'templates' as const,   label: 'Templates' },
   ]
 
+  const PROPERTIES_BETA: string[] = [
+    'colin.jenson@neohomeloans.com',
+    // add testers here before full rollout
+  ]
+  const canProperties = isAdmin || PROPERTIES_BETA.includes(profile?.email?.toLowerCase() ?? '')
+
   const advisorNavItems = [
     ...((profile?.can_production  ?? true)  ? [{ id: 'production' as const, label: 'Production' }] : []),
     ...((profile?.can_wins        ?? true)  ? [{ id: 'wins'       as const, label: 'Monthly Wins' }] : []),
     ...((profile?.can_marketing   ?? true)  ? [{ id: 'marketing'  as const, label: 'Marketing' }] : []),
-    ...((profile?.can_open_houses ?? true)  ? [{ id: 'ohevents'  as const, label: 'Open Houses' }] : []),
-    ...(profile?.can_listings               ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
-    ...(profile?.can_sign_riders            ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
-    { id: 'sellerlp' as const, label: 'Seller Advantage LP' },
+    ...(canProperties                        ? [{ id: 'properties' as const, label: 'Properties' }] : []),
+    ...((profile?.can_open_houses ?? true) && !canProperties ? [{ id: 'ohevents'  as const, label: 'Open Houses' }] : []),
+    ...(profile?.can_listings              && !canProperties ? [{ id: 'openhouse' as const, label: 'Listing Presentations' }] : []),
+    ...(profile?.can_sign_riders           && !canProperties ? [{ id: 'signriders' as const, label: 'Sign Riders' }] : []),
+    ...(!canProperties                       ? [{ id: 'sellerlp' as const, label: 'Seller Advantage LP' }] : []),
     ...(canAffordabilityLp ? [{ id: 'affordabilitylp' as const, label: 'Affordability LP' }] : []),
     ...(profile?.can_splice                 ? [{ id: 'reels'      as const, label: 'Splice' }] : []),
   ]

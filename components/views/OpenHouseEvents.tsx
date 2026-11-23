@@ -1154,7 +1154,7 @@ function PageCard({ page, onEdit, onDelete }: { page: OHEPage; onEdit: () => voi
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function OpenHouseEvents() {
-  const { supabase, profile } = useApp()
+  const { supabase, profile, pendingEditId, pendingEditType, setPendingEdit } = useApp()
   const [pages, setPages] = useState<OHEPage[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -1174,6 +1174,16 @@ export default function OpenHouseEvents() {
   }
 
   useEffect(() => { load() }, [profile?.id])
+
+  // Auto-open edit modal when navigated from Properties view
+  useEffect(() => {
+    if (!pendingEditId || pendingEditType !== 'openhouse') return
+    const match = pages.find(p => p.id === pendingEditId)
+    if (match) {
+      setEditingPage(match)
+      setPendingEdit(null, null)
+    }
+  }, [pendingEditId, pendingEditType, pages])
 
   async function deletePage(page: OHEPage) {
     setPages(prev => prev.filter(p => p.id !== page.id))
