@@ -386,6 +386,33 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         </div>
       </div>
 
+      {/* ── Property stats strip ─────────────────────────────────────────── */}
+      {(page.beds || page.baths || page.sqft || page.lot_size || page.year_built || Number(page.hoa_monthly) > 0) && (
+        <div className="oh-stats-strip">
+          {[
+            { label: 'Beds', val: page.beds },
+            { label: 'Baths', val: page.baths },
+            { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
+            { label: 'Lot', val: page.lot_size || null },
+            { label: 'Year Built', val: page.year_built || null },
+            { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
+          ].filter(r => r.val).map(r => (
+            <div key={r.label} className="oh-stat">
+              <div className="oh-stat-label">{r.label}</div>
+              <div className="oh-stat-val">{r.val}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Description ──────────────────────────────────────────────────── */}
+      {page.description && (
+        <div className="oh-section-wrap">
+          <div className="oh-section-eyebrow">About This Property</div>
+          <div className="oh-desc">{page.description}</div>
+        </div>
+      )}
+
       {/* ── Rate spotlight ───────────────────────────────────────────────── */}
       {primary && (
         <div className="oh-rate-band">
@@ -525,31 +552,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           <a href="#next-step" className="oh-piti-cta" style={{ marginTop: 20 }}>Check this option against my numbers →</a>
         </div>
       )}
-
-      {/* ── Description ──────────────────────────────────────────────────── */}
-      {page.description && (
-        <div className="oh-section-wrap">
-          <div className="oh-section-eyebrow">About This Property</div>
-          <div className="oh-desc">{page.description}</div>
-        </div>
-      )}
-
-      {/* ── Property stats strip ─────────────────────────────────────────── */}
-      <div className="oh-stats-strip">
-        {[
-          { label: 'Beds', val: page.beds },
-          { label: 'Baths', val: page.baths },
-          { label: 'Sq Ft', val: page.sqft ? page.sqft.toLocaleString() : null },
-          { label: 'Lot', val: page.lot_size || null },
-          { label: 'Year Built', val: page.year_built || null },
-          { label: 'HOA', val: Number(page.hoa_monthly) > 0 ? `${fmtPrice(page.hoa_monthly)}/mo` : null },
-        ].filter(r => r.val).map(r => (
-          <div key={r.label} className="oh-stat">
-            <div className="oh-stat-label">{r.label}</div>
-            <div className="oh-stat-val">{r.val}</div>
-          </div>
-        ))}
-      </div>
 
       {/* ── Loom video ───────────────────────────────────────────────────── */}
       {loomId && (
