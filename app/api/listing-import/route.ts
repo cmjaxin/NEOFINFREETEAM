@@ -104,13 +104,15 @@ export async function POST(req: NextRequest) {
     })
 
     if (!pageRes.ok) {
-      // Zillow always blocks server-side fetches. Parse what we can from the URL and
-      // return a partial result with a friendly hint instead of a hard error.
+      // Many listing sites block server-side fetches. Parse what we can from the URL slug
+      // and return a partial result with a friendly hint instead of a hard error.
       const urlParsed = parseFromUrl(url)
       const hasPartial = !!(urlParsed.address || urlParsed.city)
-      const hint = isZillow
-        ? 'Zillow blocks automated requests. Address pre-filled from URL — finish filling in the details, or try Realtor.com or Redfin for full auto-fill.'
-        : `Could not fetch listing page (${pageRes.status}). Try Realtor.com or Redfin for best results.`
+      const isRateLimited = pageRes.status === 429 || pageRes.status === 403
+      const siteName = isZillow ? 'Zillow' : parsedUrl.hostname.replace('www.', '')
+      const hint = isRateLimited
+        ? `${siteName} is blocking automated requests right now. ${hasPartial ? 'Address pre-filled from URL — ' : ''}Fill in the remaining details manually, or try again in a few minutes.`
+        : `Could not fetch listing page (${pageRes.status}). Try pasting the URL again or fill in details manually.`
 
       return NextResponse.json(
         {

@@ -167,7 +167,7 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | n
         body: JSON.stringify({ url: importUrl.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) { setImportError(data.error ?? 'Import failed'); return }
+      if (!res.ok && !data.partial) { setImportError(data.error ?? 'Import failed'); return }
       setForm(f => ({
         ...f,
         ...(data.address    ? { address:    data.address }                     : {}),
@@ -183,8 +183,12 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | n
         ...(data.description ? { description: data.description.slice(0, 900) } : {}),
         ...(data.photos?.length > 0 ? { photos: data.photos }                  : {}),
       }))
-      setShowImport(false)
-      setImportUrl('')
+      if (data.partial && data.hint) {
+        setImportError('⚠ ' + data.hint)
+      } else {
+        setShowImport(false)
+        setImportUrl('')
+      }
     } catch (e) {
       setImportError(e instanceof Error ? e.message : 'Network error')
     } finally {
