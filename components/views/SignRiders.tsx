@@ -68,6 +68,10 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
   const [msg, setMsg] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const [tcaUploading, setTcaUploading] = useState(false)
+  const [importUrl, setImportUrl] = useState('')
+  const [importLoading, setImportLoading] = useState(false)
+  const [importError, setImportError] = useState('')
+  const [showImport, setShowImport] = useState(false)
   const photoRef = useRef<HTMLInputElement>(null)
   const tcaRef = useRef<HTMLInputElement>(null)
   const [marketingPartners, setMarketingPartners] = useState<MarketingPartner[]>([])
@@ -151,6 +155,42 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
   }, [profile?.id])
 
   function set(k: string, v: unknown) { setForm(f => ({ ...f, [k]: v })) }
+
+  async function runImport() {
+    if (!importUrl.trim()) return
+    setImportLoading(true)
+    setImportError('')
+    try {
+      const res = await fetch('/api/listing-import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setImportError(data.error ?? 'Import failed'); return }
+      setForm(f => ({
+        ...f,
+        ...(data.address    ? { address:    data.address }                     : {}),
+        ...(data.city       ? { city:       data.city }                        : {}),
+        ...(data.state      ? { state:      data.state }                       : {}),
+        ...(data.zip        ? { zip:        data.zip }                         : {}),
+        ...(data.list_price != null ? { list_price: String(data.list_price) }  : {}),
+        ...(data.beds       != null ? { beds:       String(data.beds) }        : {}),
+        ...(data.baths      != null ? { baths:      String(data.baths) }       : {}),
+        ...(data.sqft       != null ? { sqft:       String(data.sqft) }        : {}),
+        ...(data.lot_size   ? { lot_size:   data.lot_size }                    : {}),
+        ...(data.year_built != null ? { year_built: String(data.year_built) }  : {}),
+        ...(data.description ? { description: data.description.slice(0, 900) } : {}),
+        ...(data.photos?.length > 0 ? { photos: data.photos }                  : {}),
+      }))
+      setShowImport(false)
+      setImportUrl('')
+    } catch (e) {
+      setImportError(e instanceof Error ? e.message : 'Network error')
+    } finally {
+      setImportLoading(false)
+    }
+  }
 
   function applyPartner(p: MarketingPartner) {
     setForm(f => ({
@@ -323,7 +363,30 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
 
           {/* Property Info */}
           <section>
-            <SectionHead title="Property" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <SectionHead title="Property" />
+              <button type="button" onClick={() => { setShowImport(v => !v); setImportError('') }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, color: '#1D4ED8', cursor: 'pointer' }}>
+                ✨ Import from listing link
+              </button>
+            </div>
+            {showImport && (
+              <div style={{ marginBottom: 16, padding: 16, background: '#F8FAFC', border: '1px solid #E4E8EC', borderRadius: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8 }}>Paste a Zillow, Realtor.com, or MLS listing URL</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input type="url" placeholder="https://www.zillow.com/homedetails/..."
+                    value={importUrl} onChange={e => setImportUrl(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && runImport()}
+                    style={{ flex: 1, padding: '8px 12px', border: '1.5px solid #E4E8EC', borderRadius: 8, fontSize: 13, outline: 'none', fontFamily: 'inherit' }} />
+                  <button type="button" onClick={runImport} disabled={importLoading || !importUrl.trim()}
+                    style={{ padding: '8px 16px', background: importLoading ? '#93C5D7' : '#0A2540', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: importLoading ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+                    {importLoading ? 'Scanning…' : 'Fill it in →'}
+                  </button>
+                </div>
+                {importError && <div style={{ marginTop: 8, fontSize: 12, color: '#B0504A', background: '#FBF1F0', border: '1px solid #EAD6D1', borderRadius: 6, padding: '7px 10px' }}>{importError}</div>}
+                <div style={{ marginTop: 7, fontSize: 10.5, color: '#9CA3AF' }}>AI scans the page and fills address, price, beds, baths, sqft, description, and photos. Review before saving.</div>
+              </div>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <Field label="Street Address *" name="address" placeholder="123 Main St" value={form.address} onChange={set} />
               <Field label="City" name="city" placeholder="Salt Lake City" half value={form.city} onChange={set} />
