@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { renderRateGraphic } from '@/lib/rateGraphicCanvas'
+import { BetterDisclaimer } from '@/lib/disclaimer'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -11,7 +12,7 @@ const C = {
 const NEO_WHITE_LOGO = 'https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png'
 const NEO_BIG_LOGO = 'https://8blocks.s3-us-west-1.amazonaws.com/neo/images/logo-big.jpg'
 const EHL_LOGO = 'https://ourcpb.bank/wp-content/uploads/2024/03/equal-housing-lender-logo-png-transparent.png'
-const DISCLAIMER = 'Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details. | © 2026 Better Home & Finance Holding Company and/or its affiliates. Better is a family of companies. Better Mortgage Corporation provides home loans; Better Real Estate, LLC and Better Real Estate California Inc License # 02164055 provides real estate services; Better Cover, LLC sells insurance products; and Better Settlement Services provides title insurance services; and Better Inspect, LLC provides home inspection services. All rights reserved. Better BMC operates under the name Better Mortgage Corporation in New York. Home lending products offered by Better Mortgage Corporation. Better Mortgage Corporation is a direct lender. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Loans made or arranged pursuant to a California Finance Lenders Law License. Not available in all states. Equal Housing Lender. NMLS Consumer Access | Better Real Estate, LLC dba BRE, Better Home Services, BRE Services, LLC and Better Real Estate, and operating in the State of California through its wholly owned subsidiary Better Real Estate California Inc., is a licensed real estate brokerage and maintains its corporate headquarters at 325-41 Chestnut Street, Suite 826, Philadelphia, PA 19106. Equal Housing Opportunity. All rights reserved. | Better Settlement Services, LLC. 325-41 Chestnut Street, Suite 803, Philadelphia, PA 19106. | Homeowners insurance policies are offered through Better Cover, LLC, a Pennsylvania Resident Producer Agency. License #881593. 325-41 Chestnut Street, Suite 807, Philadelphia, PA 19106. | Better Inspect, LLC maintains its corporate headquarters at 325-41 Chestnut Street, Suite 846, Philadelphia, PA 19106. | Better Mortgage Corporation, Better Real Estate, LLC, Better Settlement Services, LLC, Better Cover, LLC, Better Connect, and Better Inspect, LLC are separate operating subsidiaries of Better Home & Finance Holding Company. Each company is a separate legal entity operated and managed through its own management and governance structure as required by its state of incorporation, and applicable legal and regulatory requirements. Products not available in all states. | Licensed by the Department of Financial Protection and Innovation under the California Residential Mortgage Lending Act.'
+const DISCLAIMER = 'Special financing incentive available! This home qualifies for a reduced interest rate or closing cost credit when financed through NEO Home Loans, the preferred lender. Participation is optional; buyers may use any lender of their choice. Contact listing agent or lender for details.'
 
 interface PageData {
   id: string; slug: string; address: string; city: string; state: string; zip: string
@@ -989,7 +990,7 @@ function flyerSellerAdvantage(p: PageData) {
   const scheduleUrl = (p as any).schedule_url ?? ''
   const qrTarget = scheduleUrl || `https://neofinfree.com/open-house/${p.slug}`
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrTarget)}&size=300x300&margin=2&color=000000`
-  const DISC = `Illustrative example only, based on a ${price} purchase price. *APR and **payment estimates exclude taxes and insurance. Actual rate, payment, and closing costs vary by borrower, property, and market conditions at application; not a commitment to lend. ARM payment may adjust after the initial period. Builder promotions shown reflect publicly advertised Utah offers, for illustration only; terms are set by each builder and subject to change. This information is provided for educational and informational purposes only and should not be considered financial, legal, tax, or investment advice. Loan programs, rates, terms, and eligibility requirements are subject to change and may vary based on individual circumstances. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan. © 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation provides home loans; Better Real Estate, LLC (CA License # 02164055) provides real estate services; Better Cover, LLC sells insurance products; Better Settlement Services provides title insurance; Better Inspect, LLC provides home inspection services. Home lending products offered by Better Mortgage Corporation. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Not available in all states. Equal Housing Lender. www.nmlsconsumeraccess.org`
+  const DISC = `Illustrative example only, based on a ${price} purchase price. *APR and **payment estimates exclude taxes and insurance. Actual rate, payment, and closing costs vary by borrower, property, and market conditions at application; not a commitment to lend. ARM payment may adjust after the initial period. Builder promotions shown reflect publicly advertised Utah offers, for illustration only; terms are set by each builder and subject to change. This information is provided for educational and informational purposes only and should not be considered financial, legal, tax, or investment advice. Loan programs, rates, terms, and eligibility requirements are subject to change and may vary based on individual circumstances. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan.`
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Seller Advantage — ${p.address || 'Handout'}</title><style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1646,6 +1647,13 @@ export default function AgentPageClient({ slug }: { slug: string }) {
           </Section>
         )}
 
+      </div>
+
+      {/* Disclaimer */}
+      <div style={{ background: '#F8FAFC', borderTop: '1px solid #E2E8F0', padding: '28px 24px' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+          <BetterDisclaimer />
+        </div>
       </div>
     </div>
   )

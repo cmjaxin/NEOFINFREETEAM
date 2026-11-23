@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { BetterDisclaimer } from '@/lib/disclaimer'
 
 interface AFScenario { header: string; rate: number; apr: number; payment: number }
 
@@ -463,10 +464,7 @@ export default function PageClient({ slug }: { slug: string }) {
               <strong style={{ color: '#64748B' }}>Disclaimer: </strong>
               {`Illustrative example only. ${page.scenarios?.map(s => `${s.header}: ${fmtRate(s.rate)} interest rate (${fmtRate(s.apr)} APR), estimated total monthly payment of ${fmt(s.payment)}.`).join(' ')} Payments include estimated P&I, mortgage insurance, taxes and insurance. Rates and programs subject to change. Not a commitment to lend. All loans subject to credit approval. NEO Home Loans is an equal housing lender. Educational purposes only. Your actual rate, payment, and costs could be higher. Get an official Loan Estimate before choosing a loan.`}
             </p>
-            <p style={{ margin: 0 }}>
-              {`© 2026 Better Home & Finance Holding Company and/or its affiliates. Better Mortgage Corporation provides home loans; Better Real Estate, LLC (CA License # 02164055) provides real estate services; Better Cover, LLC sells insurance products; Better Settlement Services provides title insurance; Better Inspect, LLC provides home inspection services. Home lending products offered by Better Mortgage Corporation. NMLS #330511. 1 World Trade Center, 80th Floor, New York, NY 10007. Not available in all states. Equal Housing Lender. `}
-              <a href="https://www.nmlsconsumeraccess.org" target="_blank" rel="noopener noreferrer" style={{ color: '#64748B', textDecoration: 'underline' }}>www.nmlsconsumeraccess.org</a>
-            </p>
+            <BetterDisclaimer style={{ marginTop: 12 }} />
           </div>
         </div>
       </div>
