@@ -210,6 +210,16 @@ export default function OpenHousePage({ slug }: { slug: string }) {
   const [dbError, setDbError] = useState<string | null>(null)
   const [showLead, setShowLead] = useState(false)
   const leadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Inline lead form — must be declared here (before any conditional returns) per React rules
+  const [leadName, setLeadName] = useState('')
+  const [leadEmail, setLeadEmail] = useState('')
+  const [leadPhone, setLeadPhone] = useState('')
+  const [leadNote, setLeadNote] = useState('')
+  const [leadDone, setLeadDone] = useState(false)
+  const [leadErr, setLeadErr] = useState('')
+  const [leadSubmitting, setLeadSubmitting] = useState(false)
+  const inlineIframeRef = useRef<HTMLIFrameElement>(null)
+  const inlineFormRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -303,17 +313,6 @@ export default function OpenHousePage({ slug }: { slug: string }) {
   const yr1Savings = (yr1 && yr3plus) ? Math.round(yr3plus.piti - yr1.piti) : 0
   const effectiveDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   const reviewDate = new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-
-  // ─── Inline lead form state ────────────────────────────────────────────────
-  const [leadName, setLeadName] = useState('')
-  const [leadEmail, setLeadEmail] = useState('')
-  const [leadPhone, setLeadPhone] = useState('')
-  const [leadNote, setLeadNote] = useState('')
-  const [leadDone, setLeadDone] = useState(false)
-  const [leadErr, setLeadErr] = useState('')
-  const [leadSubmitting, setLeadSubmitting] = useState(false)
-  const inlineIframeRef = useRef<HTMLIFrameElement>(null)
-  const inlineFormRef = useRef<HTMLFormElement>(null)
 
   async function handleInlineLead(e: React.FormEvent) {
     e.preventDefault()
