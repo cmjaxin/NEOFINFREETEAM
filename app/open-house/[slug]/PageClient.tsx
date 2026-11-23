@@ -962,7 +962,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         /* Loan details table */
         .oh-details-table {
           border: 1px solid ${C.border}; border-radius: 12px; overflow: hidden;
-          margin: 16px 0;
+          margin: 16px 0; width: 100%;
         }
         .oh-details-row {
           display: flex; justify-content: space-between;
