@@ -333,7 +333,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
-function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; onClose: () => void; onSaved: () => void }) {
+export function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -690,9 +690,10 @@ function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; o
             </div>
             {showImport && (
               <div style={{ marginBottom: 16, padding: 16, background: '#F8FAFC', border: '1px solid #E4E8EC', borderRadius: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4 }}>
                   Paste a Zillow, Realtor.com, or MLS listing URL
                 </div>
+                <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 8 }}>Realtor.com recommended for best results</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input
                     type="url"

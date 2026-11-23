@@ -62,7 +62,7 @@ function Field({ label, name, type = 'text', placeholder = '', half = false, not
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
-function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; onClose: () => void; onSaved: () => void }) {
+export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -372,7 +372,8 @@ function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; on
             </div>
             {showImport && (
               <div style={{ marginBottom: 16, padding: 16, background: '#F8FAFC', border: '1px solid #E4E8EC', borderRadius: 10 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 8 }}>Paste a Zillow, Realtor.com, or MLS listing URL</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 4 }}>Paste a Zillow, Realtor.com, or MLS listing URL</div>
+                <div style={{ fontSize: 11, color: '#6B7280', marginBottom: 8 }}>Realtor.com recommended for best results</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input type="url" placeholder="https://www.zillow.com/homedetails/..."
                     value={importUrl} onChange={e => setImportUrl(e.target.value)}

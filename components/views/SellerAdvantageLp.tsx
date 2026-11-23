@@ -174,3 +174,5 @@ export default function SellerAdvantageLp() {
     </div>
   )
 }
+
+export { SellerAdvantageLp as SAModal }

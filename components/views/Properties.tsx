@@ -1,6 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useApp } from '@/lib/appContext'
+import { CreateModal as ListingModal } from './OpenHouse'
+import { CreateModal as OHEventModal } from './OpenHouseEvents'
+import { CreateModal as SignRiderModal } from './SignRiders'
+import { SAModal } from './SellerAdvantageLp'
 
 const C = {
   navy: '#0A2540', accent: '#5BCBF5', white: '#fff',
@@ -24,6 +28,11 @@ interface PropertyGroup {
   listing: OHPage | null; openHouses: OHPage[]; signRiders: OHPage[]
   photo: string | null; list_price: number; beds: number; baths: number; sqft: number
 }
+
+type ModalState = {
+  type: 'listing' | 'ohEvent' | 'signRider' | 'sa'
+  editing: OHPage | null
+} | null
 
 function fmt$(n: number) { return n ? '$' + Math.round(n).toLocaleString() : '' }
 function fmtNum(n: number) { return n ? n.toLocaleString() : '' }
@@ -82,14 +91,20 @@ function AssetTile({
 }
 
 function PropertyRow({
-  group, saPages, onEdit, onCreate,
+  group, saPages, allSignRiders, onEdit, onCreate,
 }: {
-  group: PropertyGroup; saPages: SAPage[]
-  onEdit: (id: string, type: 'listing' | 'openhouse' | 'signrider' | 'sa') => void
-  onCreate: (type: 'listing' | 'openhouse' | 'signrider' | 'sa') => void
+  group: PropertyGroup; saPages: SAPage[]; allSignRiders: OHPage[]
+  onEdit: (page: OHPage, type: 'listing' | 'ohEvent' | 'signRider' | 'sa') => void
+  onCreate: (type: 'listing' | 'ohEvent' | 'signRider' | 'sa', address?: string) => void
 }) {
   const hasOH = group.openHouses.length > 0
   const hasSA = saPages.length > 0
+
+  // Check if any sign rider matches this property's address
+  const linkedRiders = allSignRiders.filter(
+    sr => sr.address.toLowerCase().trim() === group.address.toLowerCase().trim()
+  )
+  const hasRider = linkedRiders.length > 0
 
   return (
     <div style={{
@@ -116,12 +131,23 @@ function PropertyRow({
 
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Address */}
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 15.5, color: C.navy, lineHeight: 1.3 }}>{group.address}</div>
-          <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
-            {[group.city, group.state, group.zip].filter(Boolean).join(', ')}
+        {/* Address + sign rider chip */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15.5, color: C.navy, lineHeight: 1.3 }}>{group.address}</div>
+            <div style={{ fontSize: 12.5, color: C.muted, marginTop: 2 }}>
+              {[group.city, group.state, group.zip].filter(Boolean).join(', ')}
+            </div>
           </div>
+          {hasRider && (
+            <div style={{
+              flexShrink: 0, padding: '3px 9px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+              background: C.yellow + '15', border: `1px solid ${C.yellow}44`, color: C.yellow,
+              whiteSpace: 'nowrap',
+            }}>
+              🪧 Sign Rider{linkedRiders.length > 1 ? ` ×${linkedRiders.length}` : ''}
+            </div>
+          )}
         </div>
 
         {/* Specs */}
@@ -133,24 +159,24 @@ function PropertyRow({
           </div>
         )}
 
-        {/* Asset tiles — 3 types: Listing, Open House, Seller Advantage */}
+        {/* Asset tiles — Listing, Open House, Seller Advantage */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <AssetTile
             label="Listing Page" color={C.green} exists={!!group.listing}
-            slug={group.listing?.slug} route="open-house"
-            onAction={() => group.listing ? onEdit(group.listing.id, 'listing') : onCreate('listing')}
+            slug={group.listing?.slug} route="listing-presentation"
+            onAction={() => group.listing ? onEdit(group.listing, 'listing') : onCreate('listing', group.address)}
             actionLabel={group.listing ? 'Edit' : '+ Create'}
           />
           <AssetTile
             label="Open Houses" color={C.accent} exists={hasOH} count={group.openHouses.length}
             slug={group.openHouses[0]?.slug} route="open-house"
-            onAction={() => hasOH ? onEdit(group.openHouses[0].id, 'openhouse') : onCreate('openhouse')}
+            onAction={() => hasOH ? onEdit(group.openHouses[0], 'ohEvent') : onCreate('ohEvent', group.address)}
             actionLabel={hasOH ? `Edit${group.openHouses.length > 1 ? ` (${group.openHouses.length})` : ''}` : '+ Add'}
           />
           <AssetTile
             label="Seller Adv." color={C.purple} exists={hasSA}
             slug={saPages[0]?.slug} route="seller-advantage"
-            onAction={() => hasSA ? onEdit(saPages[0].id, 'sa') : onCreate('sa')}
+            onAction={() => hasSA ? onEdit(saPages[0] as unknown as OHPage, 'sa') : onCreate('sa')}
             actionLabel={hasSA ? 'Edit' : '+ Add'}
           />
         </div>
@@ -187,12 +213,42 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+// Overlay wrapper for modals
+function ModalOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(10,37,64,0.55)',
+        zIndex: 1000, display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+        overflowY: 'auto', padding: '24px 16px',
+      }}
+    >
+      <div style={{ position: 'relative', width: '100%', maxWidth: 760, background: C.white, borderRadius: 16, boxShadow: '0 8px 40px rgba(10,37,64,0.18)' }}>
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute', top: 14, right: 14, zIndex: 10,
+            width: 32, height: 32, borderRadius: '50%', border: `1px solid ${C.border}`,
+            background: C.white, cursor: 'pointer', fontSize: 18, lineHeight: 1,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.dim,
+          }}
+        >
+          ×
+        </button>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function Properties() {
-  const { supabase, profile, setView, setPendingEdit } = useApp()
+  const { supabase, profile } = useApp()
   const [pages, setPages] = useState<OHPage[]>([])
   const [saPages, setSaPages] = useState<SAPage[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [modalState, setModalState] = useState<ModalState>(null)
 
   async function load() {
     if (!profile?.id) return
@@ -255,20 +311,21 @@ export default function Properties() {
     return p.address.toLowerCase().includes(q) || p.city.toLowerCase().includes(q)
   })
 
-  function goEdit(id: string, type: 'listing' | 'openhouse' | 'signrider' | 'sa') {
-    setPendingEdit(id, type)
-    if (type === 'listing') setView('openhouse')
-    else if (type === 'openhouse') setView('ohevents')
-    else if (type === 'signrider') setView('signriders')
-    else setView('sellerlp')
+  function openEdit(page: OHPage, type: 'listing' | 'ohEvent' | 'signRider' | 'sa') {
+    setModalState({ type, editing: page })
   }
 
-  function goCreate(type: 'listing' | 'openhouse' | 'signrider' | 'sa') {
-    setPendingEdit(null, null)
-    if (type === 'listing') setView('openhouse')
-    else if (type === 'openhouse') setView('ohevents')
-    else if (type === 'signrider') setView('signriders')
-    else setView('sellerlp')
+  function openCreate(type: 'listing' | 'ohEvent' | 'signRider' | 'sa') {
+    setModalState({ type, editing: null })
+  }
+
+  function closeModal() {
+    setModalState(null)
+  }
+
+  function handleSaved() {
+    load()
+    setModalState(null)
   }
 
   const hasAnything = filtered.length > 0 || allSignRiders.length > 0 || saPages.length > 0
@@ -282,13 +339,13 @@ export default function Properties() {
           <div style={{ fontSize: 13.5, color: C.muted, marginTop: 3 }}>Every campaign, organized by home</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => goCreate('signrider')} style={{
+          <button onClick={() => openCreate('signRider')} style={{
             padding: '10px 16px', background: C.white, border: `1px solid ${C.border}`, borderRadius: 10,
             color: C.yellow, fontSize: 13.5, fontWeight: 700, cursor: 'pointer',
           }}>
             + Sign Rider
           </button>
-          <button onClick={() => goCreate('listing')} style={{
+          <button onClick={() => openCreate('listing')} style={{
             padding: '10px 20px', background: C.navy, border: 'none', borderRadius: 10,
             color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: 8,
@@ -331,7 +388,7 @@ export default function Properties() {
           <div style={{ fontSize: 14, color: C.muted, marginBottom: 24, maxWidth: 380, margin: '0 auto 24px' }}>
             Create a listing page to get started — open house, sign rider, and seller advantage campaigns attach automatically.
           </div>
-          <button onClick={() => goCreate('listing')} style={{
+          <button onClick={() => openCreate('listing')} style={{
             padding: '12px 28px', background: C.navy, border: 'none', borderRadius: 10,
             color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer',
           }}>
@@ -350,8 +407,9 @@ export default function Properties() {
                     key={g.key}
                     group={g}
                     saPages={saForGroup(g)}
-                    onEdit={goEdit}
-                    onCreate={goCreate}
+                    allSignRiders={allSignRiders}
+                    onEdit={openEdit}
+                    onCreate={openCreate}
                   />
                 ))}
               </div>
@@ -390,7 +448,7 @@ export default function Properties() {
                       View ↗
                     </a>
                     <button
-                      onClick={() => goEdit(p.id, 'signrider')}
+                      onClick={() => openEdit(p, 'signRider')}
                       style={{
                         padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`,
                         background: C.white, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: C.navy, flexShrink: 0,
@@ -433,7 +491,7 @@ export default function Properties() {
                       View ↗
                     </a>
                     <button
-                      onClick={() => goEdit(sa.id, 'sa')}
+                      onClick={() => openEdit(sa as unknown as OHPage, 'sa')}
                       style={{
                         padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`,
                         background: C.white, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: C.navy, flexShrink: 0,
@@ -447,6 +505,43 @@ export default function Properties() {
             </>
           )}
         </>
+      )}
+
+      {/* ── Inline Modals ── */}
+      {modalState?.type === 'listing' && (
+        <ModalOverlay onClose={closeModal}>
+          <ListingModal
+            editing={modalState.editing as Parameters<typeof ListingModal>[0]['editing']}
+            onClose={closeModal}
+            onSaved={handleSaved}
+          />
+        </ModalOverlay>
+      )}
+
+      {modalState?.type === 'ohEvent' && (
+        <ModalOverlay onClose={closeModal}>
+          <OHEventModal
+            editing={modalState.editing as Parameters<typeof OHEventModal>[0]['editing']}
+            onClose={closeModal}
+            onSaved={handleSaved}
+          />
+        </ModalOverlay>
+      )}
+
+      {modalState?.type === 'signRider' && (
+        <ModalOverlay onClose={closeModal}>
+          <SignRiderModal
+            editing={modalState.editing as Parameters<typeof SignRiderModal>[0]['editing']}
+            onClose={closeModal}
+            onSaved={handleSaved}
+          />
+        </ModalOverlay>
+      )}
+
+      {modalState?.type === 'sa' && (
+        <ModalOverlay onClose={closeModal}>
+          <SAModal />
+        </ModalOverlay>
       )}
     </div>
   )
