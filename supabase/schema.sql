@@ -138,3 +138,27 @@ create policy "approved update templates" on message_templates for update using 
 -- create policy "public read headshots" on storage.objects for select using (bucket_id = 'headshots');
 -- create policy "approved upload headshots" on storage.objects for insert with check (bucket_id = 'headshots' and is_approved());
 -- create policy "approved update headshots" on storage.objects for update using (bucket_id = 'headshots' and is_approved());
+
+-- ─── Page Leads ───────────────────────────────────────────────────────────────
+-- Captures buyer leads from all public landing pages (open house, listing, sign rider, seller advantage)
+create table if not exists page_leads (
+  id               uuid primary key default gen_random_uuid(),
+  created_at       timestamptz not null default now(),
+  page_id          uuid,                        -- open_house_pages.id or seller_advantage_pages.id
+  page_type        text not null default 'open_house',  -- 'open_house' | 'listing' | 'sign_rider' | 'seller_advantage'
+  advisor_user_id  uuid references auth.users(id) on delete set null,
+  name             text not null,
+  email            text not null,
+  phone            text,
+  address          text,
+  source           text
+);
+
+-- Allow anonymous inserts (public landing pages have no auth session)
+alter table page_leads enable row level security;
+create policy "Anyone can submit a lead" on page_leads
+  for insert with check (true);
+
+-- Only the advisor who owns the page (and admins) can read their leads
+create policy "Advisors can read own leads" on page_leads
+  for select using (advisor_user_id = auth.uid());

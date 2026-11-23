@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 interface Props {
   address: string
@@ -7,9 +8,12 @@ interface Props {
   bntouchUserId: string | null
   onDismiss: () => void
   callout?: string | null
+  pageId?: string | null
+  pageType?: string | null
+  advisorUserId?: string | null
 }
 
-export default function LeadCaptureModal({ address, advisorName, bntouchUserId, onDismiss, callout }: Props) {
+export default function LeadCaptureModal({ address, advisorName, bntouchUserId, onDismiss, callout, pageId, pageType, advisorUserId }: Props) {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -26,13 +30,33 @@ export default function LeadCaptureModal({ address, advisorName, bntouchUserId, 
     return ''
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const err = validate()
     if (err) { setError(err); return }
     setError('')
     setSubmitting(true)
+
+    // Fire BNTouch form submit
     if (formRef.current) formRef.current.submit()
+
+    // Also save to Supabase so account owners see leads in-app
+    try {
+      const sb = createClient()
+      await sb.from('page_leads').insert({
+        page_id: pageId ?? null,
+        page_type: pageType ?? 'open_house',
+        advisor_user_id: advisorUserId ?? null,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        address,
+        source: advisorName ? `${advisorName} — ${address}` : address,
+      })
+    } catch {
+      // Non-blocking — BNTouch is primary, Supabase is secondary
+    }
+
     setTimeout(() => { setSubmitted(true); setSubmitting(false) }, 1200)
   }
 
