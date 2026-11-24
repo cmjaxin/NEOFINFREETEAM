@@ -214,6 +214,47 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         )
       })()}
 
+      {/* Rate Scenario Cards */}
+      {page.rate_scenarios && page.rate_scenarios.length > 0 && (
+        <div style={{ background: C.bg, padding: '20px 20px 0' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                {page.rate_scenarios.map((s: any, i: number) => {
+                  const hasBuydown = s.buydown_rate !== s.market_rate
+                  const savings = s.market_payment - s.buydown_payment
+                  return (
+                    <div key={i} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: `1px solid ${C.border}` }}>
+                      <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.navy, marginBottom: 8 }}>{hasBuydown ? s.label : 'Illustrative Comparison Rate'}</div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
+                        {hasBuydown && <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>}
+                        <span style={{ fontSize: 22, fontWeight: 900, color: C.navy }}>{s.buydown_rate.toFixed(3)}%</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                        {hasBuydown && <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>${s.market_payment.toLocaleString()}</span>}
+                        <span style={{ fontSize: 26, fontWeight: 900, color: C.navy }}>${s.buydown_payment.toLocaleString()}<span style={{ fontSize: 13, fontWeight: 600 }}>/mo</span></span>
+                      </div>
+                      {hasBuydown && savings > 0 && (
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Est. Payment Difference: ${savings.toLocaleString()}/mo</div>
+                          <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 3, lineHeight: 1.5 }}>vs. illustrative comparison at {s.market_rate.toFixed(3)}%</div>
+                        </div>
+                      )}
+                      {s.apr > 0 && <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>APR {s.apr.toFixed(3)}%</div>}
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ padding: '10px 20px', borderTop: `1px solid ${C.border}` }}>
+                <p style={{ fontSize: 9, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
+                  Rates and payments are estimates, not a commitment to lend. Actual rate, payment, and costs depend on credit, down payment, and property details at time of application.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 900, margin: '0 auto', padding: '24px 20px 60px' }}>
 
         {/* Photos */}

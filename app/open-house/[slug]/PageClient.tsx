@@ -744,6 +744,48 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         )}
       </div>
 
+      {/* Always-visible CTAs — Apply Now + Schedule */}
+      {(page.apply_url || page.schedule_url) && (
+        <div style={{ background: C.bg, padding: '0 20px 40px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {page.apply_url && (
+              <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: '24px 28px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Ready to move forward?</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 6 }}>Get Fully Underwritten Approval Today</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 20 }}>Start your mortgage application online in minutes.</div>
+                <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 36px', borderRadius: 10, textDecoration: 'none' }}>
+                  Get Approved →
+                </a>
+              </div>
+            )}
+            {page.schedule_url && (
+              <div style={{ background: C.navy, borderRadius: 16, padding: '32px 28px 28px', textAlign: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Ready to connect?</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 20 }}>
+                  Schedule a time to talk with {page.advisor_name?.split(' ')[0] || 'your advisor'}
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 28, textAlign: 'left', flexWrap: 'wrap' }}>
+                  {[
+                    { num: '01', text: 'Walk through the loan scenario and payment breakdown in detail' },
+                    { num: '02', text: 'Help you secure below-market interest rates on your next home purchase' },
+                  ].map(r => (
+                    <div key={r.num} style={{ flex: '1 1 200px', background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: C.accent, letterSpacing: '0.06em', flexShrink: 0, marginTop: 1 }}>{r.num}</div>
+                      <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{r.text}</div>
+                    </div>
+                  ))}
+                </div>
+                <a href={page.schedule_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-block', background: C.accent, color: C.navy, fontWeight: 800, fontSize: 15, padding: '14px 32px', borderRadius: 10, textDecoration: 'none' }}>
+                  Schedule a Free Consultation →
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Legal Disclaimer Footer */}
       <div style={{ background: '#F1F5F9', borderTop: '1px solid #E4E8EC', padding: '20px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', fontSize: 9, color: '#94A3B8', lineHeight: 1.7 }}>
