@@ -1042,6 +1042,8 @@ export function CreateModal({ editing, prefill, onClose, onSaved }: { editing: O
         existingScenarios={form.rate_scenarios ?? []}
         onSave={(scenarios) => set('rate_scenarios', scenarios)}
         onClose={() => setShowScenarioBuilder(false)}
+        zip={form.zip}
+        state={form.state}
       />
     )}
     </>
