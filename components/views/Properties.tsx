@@ -403,55 +403,103 @@ function StatsTab() {
     </div>
   )
 
-  const totalViews = Object.values(viewCounts).reduce((a, b) => a + b, 0)
-  const totalLeads = Object.values(leadCounts).reduce((a, b) => a + b, 0)
+  const listingPages = ohPages.filter((p: any) => p.page_type !== 'sign_rider')
+  const signRiders = ohPages.filter((p: any) => p.page_type === 'sign_rider')
+
+  const listingViews = listingPages.reduce((n: number, p: any) => n + (viewCounts[p.id] ?? 0), 0)
+  const listingLeads = listingPages.reduce((n: number, p: any) => n + (leadCounts[p.id] ?? 0), 0)
+  const riderViews = signRiders.reduce((n: number, p: any) => n + (viewCounts[p.id] ?? 0), 0)
+
+  function PageRow({ p, i, showLeads }: { p: any; i: number; showLeads: boolean }) {
+    const views = viewCounts[p.id] ?? 0
+    const lcount = leadCounts[p.id] ?? 0
+    const cvr = views > 0 ? ((lcount / views) * 100).toFixed(1) + '%' : '—'
+    const href = `/${p.page_type === 'sign_rider' ? 'sign-rider' : 'open-house'}/${p.slug}`
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`, flexWrap: 'wrap' }}>
+        {p.photos?.[0]
+          ? <img src={p.photos[0]} alt={p.address} style={{ width: 48, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+          : <div style={{ width: 48, height: 40, borderRadius: 6, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+              {p.page_type === 'sign_rider' ? '🪧' : '🏡'}
+            </div>
+        }
+        <div style={{ flex: 1, minWidth: 140 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.navy }}>{p.address}</div>
+          <div style={{ fontSize: 11, color: C.muted }}>{[p.city, p.state].filter(Boolean).join(', ')}</div>
+        </div>
+        <div style={{ display: 'flex', gap: 24, flexShrink: 0 }}>
+          {[
+            { label: 'Views', val: views },
+            ...(showLeads ? [{ label: 'Leads', val: lcount }, { label: 'CVR', val: cvr }] : []),
+          ].map(s => (
+            <div key={s.label} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 20, fontWeight: 900, color: C.navy }}>{s.val}</div>
+              <div style={{ fontSize: 10, color: C.muted, fontWeight: 600 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        <a href={href} target="_blank" rel="noopener noreferrer"
+          style={{ fontSize: 11, color: C.accent, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>View ↗</a>
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
-        {[
-          { label: 'Total Page Views', value: totalViews, icon: '👁️' },
-          { label: 'Total Leads', value: totalLeads, icon: '📋' },
-          { label: 'Active Listings', value: ohPages.length, icon: '🏡' },
-          { label: 'Conversion Rate', value: totalViews > 0 ? `${((totalLeads / totalViews) * 100).toFixed(1)}%` : '—', icon: '📈' },
-        ].map(s => (
-          <div key={s.label} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
-            <div style={{ fontSize: 24, fontWeight: 900, color: C.navy }}>{s.value}</div>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 3, fontWeight: 600 }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Per Page</div>
-        {ohPages.map((p: any, i: number) => {
-          const views = viewCounts[p.id] ?? 0
-          const lcount = leadCounts[p.id] ?? 0
-          const cvr = views > 0 ? ((lcount / views) * 100).toFixed(1) + '%' : '—'
-          return (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`, flexWrap: 'wrap' }}>
-              {p.photos?.[0]
-                ? <img src={p.photos[0]} alt={p.address} style={{ width: 48, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
-                : <div style={{ width: 48, height: 40, borderRadius: 6, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏡</div>
-              }
-              <div style={{ flex: 1, minWidth: 140 }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: C.navy }}>{p.address}</div>
-                <div style={{ fontSize: 11, color: C.muted }}>{[p.city, p.state].filter(Boolean).join(', ')}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 24, flexShrink: 0 }}>
-                {[{ label: 'Views', val: views }, { label: 'Leads', val: lcount }, { label: 'CVR', val: cvr }].map(s => (
-                  <div key={s.label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 900, color: C.navy }}>{s.val}</div>
-                    <div style={{ fontSize: 10, color: C.muted, fontWeight: 600 }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-              <a href={`/${p.page_type === 'sign_rider' ? 'sign' : 'open-house'}/${p.slug}`} target="_blank" rel="noopener noreferrer"
-                style={{ fontSize: 11, color: C.accent, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>View ↗</a>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+
+      {/* Listing Pages section */}
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.navy, marginBottom: 12 }}>Listing Pages</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 16 }}>
+          {[
+            { label: 'Total Views', value: listingViews, icon: '👁️' },
+            { label: 'Total Leads', value: listingLeads, icon: '📋' },
+            { label: 'Active Pages', value: listingPages.length, icon: '🏡' },
+            { label: 'Conversion Rate', value: listingViews > 0 ? `${((listingLeads / listingViews) * 100).toFixed(1)}%` : '—', icon: '📈' },
+          ].map(s => (
+            <div key={s.label} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px' }}>
+              <div style={{ fontSize: 20, marginBottom: 5 }}>{s.icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: C.navy }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontWeight: 600 }}>{s.label}</div>
             </div>
-          )
-        })}
+          ))}
+        </div>
+        {listingPages.length > 0 && (
+          <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 16px', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Per Listing</div>
+            {listingPages.map((p: any, i: number) => <PageRow key={p.id} p={p} i={i} showLeads={true} />)}
+          </div>
+        )}
       </div>
+
+      {/* Sign Riders section */}
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: C.navy, marginBottom: 12 }}>Sign Riders</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 16 }}>
+          {[
+            { label: 'Total Views', value: riderViews, icon: '👁️' },
+            { label: 'Active Sign Riders', value: signRiders.length, icon: '🪧' },
+          ].map(s => (
+            <div key={s.label} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px' }}>
+              <div style={{ fontSize: 20, marginBottom: 5 }}>{s.icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: C.navy }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontWeight: 600 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        {signRiders.length > 0 && (
+          <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ padding: '10px 16px', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Per Sign Rider</div>
+            {signRiders.map((p: any, i: number) => <PageRow key={p.id} p={p} i={i} showLeads={false} />)}
+          </div>
+        )}
+        {signRiders.length === 0 && (
+          <div style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: '24px 20px', color: C.muted, fontSize: 13, textAlign: 'center' }}>
+            No active sign riders yet.
+          </div>
+        )}
+      </div>
+
     </div>
   )
 }
