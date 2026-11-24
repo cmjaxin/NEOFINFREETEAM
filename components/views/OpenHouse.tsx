@@ -455,7 +455,7 @@ table.ct{width:100%;border-collapse:collapse;font-size:11.5px}
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
-export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | null; onClose: () => void; onSaved: () => void }) {
+export function CreateModal({ editing, prefill, onClose, onSaved }: { editing: OHPage | null; prefill?: Partial<OHPage>; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -496,7 +496,7 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
       })
   }, [profile?.email])
 
-  const init = editing ?? {} as Partial<OHPage>
+  const init = editing ?? prefill ?? {} as Partial<OHPage>
   const [form, setForm] = useState({
     address: init.address ?? '',
     city: init.city ?? '',

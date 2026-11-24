@@ -333,7 +333,7 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
-export function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | null; onClose: () => void; onSaved: () => void }) {
+export function CreateModal({ editing, prefill, onClose, onSaved }: { editing: OHEPage | null; prefill?: Partial<OHEPage>; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -373,7 +373,7 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHEPage | 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.email])
 
-  const init = editing ?? {} as Partial<OHEPage>
+  const init = editing ?? prefill ?? {} as Partial<OHEPage>
   const [form, setForm] = useState({
     address: init.address ?? '',
     city: init.city ?? '',

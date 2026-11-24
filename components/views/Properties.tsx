@@ -201,7 +201,7 @@ function PropertyRow({
           <AssetTile
             label="Open Houses" color={C.accent} exists={hasOH} count={group.openHouses.length}
             slug={group.openHouses[0]?.slug} route="open-house"
-            onAction={() => hasOH ? onEdit(group.openHouses[0], 'ohEvent') : onCreate('ohEvent', group.address)}
+            onAction={() => hasOH ? onEdit(group.openHouses[0], 'ohEvent') : onCreate('ohEvent', group.address, group.listing ?? undefined)}
             actionLabel={hasOH ? `Edit${group.openHouses.length > 1 ? ` (${group.openHouses.length})` : ''}` : '+ Add'}
             onDelete={hasOH ? () => onDeletePage(group.openHouses[0].id) : undefined}
           />
@@ -992,6 +992,7 @@ export default function Properties() {
       {modalState?.type === 'listing' && (
         <ListingModal
           editing={modalState.editing as Parameters<typeof ListingModal>[0]['editing']}
+          prefill={modalState.prefillPage as Parameters<typeof ListingModal>[0]['prefill']}
           onClose={closeModal}
           onSaved={handleSaved}
         />
@@ -999,6 +1000,7 @@ export default function Properties() {
       {modalState?.type === 'ohEvent' && (
         <OHEventModal
           editing={modalState.editing as Parameters<typeof OHEventModal>[0]['editing']}
+          prefill={modalState.prefillPage as Parameters<typeof OHEventModal>[0]['prefill']}
           onClose={closeModal}
           onSaved={handleSaved}
         />
