@@ -36,6 +36,7 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
     .select('id, slug, address, city, state, zip, list_price, beds, baths, sqft, photos, status, rate_scenarios')
     .eq('partner_name', partner.name)
     .eq('status', 'active')
+    .neq('page_type', 'sign_rider')
     .order('created_at', { ascending: false })
 
   const NEO = '#0A2540'
