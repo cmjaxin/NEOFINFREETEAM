@@ -54,6 +54,109 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
   )
 }
 
+// ─── Scenario Chart (TCA fallback) ────────────────────────────────────────────
+type Scenario = { label: string; down_pct: number; market_rate: number; buydown_rate: number; market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number }
+
+function ScenarioChart({ scenarios }: { scenarios: Scenario[] }) {
+  const NEO = '#0A2540'; const CYAN = '#5BCBF5'
+  const maxPmt = Math.max(...scenarios.flatMap(s => [s.market_payment, s.buydown_payment].filter(Boolean)))
+  const barMax = Math.ceil(maxPmt / 500) * 500
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E4E8EC', overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ background: NEO, padding: '14px 20px' }}>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 15, marginBottom: 4 }}>Payment Comparison</div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>
+          Side-by-side look at your financing scenarios — special rate vs. market rate estimates.
+        </div>
+      </div>
+
+      {/* Chart area */}
+      <div style={{ padding: '24px 20px 20px', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: 20, minWidth: scenarios.length > 2 ? scenarios.length * 160 : 'auto', alignItems: 'flex-end', justifyContent: 'center' }}>
+          {scenarios.map((s, i) => {
+            const hasBuydown = s.buydown_rate !== s.market_rate
+            const savings = s.market_payment - s.buydown_payment
+            const marketH = s.market_payment > 0 ? Math.round((s.market_payment / barMax) * 180) : 0
+            const buydownH = s.buydown_payment > 0 ? Math.round((s.buydown_payment / barMax) * 180) : 0
+            return (
+              <div key={i} style={{ flex: 1, minWidth: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                {/* Bar group */}
+                <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 190, width: '100%', justifyContent: 'center' }}>
+                  {/* Market rate bar */}
+                  {s.market_payment > 0 && hasBuydown && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF' }}>
+                        ${s.market_payment.toLocaleString()}
+                      </div>
+                      <div style={{ width: 48, height: marketH, background: 'rgba(156,163,175,0.3)', border: '1.5px solid #9CA3AF', borderRadius: '6px 6px 0 0', position: 'relative' }} />
+                    </div>
+                  )}
+                  {/* Buydown/special rate bar */}
+                  {s.buydown_payment > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ fontSize: 10, fontWeight: 800, color: NEO }}>
+                        ${s.buydown_payment.toLocaleString()}
+                      </div>
+                      <div style={{ width: hasBuydown ? 48 : 72, height: buydownH, background: `linear-gradient(to top, ${NEO} 0%, #1a4a7c 100%)`, borderRadius: '6px 6px 0 0', position: 'relative' }}>
+                        {hasBuydown && savings > 0 && (
+                          <div style={{ position: 'absolute', top: -26, left: '50%', transform: 'translateX(-50%)', background: '#16A34A', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                            Save ${savings.toLocaleString()}/mo
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {/* Baseline */}
+                <div style={{ width: '100%', height: 2, background: '#E4E8EC', marginBottom: 12 }} />
+                {/* Rate display */}
+                <div style={{ textAlign: 'center', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    {hasBuydown && (
+                      <span style={{ fontSize: 11, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>
+                    )}
+                    <span style={{ fontSize: 20, fontWeight: 900, color: NEO }}>{s.buydown_rate.toFixed(3)}%</span>
+                  </div>
+                  <div style={{ fontSize: 9, fontWeight: 800, color: CYAN, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 10, color: '#6B7280', marginTop: 3 }}>
+                    {s.loan_type} · {s.term_years}yr
+                    {s.down_pct > 0 ? ` · ${s.down_pct}% down` : ''}
+                  </div>
+                  {s.apr > 0 && (
+                    <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 2 }}>APR {s.apr.toFixed(3)}%</div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Legend */}
+        {scenarios.some(s => s.buydown_rate !== s.market_rate) && (
+          <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 20, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#6B7280' }}>
+              <div style={{ width: 14, height: 14, background: `linear-gradient(to top, ${NEO} 0%, #1a4a7c 100%)`, borderRadius: 3 }} />
+              Special Financing Rate
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#6B7280' }}>
+              <div style={{ width: 14, height: 14, background: 'rgba(156,163,175,0.3)', border: '1.5px solid #9CA3AF', borderRadius: 3 }} />
+              Market Rate (est.)
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '10px 20px 14px', borderTop: '1px solid #E4E8EC' }}>
+        <p style={{ fontSize: 9, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
+          Payments shown are principal &amp; interest estimates only. Rates and payments are not a commitment to lend. Actual rate, payment, and costs depend on credit profile, down payment, and market conditions at time of application.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Flyer Generator ──────────────────────────────────────────────────────────
 function openFlyer(page: PageData) {
   const NEO = '#0A2540'
@@ -201,6 +304,8 @@ interface PageData {
   schedule_url: string | null
   apply_url: string | null
   bntouch_user_id: string | null
+  partner_id: string | null
+  partner_slug: string | null
 }
 
 export default function OpenHousePage({ slug }: { slug: string }) {
@@ -237,23 +342,28 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           partner_name: '', partner_title: '', partner_email: '', partner_phone: '',
           partner_photo: '', partner_nmls: '', partner_logo: '',
           tca_url: null, tca_screenshot: null, loom_url: null, callout_text: null, schedule_url: null, apply_url: null, loan_description: null, bntouch_user_id: null,
+          partner_id: null, partner_slug: null,
           ...row,
         } as PageData
 
         const fetchExtras = async () => {
-          const [profileRes, partnerRes] = await Promise.all([
+          const [profileRes, partnerRes, dbPartnerRes] = await Promise.all([
             row.created_by
               ? sb.from('profiles').select('bntouch_user_id, schedule_url, apply_url').eq('id', row.created_by).single()
               : Promise.resolve({ data: null }),
             pageData.partner_name
               ? sb.from('marketing_partners').select('logo_url, name')
               : Promise.resolve({ data: null }),
+            row.partner_id
+              ? sb.from('partners').select('slug').eq('id', row.partner_id).single()
+              : Promise.resolve({ data: null }),
           ])
           const profileData = profileRes.data as { bntouch_user_id?: string; schedule_url?: string; apply_url?: string } | null
           const bntouchUserId = profileData?.bntouch_user_id ?? pageData.bntouch_user_id ?? null
           const scheduleUrl = profileData?.schedule_url ?? pageData.schedule_url ?? null
           const applyUrl = profileData?.apply_url ?? pageData.apply_url ?? null
-          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl }
+          const partnerSlug = (dbPartnerRes.data as { slug: string } | null)?.slug ?? null
+          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl, partner_slug: partnerSlug }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
@@ -308,8 +418,17 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           {page.partner_logo ? (
             <img src={page.partner_logo} alt={page.partner_name} style={{ maxHeight: 52, maxWidth: 180, objectFit: 'contain' }} />
           ) : <div />}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ height: 32, width: 'auto' }} />
+            {page.partner_name && (() => {
+              const pSlug = page.partner_name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+              return (
+                <a href={`/partner/${pSlug}`} target="_blank" rel="noopener noreferrer"
+                  style={{ background: 'rgba(91,203,245,0.15)', color: C.accent, border: '1px solid rgba(91,203,245,0.3)', borderRadius: 8, padding: '7px 13px', fontSize: 12, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  More Homes with Special Financing →
+                </a>
+              )
+            })()}
             {page.apply_url && (
               <a href={page.apply_url} target="_blank" rel="noopener noreferrer"
                 style={{ background: C.accent, color: C.navy, borderRadius: 8, padding: '8px 16px', fontSize: 13, fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
@@ -534,6 +653,9 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                   allow="fullscreen"
                 />
               </div>
+            ) : page.rate_scenarios && page.rate_scenarios.length > 0 ? (
+              /* Scenario Chart — visual payment comparison when no TCA is linked */
+              <ScenarioChart scenarios={page.rate_scenarios} />
             ) : null}
 
           </div>

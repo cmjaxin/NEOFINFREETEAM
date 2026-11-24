@@ -466,7 +466,6 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
   const photoRef = useRef<HTMLInputElement>(null)
   const tcaRef = useRef<HTMLInputElement>(null)
   const [marketingPartners, setMarketingPartners] = useState<MarketingPartner[]>([])
-  const [dbPartners, setDbPartners] = useState<{ id: string; name: string; title: string | null; brokerage: string | null; email: string | null; phone: string | null; nmls: string | null; photo_url: string | null; logo_url: string | null; slug: string }[]>([])
   const [importUrl, setImportUrl] = useState('')
   const [importLoading, setImportLoading] = useState(false)
   const [importError, setImportError] = useState('')
@@ -495,9 +494,6 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
           return f
         })
       })
-    // Also load partners from the new partners table
-    supabase.from('partners').select('id,name,title,brokerage,email,phone,nmls,photo_url,logo_url,slug').order('name')
-      .then(({ data }) => setDbPartners(data ?? []))
   }, [profile?.email])
 
   const init = editing ?? {} as Partial<OHPage>
@@ -1108,42 +1104,17 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: OHPage | n
             </div>
             {showPartner && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {/* Link to Partner Portal (new partners table) */}
-                {dbPartners.length > 0 && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Link to Partner Portal</label>
-                    <select
-                      value={form.partner_id}
-                      onChange={e => {
-                        const id = e.target.value
-                        set('partner_id', id)
-                        if (id) {
-                          const p = dbPartners.find(d => d.id === id)
-                          if (p) {
-                            set('partner_name', p.name)
-                            set('partner_title', p.title ?? '')
-                            set('partner_email', p.email ?? '')
-                            set('partner_phone', p.phone ?? '')
-                            set('partner_nmls', p.nmls ?? '')
-                            set('partner_photo', p.photo_url ?? '')
-                            set('partner_logo', p.logo_url ?? '')
-                          }
-                        }
-                      }}
-                      style={{ width: '100%', padding: '9px 12px', border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, background: C.white, outline: 'none' }}
-                    >
-                      <option value="">— No portal link —</option>
-                      {dbPartners.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}{p.brokerage ? ` · ${p.brokerage}` : ''}</option>
-                      ))}
-                    </select>
-                    {form.partner_id && (
-                      <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>
-                        Portal: <a href={`/partner/${dbPartners.find(d => d.id === form.partner_id)?.slug}`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontWeight: 600 }}>View →</a>
-                      </div>
-                    )}
-                  </div>
-                )}
+                {/* Partner portal link preview (derived from name via marketingPartners) */}
+                {form.partner_name && marketingPartners.some(p => p.name === form.partner_name) && (() => {
+                  const matched = marketingPartners.find(p => p.name === form.partner_name)
+                  if (!matched) return null
+                  const slug = matched.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+                  return (
+                    <div style={{ fontSize: 11, color: C.muted, background: '#F4F6F8', borderRadius: 8, padding: '8px 12px' }}>
+                      Partner portal: <a href={`/partner/${slug}`} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, fontWeight: 600 }}>View →</a>
+                    </div>
+                  )
+                })()}
                 <div style={{ position: 'relative' }}>
                   <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: C.dim, marginBottom: 5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Select from your Marketing Partners</label>
                   <input

@@ -4,6 +4,10 @@ import type { Metadata } from 'next'
 
 export const dynamic = 'force-dynamic'
 
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 interface OHPage {
   id: string; slug: string; address: string; city: string; state: string; zip: string
   list_price: number; beds: number; baths: number; sqft: number; photos: string[]
@@ -14,27 +18,25 @@ interface OHPage {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const supabase = await createClient()
-  const { data } = await supabase.from('partners').select('name, brokerage').eq('slug', slug).single()
-  if (!data) return { title: 'Partner Portal' }
-  return { title: `${data.name} — Partner Portal | NEO Home Loans` }
+  const { data } = await supabase.from('marketing_partners').select('name, company')
+  const match = (data ?? []).find((p: any) => slugify(p.name) === slug)
+  if (!match) return { title: 'Partner Portal' }
+  return { title: `${match.name} — Partner Portal | NEO Home Loans` }
 }
 
 export default async function PartnerPortalPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
 
-  const { data: partner } = await supabase
-    .from('partners')
-    .select('*')
-    .eq('slug', slug)
-    .single()
-
+  // Find marketing_partner whose slugified name matches the route slug
+  const { data: allPartners } = await supabase.from('marketing_partners').select('*')
+  const partner = (allPartners ?? []).find((p: any) => slugify(p.name) === slug)
   if (!partner) notFound()
 
   const { data: listings } = await supabase
     .from('open_house_pages')
     .select('id, slug, address, city, state, zip, list_price, beds, baths, sqft, photos, status, advisor_name, advisor_photo, advisor_title, rate_scenarios')
-    .eq('partner_id', partner.id)
+    .eq('partner_name', partner.name)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
 
@@ -50,10 +52,9 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
       {/* Header */}
       <header style={{ background: NEO, padding: '0' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Partner info */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            {partner.photo_url
-              ? <img src={partner.photo_url} alt={partner.name} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(91,203,245,0.4)' }} />
+            {partner.headshot_url
+              ? <img src={partner.headshot_url} alt={partner.name} style={{ width: 52, height: 52, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(91,203,245,0.4)' }} />
               : <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(91,203,245,0.15)', color: CYAN, fontSize: 20, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {partner.name[0]}
                 </div>
@@ -61,16 +62,14 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
             <div>
               <div style={{ fontSize: 18, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>{partner.name}</div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
-                {[partner.title, partner.brokerage].filter(Boolean).join(' · ')}
+                {[partner.title, partner.company].filter(Boolean).join(' · ')}
               </div>
             </div>
           </div>
-          {/* NEO logo */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ maxHeight: 32, maxWidth: 110, objectFit: 'contain' }} />
         </div>
 
-        {/* Blue band */}
         <div style={{ background: CYAN, padding: '14px 24px', textAlign: 'center' }}>
           <div style={{ fontSize: 12, fontWeight: 800, color: NEO, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             Homes with Special Financing
@@ -82,50 +81,36 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
       </header>
 
       <main style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px' }}>
-
-        {/* Partner bio */}
-        {partner.bio && (
-          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E4E8EC', padding: '20px 24px', marginBottom: 28 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: CYAN, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>About</div>
-            <div style={{ fontSize: 14, color: '#374151', lineHeight: 1.7 }}>{partner.bio}</div>
-          </div>
-        )}
-
-        {/* Listings */}
         {listings && listings.length > 0 ? (
           <>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 16 }}>
               {listings.length} Active Listing{listings.length !== 1 ? 's' : ''}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-              {listings.map((l: OHPage) => {
+              {(listings as OHPage[]).map((l) => {
                 const photo = l.photos?.[0]
                 const hasScenarios = l.rate_scenarios && l.rate_scenarios.length > 0
                 const primary = hasScenarios ? (l.rate_scenarios.find((s: any) => s.buydown_rate !== s.market_rate) ?? l.rate_scenarios[0]) : null
                 return (
                   <a key={l.id} href={`/open-house/${l.slug}`} target="_blank" rel="noopener noreferrer"
-                    style={{ background: '#fff', borderRadius: 14, border: '1px solid #E4E8EC', overflow: 'hidden', textDecoration: 'none', display: 'block', transition: 'box-shadow 0.15s' }}>
-                    {/* Photo */}
+                    style={{ background: '#fff', borderRadius: 14, border: '1px solid #E4E8EC', overflow: 'hidden', textDecoration: 'none', display: 'block' }}>
                     <div style={{ height: 180, background: '#E4E8EC', overflow: 'hidden' }}>
                       {photo
                         ? <img src={photo} alt={l.address} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>🏡</div>
                       }
                     </div>
-                    {/* Info */}
                     <div style={{ padding: '14px 16px' }}>
                       {l.list_price > 0 && (
                         <div style={{ fontSize: 18, fontWeight: 900, color: NEO, letterSpacing: '-0.02em', marginBottom: 2 }}>{fmtPrice(l.list_price)}</div>
                       )}
                       <div style={{ fontSize: 14, fontWeight: 700, color: '#374151', marginBottom: 2 }}>{l.address}</div>
                       <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 10 }}>{[l.city, l.state, l.zip].filter(Boolean).join(', ')}</div>
-                      {/* Stats */}
                       <div style={{ display: 'flex', gap: 14, fontSize: 12, color: '#6B7280', marginBottom: primary ? 10 : 0 }}>
                         {l.beds && <span><strong style={{ color: NEO }}>{l.beds}</strong> bd</span>}
                         {l.baths && <span><strong style={{ color: NEO }}>{l.baths}</strong> ba</span>}
                         {l.sqft && <span><strong style={{ color: NEO }}>{l.sqft.toLocaleString()}</strong> sf</span>}
                       </div>
-                      {/* Rate badge */}
                       {primary && primary.buydown_rate !== primary.market_rate && (
                         <div style={{ background: 'rgba(91,203,245,0.1)', border: '1px solid rgba(91,203,245,0.3)', borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div>
@@ -155,7 +140,6 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
           </div>
         )}
 
-        {/* Disclaimer */}
         <div style={{ marginTop: 48, fontSize: 10, color: '#9CA3AF', lineHeight: 1.6, textAlign: 'center' }}>
           Rates and payments shown are estimates for illustrative purposes only and are not a commitment to lend.
           Actual rate, payment, and costs depend on your credit profile, down payment, and market conditions at time of application.
