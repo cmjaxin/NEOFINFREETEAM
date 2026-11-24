@@ -103,18 +103,6 @@ export default function PartnerHubListings({ listings, origin }: { listings: Lis
               >
                 Client Page ↗
               </a>
-              <button
-                onClick={() => copy(clientUrl, `url-${l.id}`)}
-                style={{ background: copied === `url-${l.id}` ? '#16a34a' : '#fff', color: copied === `url-${l.id}` ? '#fff' : NEO, border: '1.5px solid #E4E8EC', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-              >
-                {copied === `url-${l.id}` ? '✓ Copied' : '📋 Copy Link'}
-              </button>
-              {l.tca_url && (
-                <a href={l.tca_url} target="_blank" rel="noopener noreferrer"
-                  style={{ background: '#fff', color: NEO, border: '1.5px solid #E4E8EC', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>
-                  📊 Total Cost Analysis
-                </a>
-              )}
               {l.loom_url && (
                 <a href={l.loom_url} target="_blank" rel="noopener noreferrer"
                   style={{ background: '#fff', color: NEO, border: '1.5px solid #E4E8EC', borderRadius: 7, padding: '6px 12px', fontSize: 12, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}>

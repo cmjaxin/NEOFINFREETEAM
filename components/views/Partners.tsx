@@ -22,6 +22,90 @@ interface Partner {
   company: string; phone: string; email: string; headshot_url: string; logo_url: string
 }
 
+const EMPTY: Omit<Partner, 'id' | 'owner_email'> = {
+  name: '', title: '', company: '', phone: '', email: '', headshot_url: '', logo_url: '',
+}
+
+function PartnerModal({ partner, ownerEmail, onClose, onSaved }: {
+  partner: Partner | null
+  ownerEmail: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const supabase = createClient()
+  const [form, setForm] = useState({ ...EMPTY, ...(partner ?? {}) })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  function set(field: string, val: string) {
+    setForm(f => ({ ...f, [field]: val }))
+  }
+
+  async function save() {
+    if (!form.name.trim()) { setError('Name is required'); return }
+    setSaving(true)
+    setError('')
+    if (partner) {
+      const { error: e } = await supabase.from('marketing_partners').update({
+        name: form.name, title: form.title, company: form.company,
+        phone: form.phone, email: form.email,
+        headshot_url: form.headshot_url, logo_url: form.logo_url,
+      }).eq('id', partner.id)
+      if (e) { setError(e.message); setSaving(false); return }
+    } else {
+      const { error: e } = await supabase.from('marketing_partners').insert({
+        owner_email: ownerEmail,
+        name: form.name, title: form.title, company: form.company,
+        phone: form.phone, email: form.email,
+        headshot_url: form.headshot_url, logo_url: form.logo_url,
+      })
+      if (e) { setError(e.message); setSaving(false); return }
+    }
+    setSaving(false)
+    onSaved()
+  }
+
+  const fields: Array<{ key: keyof typeof EMPTY; label: string; placeholder: string }> = [
+    { key: 'name', label: 'Full Name *', placeholder: 'Jane Smith' },
+    { key: 'title', label: 'Title', placeholder: 'REALTOR®' },
+    { key: 'company', label: 'Company', placeholder: 'ABC Realty' },
+    { key: 'phone', label: 'Phone', placeholder: '(801) 555-0200' },
+    { key: 'email', label: 'Email', placeholder: 'jane@abc.com' },
+    { key: 'headshot_url', label: 'Headshot URL', placeholder: 'https://…' },
+    { key: 'logo_url', label: 'Logo URL', placeholder: 'https://…' },
+  ]
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: C.white, borderRadius: 16, padding: '28px 28px 24px', width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ fontSize: 18, fontWeight: 900, color: C.navy, marginBottom: 20 }}>
+          {partner ? 'Edit Partner' : 'Add Partner'}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {fields.map(f => (
+            <div key={f.key}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</div>
+              <input
+                value={(form as any)[f.key]}
+                onChange={e => set(f.key, e.target.value)}
+                placeholder={f.placeholder}
+                style={{ width: '100%', border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 14, color: C.text, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          ))}
+        </div>
+        {error && <div style={{ color: '#DC2626', fontSize: 13, marginTop: 10 }}>{error}</div>}
+        <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ background: C.bg, color: C.text, border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+          <button onClick={save} disabled={saving} style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+            {saving ? 'Saving…' : partner ? 'Save Changes' : 'Add Partner'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Partners() {
   const { profile } = useApp()
   const supabase = createClient()
@@ -29,6 +113,7 @@ export default function Partners() {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
   const [listingCounts, setListingCounts] = useState<Record<string, number>>({})
+  const [modal, setModal] = useState<Partner | null | 'new'>(null)
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
@@ -43,7 +128,6 @@ export default function Partners() {
     const list = data ?? []
     setPartners(list)
 
-    // Count active listings per partner (by partner_name match)
     if (list.length > 0) {
       const { data: pages } = await supabase
         .from('open_house_pages')
@@ -69,17 +153,17 @@ export default function Partners() {
   return (
     <div style={{ padding: '32px 28px', maxWidth: 1000, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontSize: 24, fontWeight: 900, color: C.navy, letterSpacing: '-0.02em' }}>Partners</div>
           <div style={{ fontSize: 13, color: C.muted, marginTop: 3 }}>
-            Each partner gets a portal page showing all their active listings. Manage partners in the Marketing tab.
+            Each partner gets a portal page showing all their active listings.
           </div>
         </div>
-      </div>
-
-      <div style={{ background: 'rgba(91,203,245,0.08)', border: '1px solid rgba(91,203,245,0.25)', borderRadius: 10, padding: '12px 16px', marginBottom: 24, fontSize: 13, color: C.navy }}>
-        💡 To add or edit partners, go to the <strong>Marketing</strong> tab. Your partners automatically appear here with their portal links.
+        <button onClick={() => setModal('new')}
+          style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+          + Add Partner
+        </button>
       </div>
 
       {loading ? (
@@ -88,7 +172,11 @@ export default function Partners() {
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: '64px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>🤝</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: C.navy, marginBottom: 8 }}>No partners yet</div>
-          <div style={{ fontSize: 14, color: C.muted }}>Add partners in the Marketing tab and they&apos;ll show up here with their portal links.</div>
+          <div style={{ fontSize: 14, color: C.muted, marginBottom: 20 }}>Add your first partner to get started.</div>
+          <button onClick={() => setModal('new')}
+            style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 9, padding: '10px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            + Add Partner
+          </button>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -117,7 +205,6 @@ export default function Partners() {
 
                 {/* Links */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220 }}>
-                  {/* Client portal */}
                   <div style={{ background: C.bg, borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ fontSize: 10, color: C.muted, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{ fontWeight: 700, color: C.navy }}>Client: </span>{url}
@@ -129,7 +216,6 @@ export default function Partners() {
                     <a href={url} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 10, color: C.navy, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>↗</a>
                   </div>
-                  {/* Partner Hub */}
                   <div style={{ background: 'rgba(91,203,245,0.08)', borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ fontSize: 10, color: C.muted, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       <span style={{ fontWeight: 700, color: C.navy }}>Hub: </span>{url}/hub
@@ -142,10 +228,25 @@ export default function Partners() {
                       style={{ fontSize: 10, color: C.navy, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>↗</a>
                   </div>
                 </div>
+
+                {/* Edit button */}
+                <button onClick={() => setModal(p)}
+                  style={{ background: C.bg, color: C.text, border: `1px solid ${C.border}`, borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                  Edit
+                </button>
               </div>
             )
           })}
         </div>
+      )}
+
+      {modal !== null && (
+        <PartnerModal
+          partner={modal === 'new' ? null : modal}
+          ownerEmail={profile?.email ?? ''}
+          onClose={() => setModal(null)}
+          onSaved={() => { setModal(null); load() }}
+        />
       )}
     </div>
   )
