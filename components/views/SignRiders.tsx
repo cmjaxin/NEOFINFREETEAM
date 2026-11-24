@@ -100,8 +100,13 @@ export function CreateModal({ editing, prefill, onClose, onSaved }: { editing: S
       })
   }, [profile?.email])
 
-  // When creating new, seed from editing OR prefill (open house / listing source), whichever exists
-  const init = editing ?? prefill ?? {} as Partial<SRPage>
+  // When editing an existing slot with a prefill, merge property data over the slot record.
+  // When creating new, seed from prefill if provided.
+  const init: Partial<SRPage> = editing
+    ? (prefill
+        ? { ...editing, ...prefill, id: editing.id, slug: editing.slug, callout_text: '' }
+        : editing)
+    : (prefill ?? {} as Partial<SRPage>)
   const [form, setForm] = useState({
     address: init.address ?? '',
     city: init.city ?? '',

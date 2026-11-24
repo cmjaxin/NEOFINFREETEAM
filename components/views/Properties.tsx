@@ -29,7 +29,7 @@ type ModalState = {
   editing: OHPage | null
   prefillAddress?: string
   prefillPage?: OHPage
-} | null
+} | { type: 'slotPicker'; prefillPage: OHPage } | null
 
 type ConfirmState = {
   message: string
@@ -316,6 +316,99 @@ function ConfirmDialog({ state, onCancel }: { state: ConfirmState; onCancel: () 
           <button onClick={() => { state.onConfirm(); onCancel() }} style={{ padding: '8px 20px', border: 'none', borderRadius: 8, background: C.red, cursor: 'pointer', fontSize: 14, fontWeight: 700, color: C.white }}>
             Delete
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Slot Picker Modal ────────────────────────────────────────────────────────
+function SlotPickerModal({ prefillPage, onClose, onPick }: {
+  prefillPage: OHPage
+  onClose: () => void
+  onPick: (slot: OHPage) => void
+}) {
+  const { supabase, profile } = useApp()
+  const [slots, setSlots] = useState<OHPage[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!profile?.id) return
+    supabase.from('open_house_pages')
+      .select('*')
+      .eq('created_by', profile.id)
+      .eq('page_type', 'sign_rider')
+      .eq('status', 'active')
+      .order('callout_text', { ascending: true, nullsFirst: true })
+      .then(({ data }) => { setSlots(data ?? []); setLoading(false) })
+  }, [profile?.id])
+
+  function isPlaceholder(sr: OHPage) {
+    return /^sign rider \d+$/i.test(sr.address.trim())
+  }
+
+  const free = slots.filter(isPlaceholder)
+  const inUse = slots.filter(s => !isPlaceholder(s))
+
+  function SlotRow({ sr, dim }: { sr: OHPage; dim?: boolean }) {
+    const label = sr.callout_text || sr.address
+    const sub = sr.callout_text ? sr.address : null
+    return (
+      <button
+        onClick={() => onPick(sr)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          padding: '11px 16px', background: dim ? C.bg : C.white,
+          border: `1px solid ${C.border}`, borderRadius: 10, cursor: 'pointer',
+          textAlign: 'left', opacity: dim ? 0.75 : 1,
+        }}
+      >
+        <span style={{ fontSize: 20 }}>{dim ? '🔄' : '🟢'}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: C.navy, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+          {sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{sub}</div>}
+        </div>
+        <span style={{ fontSize: 11, fontWeight: 700, color: dim ? C.muted : '#059669', flexShrink: 0 }}>
+          {dim ? 'Override →' : 'Select →'}
+        </span>
+      </button>
+    )
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(10,37,64,0.55)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div style={{ background: C.white, borderRadius: 16, width: '100%', maxWidth: 480, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 8px 48px rgba(10,37,64,0.22)' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${C.border}` }}>
+          <div style={{ fontWeight: 800, fontSize: 17, color: C.navy, marginBottom: 4 }}>Choose a Sign Rider Slot</div>
+          <div style={{ fontSize: 13, color: C.muted }}>
+            Pointing to: <strong style={{ color: C.navy }}>{prefillPage.address}</strong>
+          </div>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {loading && <div style={{ color: C.muted, textAlign: 'center', padding: 24 }}>Loading…</div>}
+          {!loading && free.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Available Slots</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {free.map(sr => <SlotRow key={sr.id} sr={sr} />)}
+              </div>
+            </div>
+          )}
+          {!loading && inUse.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 8 }}>Currently In Use (override)</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {inUse.map(sr => <SlotRow key={sr.id} sr={sr} dim />)}
+              </div>
+            </div>
+          )}
+          {!loading && slots.length === 0 && (
+            <div style={{ color: C.muted, textAlign: 'center', padding: 24, fontSize: 13 }}>No sign rider slots found. Create some from the Sign Riders tab first.</div>
+          )}
+        </div>
+        <div style={{ padding: '12px 24px', borderTop: `1px solid ${C.border}` }}>
+          <button onClick={onClose} style={{ width: '100%', padding: '10px', border: `1px solid ${C.border}`, borderRadius: 8, background: C.white, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: C.dim }}>Cancel</button>
         </div>
       </div>
     </div>
@@ -724,7 +817,11 @@ export default function Properties() {
   }
 
   function openCreate(type: 'listing' | 'ohEvent' | 'signRider', address?: string, sourcePage?: OHPage) {
-    setModalState({ type, editing: null, prefillAddress: address, prefillPage: sourcePage })
+    if (type === 'signRider' && sourcePage) {
+      setModalState({ type: 'slotPicker', prefillPage: sourcePage })
+    } else {
+      setModalState({ type, editing: null, prefillAddress: address, prefillPage: sourcePage })
+    }
   }
 
   function closeModal() { setModalState(null) }
@@ -955,6 +1052,13 @@ export default function Properties() {
           editing={modalState.editing as Parameters<typeof OHEventModal>[0]['editing']}
           onClose={closeModal}
           onSaved={handleSaved}
+        />
+      )}
+      {modalState?.type === 'slotPicker' && (
+        <SlotPickerModal
+          prefillPage={modalState.prefillPage}
+          onClose={closeModal}
+          onPick={(slot) => setModalState({ type: 'signRider', editing: slot, prefillPage: modalState.prefillPage })}
         />
       )}
       {modalState?.type === 'signRider' && (
