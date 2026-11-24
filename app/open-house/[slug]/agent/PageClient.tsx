@@ -1430,6 +1430,22 @@ export default function AgentPageClient({ slug }: { slug: string }) {
               promo_date: (row as any).promo_date ?? '',
               promo_savings: (row as any).promo_savings ?? '',
             })
+          } else {
+            // Auto-populate from best scenario (lowest buydown rate with an actual buydown)
+            const scenarios: NonNullable<PageData['rate_scenarios']> = (row as any).rate_scenarios ?? []
+            const best = scenarios
+              .filter(s => s.buydown_rate < s.market_rate)
+              .sort((a, b) => a.buydown_rate - b.buydown_rate)[0]
+            if (best) {
+              const savings = best.market_payment - best.buydown_payment
+              setRateVals({
+                rate: best.buydown_rate.toFixed(3),
+                apr: best.apr > 0 ? best.apr.toFixed(3) : '',
+                promo_payment: best.buydown_payment > 0 ? String(Math.round(best.buydown_payment)) : '',
+                promo_date: '',
+                promo_savings: savings > 0 ? String(Math.round(savings)) : '',
+              })
+            }
           }
         }
         fetchExtras()
