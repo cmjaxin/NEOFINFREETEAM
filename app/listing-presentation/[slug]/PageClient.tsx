@@ -161,6 +161,101 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
   )
 }
 
+// ─── Shared flyer helpers ─────────────────────────────────────────────────────
+function buildScenarioTableHtml(scenarios: Scenario[], listPrice?: number): string {
+  if (!scenarios || scenarios.length === 0) return ''
+  const NEO = '#0A2540'; const CYAN = '#5BCBF5'; const BORDER = '#E4E8EC'
+  const fp = (n: number) => n > 0 ? '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'
+  const fd = (n: number) => n > 0 ? '$' + Math.round(n).toLocaleString() : '—'
+  const fpc = (n: number) => n > 0 ? n.toFixed(3) + '%' : '—'
+
+  // Deduplicate piti_schedule by rate to get year blocks
+  function yearCards(s: Scenario) {
+    const sched = s.piti_schedule ?? []
+    if (sched.length === 0) {
+      const hb = s.buydown_rate !== s.market_rate
+      if (!hb) return [{ label: 'Your Rate', rate: s.market_rate, pmt: s.buydown_payment, isLast: true }]
+      return [
+        { label: 'Year 1', rate: s.buydown_rate, pmt: s.buydown_payment, isLast: false },
+        { label: 'Year 2+', rate: s.market_rate, pmt: s.market_payment, isLast: true },
+      ]
+    }
+    const deduped: typeof sched = []
+    for (const e of sched) {
+      if (deduped.length === 0 || Math.abs(e.rate - deduped[deduped.length - 1].rate) > 0.0001) deduped.push(e)
+    }
+    return deduped.map((e, i) => {
+      const isLast = i === deduped.length - 1
+      const pmt = e.piti > e.pi ? e.piti : e.pi
+      return { label: isLast ? (deduped.length === 1 ? 'Your Rate' : `Year ${i + 1}+`) : `Year ${i + 1}`, rate: e.rate, pmt, isLast }
+    })
+  }
+
+  const allCards = scenarios.map(yearCards)
+  const maxYears = Math.max(...allCards.map(c => c.length))
+  const hasAnyBuydown = scenarios.some(s => s.buydown_rate !== s.market_rate)
+  const marketPmt = scenarios[0]?.market_payment ?? 0
+
+  const thCols = scenarios.map((s, i) => {
+    const isBd = s.buydown_rate !== s.market_rate
+    const lbl = s.label.replace(/\bLender\s+/gi, '')
+    return `<th style="padding:7px 10px;text-align:center;font-size:9px;font-weight:800;color:${isBd ? '#fff' : NEO};background:${isBd ? NEO : '#F8FAFC'};border-bottom:1.5px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      ${lbl}${isBd ? `<div style="font-size:16px;font-weight:900;color:${CYAN};line-height:1.1;margin-top:2px;">${s.buydown_rate.toFixed(3)}%</div>` : ''}
+    </th>`
+  }).join('')
+
+  function dataRow(label: string, vals: string[], highlight = false) {
+    const cells = vals.map(v => `<td style="padding:6px 10px;text-align:center;font-size:9px;font-weight:${highlight ? 700 : 500};color:${NEO};border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};">${v}</td>`).join('')
+    return `<tr style="background:${highlight ? '#EBF8FF' : '#fff'};">
+      <td style="padding:6px 10px;font-size:8px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid ${BORDER};white-space:nowrap;">${label}</td>${cells}
+    </tr>`
+  }
+
+  let rows = ''
+  rows += dataRow('Loan Type', scenarios.map(s => [s.loan_type, s.term_years ? `${s.term_years}-Yr` : ''].filter(Boolean).join(' ')))
+  rows += dataRow('Down Payment', scenarios.map(s => !s.down_pct ? '—' : (listPrice ? fd(listPrice * s.down_pct / 100) + ` (${s.down_pct}%)` : `${s.down_pct}%`)))
+  rows += dataRow('Note Rate', scenarios.map(s => fpc(s.market_rate)))
+  for (let yi = 0; yi < maxYears; yi++) {
+    const isFirst = yi === 0
+    const rowLabel = maxYears === 1 ? 'Monthly Payment' : (yi === maxYears - 1 ? `Year ${yi + 1}+ Payment` : `Year ${yi + 1} Payment`)
+    const vals = allCards.map(cards => {
+      const card = cards[yi]
+      if (!card) return '—'
+      return `<span style="font-weight:${isFirst && !card.isLast ? 800 : 600}">${fp(card.pmt)}</span> <span style="font-size:7px;color:#6B7280;">@ ${fpc(card.rate)}</span>`
+    })
+    rows += dataRow(rowLabel, vals, isFirst)
+  }
+  rows += dataRow('APR', scenarios.map(s => fpc(s.apr)))
+  if (hasAnyBuydown) {
+    rows += dataRow('Mo. Savings vs Market', scenarios.map(s => {
+      const sv = marketPmt - s.buydown_payment
+      return sv > 0 ? `<span style="color:#16A34A;font-weight:700;">$${sv.toLocaleString()}/mo</span>` : '—'
+    }))
+  }
+  if (scenarios.some(s => (s as any).total_subsidy > 0)) {
+    rows += dataRow('Total Subsidy', scenarios.map(s => fd((s as any).total_subsidy ?? 0)))
+  }
+
+  return `
+  <div style="border:1px solid ${BORDER};border-radius:8px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+    <div style="background:${NEO};padding:7px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">
+      <div style="width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0;"></div>
+      <span style="font-size:9px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em;">Financing Scenarios</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="padding:7px 10px;text-align:left;font-size:8px;font-weight:700;color:#6B7280;background:#F8FAFC;border-bottom:1.5px solid ${BORDER};white-space:nowrap;">&nbsp;</th>
+            ${thCols}
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`
+}
+
 // ─── Flyer Generator ──────────────────────────────────────────────────────────
 function openFlyer(page: PageData) {
   const NEO = '#0A2540'
@@ -261,10 +356,10 @@ html, body { width: 8.5in; height: 11in; overflow: hidden; font-family: 'Arial',
 <div class="main">
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p></div>` : ''}
-    <div class="tca-card">
-      <div class="tca-header"><div class="tca-header-dot"></div><span class="tca-header-text">Total Cost Analysis</span></div>
-      ${page.tca_screenshot ? `<div class="tca-img"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>` : `<div class="tca-placeholder"><div style="font-size:28px;opacity:0.4">📊</div><div>Upload a TCA screenshot in the listing editor</div></div>`}
-    </div>
+    ${(page.rate_scenarios && page.rate_scenarios.length > 0)
+      ? buildScenarioTableHtml(page.rate_scenarios as Scenario[], page.list_price)
+      : `<div style="border:1px solid #E4E8EC;border-radius:8px;flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:#94A3B8;font-size:11px;text-align:center;padding:20px;background:#F8FAFC;"><div style="font-size:28px;opacity:0.4">📊</div><div>No financing scenarios added yet</div></div>`
+    }
   </div>
   <div class="right">
     ${small.map((url: string, i: number) => `<div class="photo-slot">${url ? `<img src="${url}" alt="Photo ${i + 2}" />` : `<div class="photo-empty">🏠</div>`}</div>`).join('')}
@@ -403,9 +498,9 @@ table.ct{width:100%;border-collapse:collapse;font-size:11.5px}
     <div class="tca-sec">
       <div class="sec-head">See It in Action</div>
       <p class="body-p">A static example on a ${price} purchase: the same buyer, multiple ways to finance it.</p>
-      ${page.tca_screenshot
-        ? `<div class="tca-img-wrap"><img src="${page.tca_screenshot}" alt="Total Cost Analysis" /></div>`
-        : `<div class="tca-tbl-wrap"><table class="ct"><thead><tr><th></th><th>Market Rate</th><th>Seller Advantage<br>30 YR Fixed FHA</th><th>Seller Advantage<br>5 YR FHA ARM</th></tr></thead><tbody><tr><td>Purchase Price</td><td>$500,000</td><td>$515,000</td><td>$515,000</td></tr><tr><td>Down Payment</td><td>$17,500</td><td>$18,025</td><td>$18,025</td></tr><tr><td>Loan Amount</td><td>$490,943</td><td>$505,672</td><td>$505,672</td></tr><tr class="r-rate"><td>Interest Rate</td><td>6.375%</td><td>5.490%</td><td>4.750%</td></tr><tr><td>APR</td><td>*7.141%</td><td>*6.244%</td><td>*5.495%</td></tr><tr><td>Term (mos)</td><td>360</td><td>360</td><td>360</td></tr><tr class="r-pay"><td>Payment</td><td>**$3,574.52</td><td>**$3,394.78</td><td>**$3,164.42</td></tr><tr><td>Cash to Close</td><td>$25,590.75</td><td>$26,115.06</td><td>$26,115.06</td></tr><tr class="r-save"><td>Monthly Savings</td><td>$0.00</td><td>$179.74</td><td>$410.10</td></tr><tr><td>Savings (120 mos)</td><td>$0</td><td>$35,015</td><td>$71,964</td></tr><tr><td>Freedom Pt 1</td><td>30.00 yrs</td><td>30.00 yrs</td><td>30.00 yrs</td></tr></tbody></table></div>`
+      ${(page.rate_scenarios && page.rate_scenarios.length > 0)
+        ? buildScenarioTableHtml(page.rate_scenarios as Scenario[], page.list_price)
+        : `<div style="border:1px solid #E5E7EB;border-radius:4px;padding:20px;text-align:center;color:#94A3B8;font-size:11px;">No financing scenarios added yet</div>`
       }
     </div>
     <div class="q-block">
