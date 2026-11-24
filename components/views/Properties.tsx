@@ -404,19 +404,24 @@ function StatsTab() {
   )
 
   const listingPages = ohPages.filter((p: any) => p.page_type !== 'sign_rider')
-  const signRiders = ohPages.filter((p: any) => p.page_type === 'sign_rider')
+  const signRiders = ohPages
+    .filter((p: any) => p.page_type === 'sign_rider')
+    .sort((a: any, b: any) => a.address.localeCompare(b.address))
 
   const listingViews = listingPages.reduce((n: number, p: any) => n + (viewCounts[p.id] ?? 0), 0)
   const listingLeads = listingPages.reduce((n: number, p: any) => n + (leadCounts[p.id] ?? 0), 0)
   const riderViews = signRiders.reduce((n: number, p: any) => n + (viewCounts[p.id] ?? 0), 0)
 
-  function PageRow({ p, i, showLeads }: { p: any; i: number; showLeads: boolean }) {
+  function PageRow({ p, i, showLeads, num }: { p: any; i: number; showLeads: boolean; num?: number }) {
     const views = viewCounts[p.id] ?? 0
     const lcount = leadCounts[p.id] ?? 0
     const cvr = views > 0 ? ((lcount / views) * 100).toFixed(1) + '%' : '—'
     const href = `/${p.page_type === 'sign_rider' ? 'sign-rider' : 'open-house'}/${p.slug}`
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`, flexWrap: 'wrap' }}>
+        {num !== undefined && (
+          <div style={{ width: 24, textAlign: 'right', fontSize: 12, fontWeight: 700, color: C.muted, flexShrink: 0 }}>{num}</div>
+        )}
         {p.photos?.[0]
           ? <img src={p.photos[0]} alt={p.address} style={{ width: 48, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
           : <div style={{ width: 48, height: 40, borderRadius: 6, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
@@ -490,7 +495,7 @@ function StatsTab() {
         {signRiders.length > 0 && (
           <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ padding: '10px 16px', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Per Sign Rider</div>
-            {signRiders.map((p: any, i: number) => <PageRow key={p.id} p={p} i={i} showLeads={false} />)}
+            {signRiders.map((p: any, i: number) => <PageRow key={p.id} p={p} i={i} showLeads={false} num={i + 1} />)}
           </div>
         )}
         {signRiders.length === 0 && (
