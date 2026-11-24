@@ -22,8 +22,14 @@ interface Partner {
   company: string; phone: string; email: string; headshot_url: string; logo_url: string
 }
 
-const EMPTY: Omit<Partner, 'id' | 'owner_email'> = {
-  name: '', title: '', company: '', phone: '', email: '', headshot_url: '', logo_url: '',
+function uid() { return Math.random().toString(36).slice(2) }
+
+async function uploadFile(supabase: ReturnType<typeof createClient>, file: File, folder: string): Promise<string> {
+  const path = `${folder}/${uid()}.${file.name.split('.').pop()}`
+  const { error } = await supabase.storage.from('marketing-assets').upload(path, file, { contentType: file.type })
+  if (error) throw error
+  const { data } = supabase.storage.from('marketing-assets').getPublicUrl(path)
+  return data.publicUrl
 }
 
 function PartnerModal({ partner, ownerEmail, onClose, onSaved }: {
@@ -33,71 +39,105 @@ function PartnerModal({ partner, ownerEmail, onClose, onSaved }: {
   onSaved: () => void
 }) {
   const supabase = createClient()
-  const [form, setForm] = useState({ ...EMPTY, ...(partner ?? {}) })
+  const [form, setForm] = useState({
+    name: partner?.name ?? '', title: partner?.title ?? '', company: partner?.company ?? '',
+    phone: partner?.phone ?? '', email: partner?.email ?? '',
+    headshot_url: partner?.headshot_url ?? '', logo_url: partner?.logo_url ?? '',
+  })
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState<string | null>(null)
   const [error, setError] = useState('')
 
-  function set(field: string, val: string) {
-    setForm(f => ({ ...f, [field]: val }))
+  async function handleImageUpload(field: 'headshot_url' | 'logo_url', file: File) {
+    setUploading(field)
+    try {
+      const url = await uploadFile(supabase, file, field === 'headshot_url' ? 'partner-headshots' : 'partner-logos')
+      setForm(f => ({ ...f, [field]: url }))
+    } catch (e: any) { setError(`Upload error: ${e.message}`) }
+    setUploading(null)
   }
 
   async function save() {
     if (!form.name.trim()) { setError('Name is required'); return }
     setSaving(true)
     setError('')
-    if (partner) {
-      const { error: e } = await supabase.from('marketing_partners').update({
-        name: form.name, title: form.title, company: form.company,
-        phone: form.phone, email: form.email,
-        headshot_url: form.headshot_url, logo_url: form.logo_url,
-      }).eq('id', partner.id)
-      if (e) { setError(e.message); setSaving(false); return }
-    } else {
-      const { error: e } = await supabase.from('marketing_partners').insert({
-        owner_email: ownerEmail,
-        name: form.name, title: form.title, company: form.company,
-        phone: form.phone, email: form.email,
-        headshot_url: form.headshot_url, logo_url: form.logo_url,
-      })
-      if (e) { setError(e.message); setSaving(false); return }
-    }
+    try {
+      if (partner) {
+        const { error: e } = await supabase.from('marketing_partners').update({ ...form }).eq('id', partner.id)
+        if (e) throw e
+      } else {
+        const { error: e } = await supabase.from('marketing_partners').insert({ ...form, owner_email: ownerEmail })
+        if (e) throw e
+      }
+      onSaved()
+    } catch (e: any) { setError(e.message) }
     setSaving(false)
-    onSaved()
   }
 
-  const fields: Array<{ key: keyof typeof EMPTY; label: string; placeholder: string }> = [
-    { key: 'name', label: 'Full Name *', placeholder: 'Jane Smith' },
-    { key: 'title', label: 'Title', placeholder: 'REALTOR®' },
-    { key: 'company', label: 'Company', placeholder: 'ABC Realty' },
-    { key: 'phone', label: 'Phone', placeholder: '(801) 555-0200' },
-    { key: 'email', label: 'Email', placeholder: 'jane@abc.com' },
-    { key: 'headshot_url', label: 'Headshot URL', placeholder: 'https://…' },
-    { key: 'logo_url', label: 'Logo URL', placeholder: 'https://…' },
-  ]
+  const inputStyle: React.CSSProperties = {
+    width: '100%', border: `1.5px solid ${C.border}`, borderRadius: 8,
+    padding: '8px 12px', fontSize: 14, color: C.text, outline: 'none',
+    boxSizing: 'border-box',
+  }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: C.white, borderRadius: 16, padding: '28px 28px 24px', width: '100%', maxWidth: 480, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ fontSize: 18, fontWeight: 900, color: C.navy, marginBottom: 20 }}>
-          {partner ? 'Edit Partner' : 'Add Partner'}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={onClose}>
+      <div style={{ background: C.white, borderRadius: 16, padding: '28px 28px 24px', width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: C.navy }}>{partner ? 'Edit Partner' : 'Add Partner'}</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.muted }}>✕</button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {fields.map(f => (
-            <div key={f.key}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{f.label}</div>
-              <input
-                value={(form as any)[f.key]}
-                onChange={e => set(f.key, e.target.value)}
-                placeholder={f.placeholder}
-                style={{ width: '100%', border: `1.5px solid ${C.border}`, borderRadius: 8, padding: '8px 12px', fontSize: 14, color: C.text, outline: 'none', boxSizing: 'border-box' }}
-              />
+
+        {/* Image uploads */}
+        <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+          {/* Headshot */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Headshot</div>
+            <div style={{ width: '100%', height: 90, borderRadius: 10, overflow: 'hidden', background: C.bg, border: `2px dashed ${C.border}`, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {form.headshot_url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={form.headshot_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <span style={{ fontSize: 32 }}>👤</span>}
             </div>
-          ))}
+            <label style={{ display: 'block', background: C.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: uploading === 'headshot_url' ? 'default' : 'pointer', textAlign: 'center', opacity: uploading === 'headshot_url' ? 0.6 : 1 }}>
+              {uploading === 'headshot_url' ? 'Uploading…' : form.headshot_url ? 'Replace Photo' : '⬆ Upload Photo'}
+              <input type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} disabled={!!uploading}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('headshot_url', f); e.currentTarget.value = '' }} />
+            </label>
+          </div>
+          {/* Logo */}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company Logo</div>
+            <div style={{ width: '100%', height: 90, borderRadius: 10, overflow: 'hidden', background: C.bg, border: `2px dashed ${C.border}`, marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {form.logo_url
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={form.logo_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', padding: 8 }} />
+                : <span style={{ fontSize: 13, color: C.muted }}>No logo yet</span>}
+            </div>
+            <label style={{ display: 'block', background: C.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 0', fontSize: 12, fontWeight: 600, cursor: uploading === 'logo_url' ? 'default' : 'pointer', textAlign: 'center', opacity: uploading === 'logo_url' ? 0.6 : 1 }}>
+              {uploading === 'logo_url' ? 'Uploading…' : form.logo_url ? 'Replace Logo' : '⬆ Upload Logo'}
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" style={{ display: 'none' }} disabled={!!uploading}
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload('logo_url', f); e.currentTarget.value = '' }} />
+            </label>
+          </div>
         </div>
+
+        {/* Text fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Full Name *" style={inputStyle} />
+          <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Title (e.g. REALTOR®)" style={inputStyle} />
+          <input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="Company / Brokerage" style={inputStyle} />
+          <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone" style={inputStyle} />
+          <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="Email" style={inputStyle} />
+        </div>
+
         {error && <div style={{ color: '#DC2626', fontSize: 13, marginTop: 10 }}>{error}</div>}
         <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ background: C.bg, color: C.text, border: 'none', borderRadius: 8, padding: '9px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
+          <button onClick={save} disabled={saving || !!uploading}
+            style={{ background: C.navy, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: (saving || !!uploading) ? 0.6 : 1 }}>
             {saving ? 'Saving…' : partner ? 'Save Changes' : 'Add Partner'}
           </button>
         </div>
