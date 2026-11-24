@@ -372,6 +372,8 @@ interface PageData {
   schedule_url: string | null
   bntouch_user_id: string | null
   callout_text: string | null
+  seller_contribution: number | null
+  seller_contribution_pct: number | null
   rate_scenarios: Array<{
     label: string; down_pct: number; market_rate: number; buydown_rate: number
     market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number
