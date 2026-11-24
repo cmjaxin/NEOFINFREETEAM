@@ -4,8 +4,7 @@
 const SELLER_ADVANTAGE_PDF_URL = 'https://qrkwcdyqqozkvenwuoun.supabase.co/storage/v1/object/public/splice-clips/Seller%20Advantage%20Program.pdf'
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useState, useEffect, useRef } from 'react'
-import type React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { BetterDisclaimer } from '@/lib/disclaimer'
 
@@ -51,7 +50,7 @@ function ScenarioTable({ scenarios, listPrice }: { scenarios: Scenario[]; listPr
   const fmtPct = (n: number) => n > 0 ? n.toFixed(3) + '%' : '—'
   const allCards = scenarios.map(s => getYearCards(s))
   const maxYears = Math.max(...allCards.map(c => c.length))
-  const rows: Array<{ label: string; values: unknown[] }> = []
+  const rows: Array<{ label: string; values: React.ReactNode[] }> = []
   rows.push({ label: 'Loan Type', values: scenarios.map(s => [s.loan_type, s.term_years ? `${s.term_years}-Year` : ''].filter(Boolean).join(' · ') || '—') })
   rows.push({ label: 'Down Payment', values: scenarios.map(s => {
     if (!s.down_pct) return '—'

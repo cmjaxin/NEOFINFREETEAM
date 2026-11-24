@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import LeadCaptureModal from '@/components/LeadCaptureModal'
 import { createClient } from '@/lib/supabase/client'
 
@@ -197,7 +197,7 @@ function ScenarioTable({ scenarios, listPrice }: { scenarios: Scenario[]; listPr
   const allCards = scenarios.map(s => getYearCards(s))
   const maxYears = Math.max(...allCards.map(c => c.length))
 
-  const rows: Array<{ label: string; values: unknown[] }> = []
+  const rows: Array<{ label: string; values: React.ReactNode[] }> = []
 
   // Loan type + term
   rows.push({ label: 'Loan Type', values: scenarios.map(s => [s.loan_type, s.term_years ? `${s.term_years}-Year` : ''].filter(Boolean).join(' · ') || '—') })
