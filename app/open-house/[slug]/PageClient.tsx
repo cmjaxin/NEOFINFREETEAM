@@ -187,6 +187,116 @@ function ScenarioChart({ scenarios }: { scenarios: Scenario[] }) {
   )
 }
 
+function ScenarioTable({ scenarios, listPrice }: { scenarios: Scenario[]; listPrice?: number }) {
+  const NEO = '#0A2540'; const CYAN = '#5BCBF5'; const BORDER = '#E4E8EC'
+  const fmtPmt = (n: number) => n > 0 ? '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'
+  const fmtDollar = (n: number) => n > 0 ? '$' + Math.round(n).toLocaleString() : '—'
+  const fmtPct = (n: number) => n > 0 ? n.toFixed(3) + '%' : '—'
+
+  // Build rows: year payment rows driven by the max card count across all scenarios
+  const allCards = scenarios.map(s => getYearCards(s))
+  const maxYears = Math.max(...allCards.map(c => c.length))
+
+  const rows: Array<{ label: string; values: (string | JSX.Element)[] }> = []
+
+  // Loan type + term
+  rows.push({ label: 'Loan Type', values: scenarios.map(s => [s.loan_type, s.term_years ? `${s.term_years}-Year` : ''].filter(Boolean).join(' · ') || '—') })
+
+  // Down payment
+  rows.push({ label: 'Down Payment', values: scenarios.map(s => {
+    if (!s.down_pct) return '—'
+    const dp = listPrice ? fmtDollar(listPrice * s.down_pct / 100) + ` (${s.down_pct}%)` : `${s.down_pct}%`
+    return dp
+  })})
+
+  // Note rate
+  rows.push({ label: 'Note Rate', values: scenarios.map(s => fmtPct(s.market_rate)) })
+
+  // Year payment rows
+  for (let yi = 0; yi < maxYears; yi++) {
+    const isFirst = yi === 0
+    rows.push({
+      label: maxYears === 1 ? 'Monthly Payment' : (yi === maxYears - 1 ? `Year ${yi + 1}+ Payment` : `Year ${yi + 1} Payment`),
+      values: allCards.map((cards) => {
+        const card = cards[yi]
+        if (!card) return '—'
+        const pmt = card.piti > card.pi ? card.piti : card.pi
+        const rateStr = fmtPct(card.rate)
+        return (
+          <span>
+            <span style={{ fontWeight: isFirst && !card.isLast ? 800 : 600 }}>{fmtPmt(pmt)}</span>
+            <span style={{ fontSize: 10, color: '#6B7280', marginLeft: 4 }}>@ {rateStr}</span>
+          </span>
+        )
+      }),
+    })
+  }
+
+  // APR
+  rows.push({ label: 'APR', values: scenarios.map(s => fmtPct(s.apr)) })
+
+  // Monthly savings vs market
+  const hasAnyBuydown = scenarios.some(s => s.buydown_rate !== s.market_rate)
+  if (hasAnyBuydown) {
+    const marketPmt = scenarios[0]?.market_payment ?? 0
+    rows.push({ label: 'Mo. Savings vs Market', values: scenarios.map(s => {
+      const savings = marketPmt - s.buydown_payment
+      if (savings <= 0) return '—'
+      return <span style={{ color: '#16A34A', fontWeight: 700 }}>${savings.toLocaleString()}/mo</span>
+    })})
+  }
+
+  // Total subsidy
+  if (scenarios.some(s => (s as any).total_subsidy > 0)) {
+    rows.push({ label: 'Total Subsidy', values: scenarios.map(s => fmtDollar((s as any).total_subsidy ?? 0)) })
+  }
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 14, border: `1px solid ${BORDER}`, overflow: 'hidden' }}>
+      <div style={{ background: NEO, padding: '14px 20px' }}>
+        <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Scenario Comparison</div>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>Side-by-side look at all financing options</div>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#6B7280', background: '#F8FAFC', borderBottom: `2px solid ${BORDER}`, minWidth: 160, whiteSpace: 'nowrap' }}>
+                &nbsp;
+              </th>
+              {scenarios.map((s, i) => {
+                const isBuydown = s.buydown_rate !== s.market_rate
+                return (
+                  <th key={i} style={{ padding: '12px 16px', textAlign: 'center', fontSize: 12, fontWeight: 800, color: isBuydown ? '#fff' : NEO, background: isBuydown ? NEO : '#F8FAFC', borderBottom: `2px solid ${BORDER}`, borderLeft: `1px solid ${BORDER}`, minWidth: 160, whiteSpace: 'nowrap' }}>
+                    <div>{cleanLabel(s.label)}</div>
+                    {isBuydown && (
+                      <div style={{ fontSize: 20, fontWeight: 900, color: CYAN, lineHeight: 1.1, marginTop: 4 }}>{s.buydown_rate.toFixed(3)}%</div>
+                    )}
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri} style={{ background: ri % 2 === 0 ? '#fff' : '#F8FAFC' }}>
+                <td style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: `1px solid ${BORDER}`, whiteSpace: 'nowrap' }}>
+                  {row.label}
+                </td>
+                {row.values.map((val, ci) => (
+                  <td key={ci} style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: NEO, borderBottom: `1px solid ${BORDER}`, borderLeft: `1px solid ${BORDER}` }}>
+                    {val}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ─── Flyer Generator ──────────────────────────────────────────────────────────
 function openFlyer(page: PageData) {
   const NEO = '#0A2540'
@@ -775,10 +885,12 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                   allow="fullscreen"
                 />
               </div>
-            ) : page.rate_scenarios && page.rate_scenarios.length > 0 ? (
-              /* Scenario Chart — visual payment comparison when no TCA is linked */
-              <ScenarioChart scenarios={page.rate_scenarios} />
             ) : null}
+
+            {/* Scenario comparison table — always shown when scenarios exist */}
+            {page.rate_scenarios && page.rate_scenarios.length > 0 && (
+              <ScenarioTable scenarios={page.rate_scenarios} listPrice={page.list_price} />
+            )}
 
           </div>
         )}
