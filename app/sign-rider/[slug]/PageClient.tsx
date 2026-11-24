@@ -136,6 +136,12 @@ export default function SignRiderPage({ slug }: { slug: string }) {
   }, [slug])
 
   useEffect(() => {
+    if (!page) return
+    fetch('/api/page-view', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page_id: page.id, slug, page_type: 'sign_rider' }) }).catch(() => {})
+  }, [page?.id])
+
+  useEffect(() => {
     if (!page || leadShown.current) return
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1') return
     const t = setTimeout(() => { leadShown.current = true; setShowLead(true) }, 10000)

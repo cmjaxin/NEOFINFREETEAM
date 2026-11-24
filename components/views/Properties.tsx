@@ -373,18 +373,17 @@ function StatsTab() {
     async function load() {
       const { data: pgs } = await supabase.from('open_house_pages')
         .select('id, slug, address, city, state, list_price, photos, page_type')
-        .eq('created_by', profile!.id).eq('status', 'active').eq('page_type', 'open_house')
+        .eq('created_by', profile!.id).eq('status', 'active')
         .order('created_at', { ascending: false })
       setOhPages(pgs ?? [])
       if ((pgs ?? []).length > 0) {
-        const slugs = (pgs ?? []).map((p: any) => p.slug)
         const ids = (pgs ?? []).map((p: any) => p.id)
         const [{ data: views }, { data: leads }] = await Promise.all([
-          supabase.from('page_views').select('slug').in('slug', slugs),
+          supabase.from('page_views').select('page_id').in('page_id', ids),
           supabase.from('page_leads').select('page_id').in('page_id', ids),
         ])
         const vc: Record<string, number> = {}
-        for (const v of views ?? []) vc[v.slug] = (vc[v.slug] ?? 0) + 1
+        for (const v of views ?? []) if (v.page_id) vc[v.page_id] = (vc[v.page_id] ?? 0) + 1
         setViewCounts(vc)
         const lc: Record<string, number> = {}
         for (const l of leads ?? []) if (l.page_id) lc[l.page_id] = (lc[l.page_id] ?? 0) + 1
@@ -399,8 +398,8 @@ function StatsTab() {
   if (!ohPages.length) return (
     <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
       <div style={{ fontSize: 48, marginBottom: 12 }}>📊</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No open house pages yet</div>
-      <div style={{ fontSize: 14, color: C.muted }}>Create open house pages and stats will appear here as people visit.</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No pages yet</div>
+      <div style={{ fontSize: 14, color: C.muted }}>Create listing pages or sign riders and stats will appear here as people visit.</div>
     </div>
   )
 
@@ -424,9 +423,9 @@ function StatsTab() {
         ))}
       </div>
       <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Per Listing</div>
+        <div style={{ padding: '12px 16px', background: C.navy, color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Per Page</div>
         {ohPages.map((p: any, i: number) => {
-          const views = viewCounts[p.slug] ?? 0
+          const views = viewCounts[p.id] ?? 0
           const lcount = leadCounts[p.id] ?? 0
           const cvr = views > 0 ? ((lcount / views) * 100).toFixed(1) + '%' : '—'
           return (
@@ -447,7 +446,7 @@ function StatsTab() {
                   </div>
                 ))}
               </div>
-              <a href={`/open-house/${p.slug}`} target="_blank" rel="noopener noreferrer"
+              <a href={`/${p.page_type === 'sign_rider' ? 'sign' : 'open-house'}/${p.slug}`} target="_blank" rel="noopener noreferrer"
                 style={{ fontSize: 11, color: C.accent, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>View ↗</a>
             </div>
           )
