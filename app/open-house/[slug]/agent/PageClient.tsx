@@ -67,7 +67,8 @@ function buildScenarioTableHtml(scenarios: NonNullable<PageData['rate_scenarios'
     rows += dataRow(rowLabel, vals, isFirst)
   }
   rows += dataRow('APR', scenarios.map(s => fpc(s.apr)))
-  if (hasAnyBuydown) rows += dataRow('Mo. Savings vs Market', scenarios.map(s => { const sv = marketPmt - s.buydown_payment; return sv > 0 ? `<span style="color:#16A34A;font-weight:700;">$${sv.toLocaleString()}/mo</span>` : '—' }))
+  const hasTempBuydown = scenarios.some(s => s.buydown_rate < s.market_rate && s.piti_schedule && s.piti_schedule.length > 1)
+  if (hasAnyBuydown) rows += dataRow(hasTempBuydown ? 'Yr 1 Mo. Savings vs Market' : 'Mo. Savings vs Market', scenarios.map(s => { const sv = marketPmt - s.buydown_payment; return sv > 0 ? `<span style="color:#16A34A;font-weight:700;">$${sv.toLocaleString()}/mo</span>` : '—' }))
   if (scenarios.some(s => (s as any).total_subsidy > 0)) rows += dataRow('Total Subsidy', scenarios.map(s => fd((s as any).total_subsidy ?? 0)))
   return `<div style="border:1px solid ${BORDER};border-radius:8px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><div style="background:${NEO};padding:7px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><div style="width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0;"></div><span style="font-size:9px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em;">Financing Scenarios</span></div><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="padding:7px 10px;text-align:left;font-size:8px;font-weight:700;color:#6B7280;background:#F8FAFC;border-bottom:1.5px solid ${BORDER};white-space:nowrap;">&nbsp;</th>${thCols}</tr></thead><tbody>${rows}</tbody></table></div></div>`
 }

@@ -71,9 +71,10 @@ function ScenarioTable({ scenarios, listPrice }: { scenarios: Scenario[]; listPr
   }
   rows.push({ label: 'APR', values: scenarios.map(s => fmtPct(s.apr)) })
   const hasAnyBuydown = scenarios.some(s => s.buydown_rate !== s.market_rate)
+  const hasTempBuydown = scenarios.some(s => s.buydown_rate < s.market_rate && s.piti_schedule && s.piti_schedule.length > 1)
   if (hasAnyBuydown) {
     const marketPmt = scenarios[0]?.market_payment ?? 0
-    rows.push({ label: 'Mo. Savings vs Market', values: scenarios.map(s => {
+    rows.push({ label: hasTempBuydown ? 'Yr 1 Mo. Savings vs Market' : 'Mo. Savings vs Market', values: scenarios.map(s => {
       const savings = marketPmt - s.buydown_payment
       if (savings <= 0) return '—'
       return <span style={{ color: '#16A34A', fontWeight: 700 }}>${savings.toLocaleString()}/mo</span>
@@ -226,8 +227,9 @@ function buildScenarioTableHtml(scenarios: Scenario[], listPrice?: number): stri
     rows += dataRow(rowLabel, vals, isFirst)
   }
   rows += dataRow('APR', scenarios.map(s => fpc(s.apr)))
+  const hasTempBuydownHtml = scenarios.some(s => s.buydown_rate < s.market_rate && s.piti_schedule && s.piti_schedule.length > 1)
   if (hasAnyBuydown) {
-    rows += dataRow('Mo. Savings vs Market', scenarios.map(s => {
+    rows += dataRow(hasTempBuydownHtml ? 'Yr 1 Mo. Savings vs Market' : 'Mo. Savings vs Market', scenarios.map(s => {
       const sv = marketPmt - s.buydown_payment
       return sv > 0 ? `<span style="color:#16A34A;font-weight:700;">$${sv.toLocaleString()}/mo</span>` : '—'
     }))
