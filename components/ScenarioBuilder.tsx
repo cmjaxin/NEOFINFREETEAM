@@ -64,6 +64,12 @@ interface ScenarioDraft {
   permanentRate: string
   apr: string
   label: string
+  // Manual overrides — when set, skip calculateScenario and build row directly
+  buydownRate: string
+  marketRate: string
+  buydownPayment: string
+  marketPayment: string
+  totalSubsidy: string
 }
 
 const DEFAULT_DRAFT: ScenarioDraft = {
@@ -74,6 +80,11 @@ const DEFAULT_DRAFT: ScenarioDraft = {
   permanentRate: '',
   apr: '',
   label: '',
+  buydownRate: '',
+  marketRate: '',
+  buydownPayment: '',
+  marketPayment: '',
+  totalSubsidy: '',
 }
 
 // ─── Inline scenario editor ───────────────────────────────────────────────────
@@ -313,6 +324,54 @@ export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, 
   }, [draft, shared, price])
 
   function addScenario() {
+    // If manual overrides are present, build the row directly without auto-calculation
+    const hasManual = draft.buydownRate || draft.marketRate || draft.buydownPayment || draft.marketPayment
+    if (hasManual) {
+      const p = parseFloat(price) || listPrice
+      const down = parseFloat(draft.downPct) || 0
+      const loanAmt = p * (1 - down / 100)
+      const mr = parseFloat(draft.marketRate) || parseFloat(draft.noteRate) || 0
+      const br = parseFloat(draft.buydownRate) || mr
+      const mp = parseFloat(draft.marketPayment) || 0
+      const bp = parseFloat(draft.buydownPayment) || mp
+      const tax = parseFloat(shared.monthlyTax) || 0
+      const ins = parseFloat(shared.monthlyInsurance) || 0
+      const hoa = parseFloat(shared.monthlyHoa) || 0
+      const taxIns = tax + ins + hoa
+      // Build a piti_schedule matching the buydown type
+      const isBuydown = br < mr
+      const schedule: Array<{rate: number; pi: number; piti: number}> = isBuydown
+        ? (() => {
+            const years = draft.buydownType === '3-2-1' ? 3 : draft.buydownType === '2-1' ? 2 : 1
+            const entries: Array<{rate: number; pi: number; piti: number}> = []
+            for (let y = 0; y < years; y++) {
+              const spread = mr - br
+              const yr = draft.buydownType === '3-2-1' ? br + (spread * y / (years - 1 || 1)) : draft.buydownType === '2-1' ? (y === 0 ? br : br + (mr - br) / 2) : br
+              const pi = y === 0 ? bp : Math.round(bp + (mp - bp) * y / years)
+              entries.push({ rate: y === 0 ? br : yr, pi: y === 0 ? bp : pi, piti: (y === 0 ? bp : pi) + taxIns })
+            }
+            entries.push({ rate: mr, pi: mp, piti: mp + taxIns })
+            return entries
+          })()
+        : [{ rate: mr, pi: mp, piti: mp + taxIns }]
+      const manualRow = {
+        label: draft.label || `${draft.loanType} · ${down}% Down`,
+        loan_type: draft.loanType,
+        down_pct: down,
+        loan_amount: loanAmt,
+        buydown_rate: br,
+        market_rate: mr,
+        buydown_payment: bp,
+        market_payment: mp,
+        apr: parseFloat(draft.apr) || mr,
+        total_subsidy: parseFloat(draft.totalSubsidy) || 0,
+        piti_schedule: schedule,
+        term_years: 30,
+      }
+      setScenarios(prev => [...prev, manualRow])
+      setDraft(d => ({ ...DEFAULT_DRAFT, noteRate: d.noteRate, buydownType: d.buydownType === 'none' ? '1-0' : d.buydownType }))
+      return
+    }
     if (!preview) return
     const row = toRateScenario(preview)
     setScenarios(prev => [...prev, row])
@@ -440,7 +499,47 @@ export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, 
                   />
                 </InputRow>
               </div>
+
+              {/* Manual override fields — mirrors the edit form */}
+              <div style={{ marginTop: 16, padding: 14, background: 'rgba(91,203,245,0.06)', border: `1px solid rgba(91,203,245,0.2)`, borderRadius: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+                  Manual Override <span style={{ fontWeight: 400, color: C.muted, textTransform: 'none', letterSpacing: 0 }}>— enter values directly instead of auto-calculating</span>
+                </div>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <InputRow label="Initial (Buydown) Rate %" note="Overrides calculated rate">
+                    <NumInput value={draft.buydownRate} onChange={v => set('buydownRate', v)} suffix="%" step="0.001" />
+                  </InputRow>
+                  <InputRow label="Market Rate %" note="Overrides note rate">
+                    <NumInput value={draft.marketRate} onChange={v => set('marketRate', v)} suffix="%" step="0.001" />
+                  </InputRow>
+                  <InputRow label="Initial Payment /mo">
+                    <NumInput value={draft.buydownPayment} onChange={v => set('buydownPayment', v)} prefix="$" step="1" />
+                  </InputRow>
+                  <InputRow label="Market Payment /mo">
+                    <NumInput value={draft.marketPayment} onChange={v => set('marketPayment', v)} prefix="$" step="1" />
+                  </InputRow>
+                  <InputRow label="Buydown Cost $">
+                    <NumInput value={draft.totalSubsidy} onChange={v => set('totalSubsidy', v)} prefix="$" step="100" />
+                  </InputRow>
+                </div>
+              </div>
             </div>
+
+            {/* Manual override add button — shown when overrides are present but no auto-preview */}
+            {!preview && (draft.buydownRate || draft.marketRate || draft.buydownPayment || draft.marketPayment) && (
+              <div style={{ background: C.navy, borderRadius: 14, padding: 18 }}>
+                <div style={{ color: '#7EC8E3', fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Manual Entry Ready</div>
+                <div style={{ color: '#9EB4C8', fontSize: 12, marginBottom: 12 }}>
+                  Using manually entered values. Fill in a purchase price above to also see the auto-calculated preview.
+                </div>
+                <button
+                  onClick={addScenario}
+                  style={{ padding: '10px 20px', background: C.accent, border: 'none', borderRadius: 9, color: C.navy, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                >
+                  + Add this scenario
+                </button>
+              </div>
+            )}
 
             {/* Live preview */}
             {preview && (

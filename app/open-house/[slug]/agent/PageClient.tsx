@@ -1556,17 +1556,53 @@ export default function AgentPageClient({ slug }: { slug: string }) {
               <div style={{ display: 'flex', gap: 0 }}>
                 <div style={{ flex: '0 0 320px', padding: '18px 20px', borderRight: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Rate Details</div>
+
+                  {/* Scenario picker */}
+                  {page?.rate_scenarios && page.rate_scenarios.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 3, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Pick from Scenario</div>
+                      <select
+                        onChange={e => {
+                          const idx = parseInt(e.target.value)
+                          if (isNaN(idx) || !page.rate_scenarios) return
+                          const s = page.rate_scenarios[idx]
+                          const savings = s.market_payment - s.buydown_payment
+                          setRateVals({
+                            rate: s.buydown_rate > 0 ? s.buydown_rate.toFixed(3) : '',
+                            apr: s.apr > 0 ? s.apr.toFixed(3) : '',
+                            promo_payment: s.buydown_payment > 0 ? String(Math.round(s.buydown_payment)) : '',
+                            promo_date: '',
+                            promo_savings: savings > 0 ? String(Math.round(savings)) : '',
+                          })
+                          e.target.value = ''
+                        }}
+                        defaultValue=""
+                        style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, color: C.text, background: C.white, outline: 'none' }}
+                      >
+                        <option value="" disabled>Select a scenario…</option>
+                        {page.rate_scenarios.map((s, i) => (
+                          <option key={i} value={i}>{s.label || `Scenario ${i + 1}`}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {([
-                    { key: 'rate', label: 'Interest Rate' },
-                    { key: 'apr', label: 'APR' },
-                    { key: 'promo_payment', label: 'Monthly Payment' },
-                    { key: 'promo_date', label: 'Rate Date' },
-                  ] as { key: keyof typeof rateVals; label: string }[]).map(f => (
+                    { key: 'rate', label: 'Interest Rate', placeholder: 'e.g. 5.500' },
+                    { key: 'apr', label: 'APR', placeholder: 'e.g. 5.724' },
+                    { key: 'promo_payment', label: 'Monthly Payment', placeholder: 'e.g. 2850' },
+                    { key: 'promo_date', label: 'Rate Date', placeholder: 'e.g. Nov 2026' },
+                    { key: 'promo_savings', label: 'Monthly Savings', placeholder: 'e.g. 410' },
+                  ] as { key: keyof typeof rateVals; label: string; placeholder: string }[]).map(f => (
                     <div key={f.key}>
                       <div style={{ fontSize: 11, fontWeight: 700, color: C.navy, marginBottom: 3, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{f.label}</div>
-                      <div style={{ padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, color: rateVals[f.key] ? C.text : C.muted, background: '#F9FAFB' }}>
-                        {rateVals[f.key] || <span style={{ fontStyle: 'italic' }}>Set in Open House admin</span>}
-                      </div>
+                      <input
+                        type="text"
+                        value={rateVals[f.key]}
+                        onChange={e => setRateVals(v => ({ ...v, [f.key]: e.target.value }))}
+                        placeholder={f.placeholder}
+                        style={{ width: '100%', padding: '8px 10px', border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 13, color: C.text, background: C.white, outline: 'none', boxSizing: 'border-box' }}
+                      />
                     </div>
                   ))}
                   {rateVals.promo_savings && (
@@ -1575,9 +1611,6 @@ export default function AgentPageClient({ slug }: { slug: string }) {
                       <span style={{ fontSize: 15, fontWeight: 900, color: '#16a34a' }}>Save ${rateVals.promo_savings}/mo</span>
                     </div>
                   )}
-                  <div style={{ fontSize: 11, color: C.muted, background: 'rgba(91,203,245,0.07)', border: '1px solid rgba(91,203,245,0.25)', borderRadius: 8, padding: '8px 12px', lineHeight: 1.5 }}>
-                    Rate values are set by admin. QR code links buyers directly to this open house page.
-                  </div>
                   <button
                     onClick={() => {
                       const canvas = rateCanvasRef.current
