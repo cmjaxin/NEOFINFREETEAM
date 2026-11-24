@@ -45,7 +45,9 @@ function normAddr(s: string) {
     terrace: 'ter', trail: 'trl', north: 'n', south: 's', east: 'e', west: 'w',
   }
   return s.toLowerCase()
-    .replace(/[.,#]/g, ' ')
+    // Strip unit/apt/suite/# suffixes before the rest of normalization
+    .replace(/\s*(#|unit|apt|apartment|suite|ste|lot)\s*[\w-]*/g, '')
+    .replace(/[.,]/g, ' ')
     .split(/\s+/)
     .map(w => abbr[w] ?? w)
     .join('')
