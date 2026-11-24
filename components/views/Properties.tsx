@@ -347,8 +347,12 @@ function SlotPickerModal({ prefillPage, onClose, onPick }: {
     return /^sign rider \d+$/i.test(sr.address.trim())
   }
 
-  const free = slots.filter(isPlaceholder)
-  const inUse = slots.filter(s => !isPlaceholder(s))
+  function slotNum(sr: OHPage) {
+    const m = sr.address.match(/(\d+)/)
+    return m ? parseInt(m[1], 10) : 9999
+  }
+  const free = slots.filter(isPlaceholder).sort((a, b) => slotNum(a) - slotNum(b))
+  const inUse = slots.filter(s => !isPlaceholder(s)).sort((a, b) => slotNum(a) - slotNum(b))
 
   function SlotRow({ sr, dim }: { sr: OHPage; dim?: boolean }) {
     const label = sr.callout_text || sr.address
