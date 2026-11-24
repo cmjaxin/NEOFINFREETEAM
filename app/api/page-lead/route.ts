@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const sb = admin()
 
   // Save lead to Supabase
-  await sb.from('page_leads').insert({
+  const { error: insertError } = await sb.from('page_leads').insert({
     page_id: page_id ?? null,
     page_type: page_type ?? 'open_house',
     advisor_user_id: advisor_user_id ?? null,
@@ -28,6 +28,13 @@ export async function POST(req: NextRequest) {
     address: address ?? '',
     source: source ?? '',
   })
+
+  if (insertError) {
+    console.error('[page-lead] insert error:', insertError)
+    return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 })
+  }
+
+  console.log('[page-lead] saved:', { name, email, page_id, page_type, advisor_user_id })
 
   // Send email notification to advisor if we have their email
   const toEmail = advisor_email ?? null
