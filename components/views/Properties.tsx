@@ -38,7 +38,19 @@ type ConfirmState = {
 function fmt$(n: number) { return n ? '$' + Math.round(n).toLocaleString() : '' }
 function fmtNum(n: number) { return n ? n.toLocaleString() : '' }
 function addrKey(p: OHPage) { return [p.address, p.city, p.state].join('|').toLowerCase().trim() }
-function normAddr(s: string) { return s.toLowerCase().replace(/[^a-z0-9]/g, '') }
+function normAddr(s: string) {
+  const abbr: Record<string, string> = {
+    street: 'st', drive: 'dr', avenue: 'ave', boulevard: 'blvd', road: 'rd',
+    lane: 'ln', court: 'ct', circle: 'cir', place: 'pl', way: 'wy',
+    terrace: 'ter', trail: 'trl', north: 'n', south: 's', east: 'e', west: 'w',
+  }
+  return s.toLowerCase()
+    .replace(/[.,#]/g, ' ')
+    .split(/\s+/)
+    .map(w => abbr[w] ?? w)
+    .join('')
+    .replace(/[^a-z0-9]/g, '')
+}
 
 function AssetTile({
   label, color, exists, count, slug, route, onAction, actionLabel, onDelete,
@@ -331,6 +343,7 @@ function ClientsTab() {
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [contactedOpen, setContactedOpen] = useState(false)
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null)
 
   useEffect(() => {
     if (!profile?.id) return
@@ -345,12 +358,30 @@ function ClientsTab() {
 
   async function deleteLead(id: string) {
     setLeads(prev => prev.filter(l => l.id !== id))
-    await supabase.from('page_leads').delete().eq('id', id)
+    const res = await fetch(`/api/page-lead/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      // Restore on failure
+      setLeads(prev => {
+        const restored = leads.find(l => l.id === id)
+        return restored ? [...prev, restored].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) : prev
+      })
+    }
+  }
+
+  function confirmDelete(lead: any) {
+    setConfirmState({
+      message: `Remove ${lead.name} from your leads? This cannot be undone.`,
+      onConfirm: () => deleteLead(lead.id),
+    })
   }
 
   async function toggleContacted(id: string, current: boolean) {
     setLeads(prev => prev.map(l => l.id === id ? { ...l, contacted: !current } : l))
-    await supabase.from('page_leads').update({ contacted: !current }).eq('id', id)
+    await fetch(`/api/page-lead/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contacted: !current }),
+    })
   }
 
   if (loading) return <div style={{ color: C.muted, padding: 40, textAlign: 'center' }}>Loading…</div>
@@ -412,7 +443,7 @@ function ClientsTab() {
                         {l.contacted ? '✓ Contacted' : 'Mark Contacted'}
                       </button>
                       <button
-                        onClick={() => deleteLead(l.id)}
+                        onClick={() => confirmDelete(l)}
                         title="Remove lead"
                         style={{
                           background: 'none', border: 'none', cursor: 'pointer',
@@ -432,6 +463,8 @@ function ClientsTab() {
   }
 
   return (
+    <>
+    <ConfirmDialog state={confirmState} onCancel={() => setConfirmState(null)} />
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
         <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>
@@ -466,6 +499,7 @@ function ClientsTab() {
         </div>
       )}
     </div>
+    </>
   )
 }
 
