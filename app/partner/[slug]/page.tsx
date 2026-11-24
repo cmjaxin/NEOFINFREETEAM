@@ -92,7 +92,7 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
                 const hasScenarios = l.rate_scenarios && l.rate_scenarios.length > 0
                 const primary = hasScenarios ? (l.rate_scenarios.find((s: any) => s.buydown_rate !== s.market_rate) ?? l.rate_scenarios[0]) : null
                 return (
-                  <a key={l.id} href={`/open-house/${l.slug}`} target="_blank" rel="noopener noreferrer"
+                  <a key={l.id} href={`/open-house/${l.slug}`}
                     style={{ background: '#fff', borderRadius: 14, border: '1px solid #E4E8EC', overflow: 'hidden', textDecoration: 'none', display: 'block' }}>
                     <div style={{ height: 180, background: '#E4E8EC', overflow: 'hidden' }}>
                       {photo
