@@ -9,9 +9,8 @@ const C = {
   text: '#1F2937', dim: '#374151',
 }
 
-export function partnerSlug(name: string, company?: string | null) {
-  const base = [name, company].filter(Boolean).join(' ')
-  return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+export function partnerSlug(name: string) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
 function initials(name: string) {
@@ -94,7 +93,7 @@ export default function Partners() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {partners.map(p => {
-            const slug = partnerSlug(p.name, p.company)
+            const slug = partnerSlug(p.name)
             const url = `${origin}/partner/${slug}`
             const count = listingCounts[p.name] ?? 0
             return (

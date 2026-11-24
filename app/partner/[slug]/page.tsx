@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import PartnerPortalClient from './PartnerPortalClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,7 @@ interface OHPage {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params
   const supabase = await createClient()
-  const { data } = await supabase.from('marketing_partners').select('name, company')
+  const { data } = await supabase.from('marketing_partners').select('name')
   const match = (data ?? []).find((p: any) => slugify(p.name) === slug)
   if (!match) return { title: 'Partner Portal' }
   return { title: `${match.name} — Partner Portal | NEO Home Loans` }
@@ -28,17 +29,21 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
   const { slug } = await params
   const supabase = await createClient()
 
-  // Find marketing_partner whose slugified name matches the route slug
+  // Find marketing_partner whose slugified name matches the route slug (name-only, same as LP button)
   const { data: allPartners } = await supabase.from('marketing_partners').select('*')
   const partner = (allPartners ?? []).find((p: any) => slugify(p.name) === slug)
   if (!partner) notFound()
 
   const { data: listings } = await supabase
     .from('open_house_pages')
-    .select('id, slug, address, city, state, zip, list_price, beds, baths, sqft, photos, status, advisor_name, advisor_photo, advisor_title, rate_scenarios')
+    .select('id, slug, address, city, state, zip, list_price, beds, baths, sqft, photos, status, advisor_name, advisor_photo, advisor_title, rate_scenarios, apply_url, bntouch_user_id, advisor_name')
     .eq('partner_name', partner.name)
     .eq('status', 'active')
     .order('created_at', { ascending: false })
+
+  const applyUrl = (listings ?? []).map((l: any) => l.apply_url).find(Boolean) ?? 'https://neohomeloans.com/apply'
+  const bntouchUserId = (listings ?? []).map((l: any) => l.bntouch_user_id).find(Boolean) ?? null
+  const advisorName = (listings ?? []).map((l: any) => l.advisor_name).find(Boolean) ?? null
 
   const NEO = '#0A2540'
   const CYAN = '#5BCBF5'
@@ -66,8 +71,16 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
               </div>
             </div>
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ maxHeight: 32, maxWidth: 110, objectFit: 'contain' }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="https://8blocks.s3.us-west-1.amazonaws.com/neo/images/logo-allwhite.png" alt="NEO Home Loans" style={{ maxHeight: 32, maxWidth: 110, objectFit: 'contain' }} />
+            <PartnerPortalClient
+              partnerName={partner.name}
+              advisorName={advisorName}
+              bntouchUserId={bntouchUserId}
+              applyUrl={applyUrl}
+            />
+          </div>
         </div>
 
         <div style={{ background: CYAN, padding: '14px 24px', textAlign: 'center' }}>
