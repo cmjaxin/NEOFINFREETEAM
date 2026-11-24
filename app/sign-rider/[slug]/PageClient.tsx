@@ -75,6 +75,7 @@ interface PageData {
   schedule_url: string | null
   apply_url: string | null
   bntouch_user_id: string | null
+  created_by: string | null
   rate_scenarios: Array<{
     label: string; down_pct: number; market_rate: number; buydown_rate: number
     market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number
@@ -122,7 +123,7 @@ export default function SignRiderPage({ slug }: { slug: string }) {
           const bntouchUserId = profileData?.bntouch_user_id ?? pageData.bntouch_user_id ?? null
           const scheduleUrl = profileData?.schedule_url ?? pageData.schedule_url ?? null
           const applyUrl = profileData?.apply_url ?? pageData.apply_url ?? null
-          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl }
+          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl, created_by: row.created_by ?? null }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
@@ -534,9 +535,14 @@ export default function SignRiderPage({ slug }: { slug: string }) {
         <LeadCaptureModal
           address={page.address || slug}
           advisorName={page.advisor_name}
+          advisorEmail={page.advisor_email}
+          advisorUserId={page.created_by}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
           callout={page.callout_text}
+          scheduleUrl={page.schedule_url}
+          pageId={page.id}
+          pageType="sign_rider"
         />
       )}
 

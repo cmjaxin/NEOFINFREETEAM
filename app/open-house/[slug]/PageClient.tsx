@@ -306,6 +306,7 @@ interface PageData {
   bntouch_user_id: string | null
   partner_id: string | null
   partner_slug: string | null
+  created_by: string | null
 }
 
 export default function OpenHousePage({ slug }: { slug: string }) {
@@ -374,7 +375,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           const scheduleUrl = profileData?.schedule_url ?? pageData.schedule_url ?? null
           const applyUrl = profileData?.apply_url ?? pageData.apply_url ?? null
           const partnerSlug = (dbPartnerRes.data as { slug: string } | null)?.slug ?? null
-          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl, partner_slug: partnerSlug }
+          let finalData = { ...pageData, bntouch_user_id: bntouchUserId, schedule_url: scheduleUrl, apply_url: applyUrl, partner_slug: partnerSlug, created_by: row.created_by ?? null }
           if (partnerRes.data) {
             const match = (partnerRes.data as { name: string; logo_url: string }[]).find(p =>
               p.name.toLowerCase().trim() === pageData.partner_name.toLowerCase().trim()
@@ -416,6 +417,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
           address={page.address + (page.city ? ', ' + page.city : '')}
           advisorName={page.advisor_name}
           advisorEmail={page.advisor_email}
+          advisorUserId={page.created_by}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
           callout={page.callout_text}

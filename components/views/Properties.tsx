@@ -307,6 +307,24 @@ function ConfirmDialog({ state, onCancel }: { state: ConfirmState; onCancel: () 
   )
 }
 
+const CLIENTS_SEEN_KEY = 'properties_clients_last_seen'
+
+function useUnreadLeads(profileId?: string) {
+  const { supabase } = useApp()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    if (!profileId) return
+    const lastSeen = localStorage.getItem(CLIENTS_SEEN_KEY) ?? '1970-01-01'
+    supabase.from('page_leads').select('id', { count: 'exact', head: true })
+      .eq('advisor_user_id', profileId)
+      .gt('created_at', lastSeen)
+      .then(({ count }) => setUnreadCount(count ?? 0))
+  }, [profileId])
+
+  return unreadCount
+}
+
 // ─── Clients Tab ──────────────────────────────────────────────────────────────
 function ClientsTab() {
   const { supabase, profile } = useApp()
@@ -317,7 +335,12 @@ function ClientsTab() {
     if (!profile?.id) return
     supabase.from('page_leads').select('*').eq('advisor_user_id', profile.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => { setLeads(data ?? []); setLoading(false) })
+      .then(({ data }) => {
+        setLeads(data ?? [])
+        setLoading(false)
+        // Mark all as seen
+        localStorage.setItem(CLIENTS_SEEN_KEY, new Date().toISOString())
+      })
   }, [profile?.id])
 
   if (loading) return <div style={{ color: C.muted, padding: 40, textAlign: 'center' }}>Loading…</div>
@@ -329,6 +352,13 @@ function ClientsTab() {
     </div>
   )
 
+  const lastSeen = localStorage.getItem(CLIENTS_SEEN_KEY)
+
+  function sourceLabel(l: any) {
+    const type = l.page_type === 'sign_rider' ? 'Sign Rider' : l.page_type === 'open_house' ? 'Open House' : l.page_type || ''
+    return [l.address, type].filter(Boolean).join(' · ')
+  }
+
   return (
     <div>
       <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>{leads.length} lead{leads.length !== 1 ? 's' : ''} total</div>
@@ -336,24 +366,29 @@ function ClientsTab() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: C.navy }}>
-              {['Name', 'Email', 'Phone', 'Listing', 'Type', 'Date'].map(h => (
+              {['', 'Name', 'Email', 'Phone', 'Source', 'Date'].map(h => (
                 <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {leads.map((l, i) => (
-              <tr key={l.id} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 === 0 ? '#fff' : C.bg }}>
-                <td style={{ padding: '10px 14px', fontWeight: 700, color: C.navy, whiteSpace: 'nowrap' }}>{l.name}</td>
-                <td style={{ padding: '10px 14px' }}><a href={`mailto:${l.email}`} style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}>{l.email}</a></td>
-                <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}><a href={`tel:${l.phone}`} style={{ color: C.navy, textDecoration: 'none' }}>{l.phone}</a></td>
-                <td style={{ padding: '10px 14px', color: C.dim, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.address || '—'}</td>
-                <td style={{ padding: '10px 14px', color: C.muted, fontSize: 11 }}>{l.page_type || '—'}</td>
-                <td style={{ padding: '10px 14px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>
-                  {l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
-                </td>
-              </tr>
-            ))}
+            {leads.map((l, i) => {
+              const isNew = lastSeen ? new Date(l.created_at) > new Date(lastSeen) : false
+              return (
+                <tr key={l.id} style={{ borderTop: `1px solid ${C.border}`, background: isNew ? '#EFF9FF' : i % 2 === 0 ? '#fff' : C.bg }}>
+                  <td style={{ padding: '10px 10px 10px 14px', width: 10 }}>
+                    {isNew && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />}
+                  </td>
+                  <td style={{ padding: '10px 14px', fontWeight: 700, color: C.navy, whiteSpace: 'nowrap' }}>{l.name}</td>
+                  <td style={{ padding: '10px 14px' }}><a href={`mailto:${l.email}`} style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}>{l.email}</a></td>
+                  <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}><a href={`tel:${l.phone}`} style={{ color: C.navy, textDecoration: 'none' }}>{l.phone}</a></td>
+                  <td style={{ padding: '10px 14px', color: C.dim, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{sourceLabel(l)}</td>
+                  <td style={{ padding: '10px 14px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>
+                    {l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -519,6 +554,7 @@ export default function Properties() {
   const [modalState, setModalState] = useState<ModalState>(null)
   const [confirmState, setConfirmState] = useState<ConfirmState>(null)
   const [activeTab, setActiveTab] = useState<'properties' | 'clients' | 'stats'>('properties')
+  const unreadLeads = useUnreadLeads(profile?.id)
 
   async function load() {
     if (!profile?.id) return
@@ -659,7 +695,17 @@ export default function Properties() {
             background: activeTab === tab.id ? C.navy : 'transparent',
             color: activeTab === tab.id ? '#fff' : C.muted,
             transition: 'all 0.15s',
-          }}>{tab.label}</button>
+            position: 'relative', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            {tab.label}
+            {tab.id === 'clients' && unreadLeads > 0 && activeTab !== 'clients' && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                minWidth: 18, height: 18, borderRadius: 9, padding: '0 5px',
+                background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 800, lineHeight: 1,
+              }}>{unreadLeads}</span>
+            )}
+          </button>
         ))}
       </div>
 
