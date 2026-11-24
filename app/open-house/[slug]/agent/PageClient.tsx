@@ -25,9 +25,52 @@ interface PageData {
   partner_phone: string; partner_photo: string; partner_nmls: string; partner_logo: string
   tca_url: string | null; tca_screenshot: string | null
   schedule_url: string | null
+  rate_scenarios: Array<{ label: string; down_pct: number; market_rate: number; buydown_rate: number; market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number; piti_schedule?: Array<{rate: number; pi: number; piti: number}> }> | null
 }
 
 function fmtPrice(n: number) { return '$' + Math.round(n).toLocaleString() }
+
+function buildScenarioTableHtml(scenarios: NonNullable<PageData['rate_scenarios']>, listPrice?: number): string {
+  if (!scenarios || scenarios.length === 0) return ''
+  const NEO = '#0A2540'; const CYAN = '#5BCBF5'; const BORDER = '#E4E8EC'
+  const fp = (n: number) => n > 0 ? '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'
+  const fd = (n: number) => n > 0 ? '$' + Math.round(n).toLocaleString() : '—'
+  const fpc = (n: number) => n > 0 ? n.toFixed(3) + '%' : '—'
+  function yearCards(s: typeof scenarios[0]) {
+    const sched = s.piti_schedule ?? []
+    if (sched.length === 0) {
+      const hb = s.buydown_rate !== s.market_rate
+      if (!hb) return [{ label: 'Your Rate', rate: s.market_rate, pmt: s.buydown_payment, isLast: true }]
+      return [{ label: 'Year 1', rate: s.buydown_rate, pmt: s.buydown_payment, isLast: false }, { label: 'Year 2+', rate: s.market_rate, pmt: s.market_payment, isLast: true }]
+    }
+    const deduped: typeof sched = []
+    for (const e of sched) { if (deduped.length === 0 || Math.abs(e.rate - deduped[deduped.length - 1].rate) > 0.0001) deduped.push(e) }
+    return deduped.map((e, i) => { const isLast = i === deduped.length - 1; const pmt = e.piti > e.pi ? e.piti : e.pi; return { label: isLast ? (deduped.length === 1 ? 'Your Rate' : `Year ${i + 1}+`) : `Year ${i + 1}`, rate: e.rate, pmt, isLast } })
+  }
+  const allCards = scenarios.map(yearCards)
+  const maxYears = Math.max(...allCards.map(c => c.length))
+  const hasAnyBuydown = scenarios.some(s => s.buydown_rate !== s.market_rate)
+  const marketPmt = scenarios[0]?.market_payment ?? 0
+  const thCols = scenarios.map(s => { const isBd = s.buydown_rate !== s.market_rate; const lbl = s.label.replace(/\bLender\s+/gi, ''); return `<th style="padding:7px 10px;text-align:center;font-size:9px;font-weight:800;color:${isBd ? '#fff' : NEO};background:${isBd ? NEO : '#F8FAFC'};border-bottom:1.5px solid ${BORDER};border-left:1px solid ${BORDER};white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact;">${lbl}${isBd ? `<div style="font-size:16px;font-weight:900;color:${CYAN};line-height:1.1;margin-top:2px;">${s.buydown_rate.toFixed(3)}%</div>` : ''}</th>` }).join('')
+  function dataRow(label: string, vals: string[], highlight = false) {
+    const cells = vals.map(v => `<td style="padding:6px 10px;text-align:center;font-size:9px;font-weight:${highlight ? 700 : 500};color:${NEO};border-bottom:1px solid ${BORDER};border-left:1px solid ${BORDER};">${v}</td>`).join('')
+    return `<tr style="background:${highlight ? '#EBF8FF' : '#fff'};"><td style="padding:6px 10px;font-size:8px;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid ${BORDER};white-space:nowrap;">${label}</td>${cells}</tr>`
+  }
+  let rows = ''
+  rows += dataRow('Loan Type', scenarios.map(s => [s.loan_type, s.term_years ? `${s.term_years}-Yr` : ''].filter(Boolean).join(' ')))
+  rows += dataRow('Down Payment', scenarios.map(s => !s.down_pct ? '—' : (listPrice ? fd(listPrice * s.down_pct / 100) + ` (${s.down_pct}%)` : `${s.down_pct}%`)))
+  rows += dataRow('Note Rate', scenarios.map(s => fpc(s.market_rate)))
+  for (let yi = 0; yi < maxYears; yi++) {
+    const isFirst = yi === 0
+    const rowLabel = maxYears === 1 ? 'Monthly Payment' : (yi === maxYears - 1 ? `Year ${yi + 1}+ Payment` : `Year ${yi + 1} Payment`)
+    const vals = allCards.map(cards => { const card = cards[yi]; if (!card) return '—'; return `<span style="font-weight:${isFirst && !card.isLast ? 800 : 600}">${fp(card.pmt)}</span> <span style="font-size:7px;color:#6B7280;">@ ${fpc(card.rate)}</span>` })
+    rows += dataRow(rowLabel, vals, isFirst)
+  }
+  rows += dataRow('APR', scenarios.map(s => fpc(s.apr)))
+  if (hasAnyBuydown) rows += dataRow('Mo. Savings vs Market', scenarios.map(s => { const sv = marketPmt - s.buydown_payment; return sv > 0 ? `<span style="color:#16A34A;font-weight:700;">$${sv.toLocaleString()}/mo</span>` : '—' }))
+  if (scenarios.some(s => (s as any).total_subsidy > 0)) rows += dataRow('Total Subsidy', scenarios.map(s => fd((s as any).total_subsidy ?? 0)))
+  return `<div style="border:1px solid ${BORDER};border-radius:8px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><div style="background:${NEO};padding:7px 12px;display:flex;align-items:center;gap:8px;-webkit-print-color-adjust:exact;print-color-adjust:exact;"><div style="width:6px;height:6px;border-radius:50%;background:${CYAN};flex-shrink:0;"></div><span style="font-size:9px;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0.1em;">Financing Scenarios</span></div><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><thead><tr><th style="padding:7px 10px;text-align:left;font-size:8px;font-weight:700;color:#6B7280;background:#F8FAFC;border-bottom:1.5px solid ${BORDER};white-space:nowrap;">&nbsp;</th>${thCols}</tr></thead><tbody>${rows}</tbody></table></div></div>`
+}
 
 function openBlob(html: string) {
   const blob = new Blob([html], { type: 'text/html' })
@@ -120,9 +163,11 @@ html,body{width:8.5in;height:11in;overflow:hidden;font-family:'Arial',Helvetica,
 <div class="main">
   <div class="left">
     ${desc ? `<div><div class="section-label">About This Property</div><p class="desc-text">${desc.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</p></div>` : ''}
-    ${p.tca_screenshot
-      ? `<div class="tca-card"><div class="tca-header">Financing Options For This Home</div><div class="tca-sub">Same ${price ? price : 'list price'} home. Multiple ways to structure the financing.</div><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
-      : `<div class="qr-card"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=300x300&margin=2&color=0A2540" alt="QR Code" /><div class="qr-label">Scan for Special Financing Options</div><div class="qr-sub">Exclusive rates &amp; programs for this home.</div><div class="qr-bullets"><div class="qr-bullet"><div class="qr-dot"></div>Payment breakdowns &amp; monthly estimates</div><div class="qr-bullet"><div class="qr-dot"></div>Loan scenarios tailored to this property</div><div class="qr-bullet"><div class="qr-dot"></div>Connect directly with your mortgage advisor</div></div></div>`
+    ${(p.rate_scenarios && p.rate_scenarios.length > 0)
+      ? buildScenarioTableHtml(p.rate_scenarios, p.list_price)
+      : p.tca_screenshot
+        ? `<div class="tca-card"><div class="tca-header">Financing Options For This Home</div><div class="tca-sub">Same ${price ? price : 'list price'} home. Multiple ways to structure the financing.</div><img src="${p.tca_screenshot}" alt="MortgageCoach TCA" /></div>`
+        : `<div class="qr-card"><img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(`https://neofinfree.com/open-house/${p.slug}`)}&size=300x300&margin=2&color=0A2540" alt="QR Code" /><div class="qr-label">Scan for Special Financing Options</div><div class="qr-sub">Exclusive rates &amp; programs for this home.</div><div class="qr-bullets"><div class="qr-bullet"><div class="qr-dot"></div>Payment breakdowns &amp; monthly estimates</div><div class="qr-bullet"><div class="qr-dot"></div>Loan scenarios tailored to this property</div><div class="qr-bullet"><div class="qr-dot"></div>Connect directly with your mortgage advisor</div></div></div>`
     }
   </div>
   <div class="right">
