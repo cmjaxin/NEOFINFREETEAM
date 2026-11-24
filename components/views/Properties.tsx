@@ -799,24 +799,11 @@ export default function Properties() {
 
   const allSignRiders = pages.filter(p => p.page_type === 'sign_rider')
 
-  // Sign riders with no matching property address (orphaned)
-  const unlinkedRiders = allSignRiders.filter(
-    sr => !groups.some(g => normAddr(g.address) === normAddr(sr.address))
-  )
-
   const filtered = groups.filter(g => {
     if (!search) return true
     const q = search.toLowerCase()
     return g.address.toLowerCase().includes(q) || g.city.toLowerCase().includes(q)
   })
-
-  const filteredUnlinked = unlinkedRiders
-    .filter(p => {
-      if (!search) return true
-      const q = search.toLowerCase()
-      return p.address.toLowerCase().includes(q) || p.city.toLowerCase().includes(q)
-    })
-    .sort((a, b) => (a.callout_text || a.address).localeCompare(b.callout_text || b.address, undefined, { numeric: true, sensitivity: 'base' }))
 
   function openEdit(page: OHPage, type: 'listing' | 'ohEvent' | 'signRider') {
     setModalState({ type, editing: page })
@@ -878,7 +865,7 @@ export default function Properties() {
     })
   }
 
-  const hasAnything = filtered.length > 0 || unlinkedRiders.length > 0
+  const hasAnything = filtered.length > 0
 
   return (
     <div style={{ padding: '28px 32px', background: C.bg, minHeight: '100vh' }}>
@@ -942,7 +929,7 @@ export default function Properties() {
             <StatCard label="Properties" value={groups.length} />
             <StatCard label="Listings" value={groups.filter(g => g.listing).length} color={C.green} />
             <StatCard label="Open Houses" value={groups.reduce((n, g) => n + g.openHouses.length, 0)} color={C.accent} />
-            <StatCard label="Sign Riders" value={allSignRiders.length - unlinkedRiders.length} color={C.yellow} />
+            <StatCard label="Sign Riders" value={allSignRiders.filter(sr => groups.some(g => normAddr(g.address) === normAddr(sr.address))).length} color={C.yellow} />
           </>
         )}
         <div style={{ flex: 1, minWidth: 220 }}>
@@ -998,59 +985,6 @@ export default function Properties() {
             </>
           )}
 
-          {/* Orphaned sign riders — have no matching property */}
-          {filteredUnlinked.length > 0 && (
-            <>
-              <SectionLabel>Unlinked Sign Riders ({filteredUnlinked.length})</SectionLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {filteredUnlinked.map(p => (
-                  <div key={p.id} style={{
-                    background: C.white, borderRadius: 12, border: `1px solid ${C.yellow}22`,
-                    padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  }}>
-                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.yellow, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{p.address}</div>
-                      <div style={{ fontSize: 12, color: C.muted }}>
-                        {[p.city, p.state, p.zip].filter(Boolean).join(', ')}
-                        {p.list_price > 0 && ` · ${fmt$(p.list_price)}`}
-                      </div>
-                    </div>
-                    <a
-                      href={`/sign-rider/${p.slug}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{
-                        padding: '6px 12px', borderRadius: 8, fontSize: 12.5, fontWeight: 700,
-                        border: `1px solid ${C.yellow}55`, color: C.yellow, textDecoration: 'none',
-                        background: C.yellow + '0D', flexShrink: 0,
-                      }}
-                    >
-                      View ↗
-                    </a>
-                    <button
-                      onClick={() => openEdit(p, 'signRider')}
-                      style={{
-                        padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`,
-                        background: C.white, cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: C.navy, flexShrink: 0,
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => confirmDeletePage(p.id, p.address)}
-                      style={{
-                        padding: '6px 10px', borderRadius: 8, border: `1px solid ${C.border}`,
-                        background: C.white, cursor: 'pointer', fontSize: 14, color: C.muted, flexShrink: 0,
-                      }}
-                      title="Remove"
-                    >×</button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
         </>
       )}
 
