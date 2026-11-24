@@ -76,6 +76,147 @@ const DEFAULT_DRAFT: ScenarioDraft = {
   label: '',
 }
 
+// ─── Inline scenario editor ───────────────────────────────────────────────────
+
+function ScenarioList({ scenarios, setScenarios }: {
+  scenarios: any[]
+  setScenarios: React.Dispatch<React.SetStateAction<any[]>>
+}) {
+  const [editing, setEditing] = useState<number | null>(null)
+  const [draft, setDraft] = useState<any>(null)
+
+  function startEdit(i: number) {
+    setEditing(i)
+    const s = scenarios[i]
+    setDraft({
+      label: s.label ?? '',
+      market_rate: String(s.market_rate ?? ''),
+      buydown_rate: String(s.buydown_rate ?? ''),
+      market_payment: String(s.market_payment ?? ''),
+      buydown_payment: String(s.buydown_payment ?? ''),
+      apr: String(s.apr ?? ''),
+      down_pct: String(s.down_pct ?? ''),
+      loan_type: s.loan_type ?? 'Conventional',
+      total_subsidy: String(s.total_subsidy ?? ''),
+    })
+  }
+
+  function saveEdit(i: number) {
+    setScenarios(prev => prev.map((s, idx) => idx !== i ? s : {
+      ...s,
+      label: draft.label || s.label,
+      market_rate: parseFloat(draft.market_rate) || s.market_rate,
+      buydown_rate: parseFloat(draft.buydown_rate) || s.buydown_rate,
+      market_payment: parseFloat(draft.market_payment) || s.market_payment,
+      buydown_payment: parseFloat(draft.buydown_payment) || s.buydown_payment,
+      apr: parseFloat(draft.apr) || s.apr,
+      down_pct: parseFloat(draft.down_pct) || s.down_pct,
+      loan_type: draft.loan_type || s.loan_type,
+      total_subsidy: parseFloat(draft.total_subsidy) || s.total_subsidy,
+    }))
+    setEditing(null)
+    setDraft(null)
+  }
+
+  const inp: React.CSSProperties = {
+    width: '100%', border: `1px solid ${C.border}`, borderRadius: 7,
+    padding: '6px 9px', fontSize: 13, color: C.text, background: C.white,
+    outline: 'none', boxSizing: 'border-box',
+  }
+
+  return (
+    <div>
+      <div style={{ fontWeight: 700, fontSize: 13, color: C.navy, marginBottom: 10 }}>
+        Scenarios ({scenarios.length})
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {scenarios.map((s, i) => (
+          <div key={i} style={{ background: C.bg, borderRadius: 10, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            {/* Collapsed row */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
+                <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
+                  {fmtRate(s.buydown_rate)} Y1 → {fmtRate(s.market_rate)} market
+                  {s.piti_schedule && s.piti_schedule[0]?.piti > s.piti_schedule[0]?.pi
+                    ? ` · PITI ${fmt$(s.piti_schedule[0].piti)}/mo`
+                    : ` · P&I ${fmt$(s.buydown_payment)}/mo`}
+                  {s.total_subsidy > 0 && ` · Subsidy ${fmt$(s.total_subsidy)}`}
+                </div>
+              </div>
+              <button
+                onClick={() => editing === i ? setEditing(null) : startEdit(i)}
+                style={{ background: editing === i ? C.navy : C.white, color: editing === i ? C.white : C.navy, border: `1px solid ${C.border}`, borderRadius: 7, padding: '5px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+              >
+                {editing === i ? 'Cancel' : 'Edit'}
+              </button>
+              <button
+                onClick={() => setScenarios(prev => prev.filter((_, idx) => idx !== i))}
+                style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18, lineHeight: 1, flexShrink: 0 }}
+              >×</button>
+            </div>
+
+            {/* Expanded edit form */}
+            {editing === i && draft && (
+              <div style={{ borderTop: `1px solid ${C.border}`, padding: '14px 14px 16px', background: C.white }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Label</div>
+                    <input style={{ ...inp, gridColumn: '1 / -1' }} value={draft.label} onChange={e => setDraft((d: any) => ({ ...d, label: e.target.value }))} placeholder="Scenario label" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Loan Type</div>
+                    <select value={draft.loan_type} onChange={e => setDraft((d: any) => ({ ...d, loan_type: e.target.value }))}
+                      style={{ ...inp }}>
+                      {LOAN_TYPES.map(t => <option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Down %</div>
+                    <input style={inp} type="number" step="0.5" value={draft.down_pct} onChange={e => setDraft((d: any) => ({ ...d, down_pct: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Initial (Buydown) Rate %</div>
+                    <input style={inp} type="number" step="0.001" value={draft.buydown_rate} onChange={e => setDraft((d: any) => ({ ...d, buydown_rate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Market Rate %</div>
+                    <input style={inp} type="number" step="0.001" value={draft.market_rate} onChange={e => setDraft((d: any) => ({ ...d, market_rate: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Initial Payment /mo</div>
+                    <input style={inp} type="number" step="1" value={draft.buydown_payment} onChange={e => setDraft((d: any) => ({ ...d, buydown_payment: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Market Payment /mo</div>
+                    <input style={inp} type="number" step="1" value={draft.market_payment} onChange={e => setDraft((d: any) => ({ ...d, market_payment: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>APR %</div>
+                    <input style={inp} type="number" step="0.001" value={draft.apr} onChange={e => setDraft((d: any) => ({ ...d, apr: e.target.value }))} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: C.muted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Buydown Cost $</div>
+                    <input style={inp} type="number" step="100" value={draft.total_subsidy} onChange={e => setDraft((d: any) => ({ ...d, total_subsidy: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button onClick={() => saveEdit(i)}
+                    style={{ background: C.navy, color: C.white, border: 'none', borderRadius: 8, padding: '8px 20px', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Main builder ─────────────────────────────────────────────────────────────
+
 interface Props {
   listPrice: number
   existingScenarios: any[]
@@ -325,29 +466,7 @@ export default function ScenarioBuilder({ listPrice, existingScenarios, onSave, 
 
             {/* Scenario list */}
             {scenarios.length > 0 && (
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: C.navy, marginBottom: 10 }}>Scenarios ({scenarios.length})</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {scenarios.map((s, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: C.bg, borderRadius: 10, border: `1px solid ${C.border}` }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
-                        <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>
-                          {fmtRate(s.buydown_rate)} Y1
-                          {s.piti_schedule && s.piti_schedule[0].piti > s.piti_schedule[0].pi
-                            ? ` · PITI ${fmt$(s.piti_schedule[0].piti)}/mo`
-                            : ` · P&I ${fmt$(s.buydown_payment)}/mo`}
-                          {s.total_subsidy > 0 && ` · Subsidy ${fmt$(s.total_subsidy)}`}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => removeScenario(i)}
-                        style={{ background: 'transparent', border: 'none', color: C.muted, cursor: 'pointer', fontSize: 18, lineHeight: 1, flexShrink: 0 }}
-                      >×</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <ScenarioList scenarios={scenarios} setScenarios={setScenarios} />
             )}
 
           </div>
