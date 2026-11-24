@@ -910,6 +910,31 @@ export function CreateModal({ editing, prefill, onClose, onSaved }: { editing: O
           {/* Special Financing Rate Graphic */}
           <section>
             <SectionHead title="Special Financing Rate Graphic" sub="These values auto-generate the rate graphic on the agent hub — agents won't need to fill them in." />
+            {form.rate_scenarios && form.rate_scenarios.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#5C6570', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: 5 }}>Auto-fill from Scenario</label>
+                <select
+                  defaultValue=""
+                  onChange={e => {
+                    const idx = parseInt(e.target.value)
+                    if (isNaN(idx) || !form.rate_scenarios) return
+                    const s = form.rate_scenarios[idx]
+                    const savings = s.market_payment - s.buydown_payment
+                    set('promo_rate', s.buydown_rate > 0 ? s.buydown_rate.toFixed(3) : '')
+                    set('promo_apr', s.apr > 0 ? s.apr.toFixed(3) : '')
+                    set('promo_payment', s.buydown_payment > 0 ? String(Math.round(s.buydown_payment)) : '')
+                    set('promo_savings', savings > 0 ? String(Math.round(savings)) : '')
+                    e.target.value = ''
+                  }}
+                  style={{ width: '100%', maxWidth: 360, padding: '8px 10px', border: '1px solid #E4E8EC', borderRadius: 8, fontSize: 13, color: '#26303B', background: '#fff', outline: 'none' }}
+                >
+                  <option value="" disabled>Select a scenario…</option>
+                  {form.rate_scenarios.map((s, i) => (
+                    <option key={i} value={i}>{s.label || `Scenario ${i + 1}`}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
               <Field label="Interest Rate (%)" name="promo_rate" placeholder="e.g. 4.875" half value={form.promo_rate} onChange={set} />
               <Field label="APR (%)" name="promo_apr" placeholder="e.g. 5.12" half value={form.promo_apr} onChange={set} />
