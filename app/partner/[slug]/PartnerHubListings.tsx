@@ -92,10 +92,16 @@ export default function PartnerHubListings({ listings, origin }: { listings: Lis
             {/* Materials bar */}
             <div style={{ borderTop: '1px solid #E4E8EC', background: '#F8FAFC', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <a
+                href={`${origin}/open-house/${l.slug}/agent`}
+                style={{ background: CYAN, color: NEO, borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}
+              >
+                Open Agent Hub ↗
+              </a>
+              <a
                 href={clientUrl}
                 style={{ background: NEO, color: '#fff', borderRadius: 7, padding: '7px 14px', fontSize: 12, fontWeight: 700, textDecoration: 'none', cursor: 'pointer' }}
               >
-                Open Client Page ↗
+                Client Page ↗
               </a>
               <button
                 onClick={() => copy(clientUrl, `url-${l.id}`)}
