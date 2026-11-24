@@ -564,11 +564,13 @@ export default function Properties() {
     return g.address.toLowerCase().includes(q) || g.city.toLowerCase().includes(q)
   })
 
-  const filteredUnlinked = unlinkedRiders.filter(p => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return p.address.toLowerCase().includes(q) || p.city.toLowerCase().includes(q)
-  })
+  const filteredUnlinked = unlinkedRiders
+    .filter(p => {
+      if (!search) return true
+      const q = search.toLowerCase()
+      return p.address.toLowerCase().includes(q) || p.city.toLowerCase().includes(q)
+    })
+    .sort((a, b) => (a.callout_text || a.address).localeCompare(b.callout_text || b.address, undefined, { numeric: true, sensitivity: 'base' }))
 
   function openEdit(page: OHPage, type: 'listing' | 'ohEvent' | 'signRider') {
     setModalState({ type, editing: page })
