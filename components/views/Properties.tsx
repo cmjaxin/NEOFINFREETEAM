@@ -330,6 +330,7 @@ function ClientsTab() {
   const { supabase, profile } = useApp()
   const [leads, setLeads] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [contactedOpen, setContactedOpen] = useState(false)
 
   useEffect(() => {
     if (!profile?.id) return
@@ -338,10 +339,19 @@ function ClientsTab() {
       .then(({ data }) => {
         setLeads(data ?? [])
         setLoading(false)
-        // Mark all as seen
         localStorage.setItem(CLIENTS_SEEN_KEY, new Date().toISOString())
       })
   }, [profile?.id])
+
+  async function deleteLead(id: string) {
+    setLeads(prev => prev.filter(l => l.id !== id))
+    await supabase.from('page_leads').delete().eq('id', id)
+  }
+
+  async function toggleContacted(id: string, current: boolean) {
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, contacted: !current } : l))
+    await supabase.from('page_leads').update({ contacted: !current }).eq('id', id)
+  }
 
   if (loading) return <div style={{ color: C.muted, padding: 40, textAlign: 'center' }}>Loading…</div>
   if (!leads.length) return (
@@ -353,38 +363,64 @@ function ClientsTab() {
   )
 
   const lastSeen = localStorage.getItem(CLIENTS_SEEN_KEY)
+  const newLeads = leads.filter(l => !l.contacted)
+  const contactedLeads = leads.filter(l => l.contacted)
 
   function sourceLabel(l: any) {
     const type = l.page_type === 'sign_rider' ? 'Sign Rider' : l.page_type === 'open_house' ? 'Open House' : l.page_type || ''
     return [l.address, type].filter(Boolean).join(' · ')
   }
 
-  return (
-    <div>
-      <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>{leads.length} lead{leads.length !== 1 ? 's' : ''} total</div>
-      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'auto' }}>
+  function LeadTable({ rows, dim }: { rows: any[], dim?: boolean }) {
+    return (
+      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'auto', opacity: dim ? 0.72 : 1 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ background: C.navy }}>
-              {['', 'Name', 'Email', 'Phone', 'Source', 'Date'].map(h => (
-                <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
+            <tr style={{ background: dim ? '#6B7280' : C.navy }}>
+              {['', 'Name', 'Email', 'Phone', 'Source', 'Date', ''].map((h, i) => (
+                <th key={i} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#fff', whiteSpace: 'nowrap' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {leads.map((l, i) => {
-              const isNew = lastSeen ? new Date(l.created_at) > new Date(lastSeen) : false
+            {rows.map((l, i) => {
+              const isNew = !l.contacted && lastSeen ? new Date(l.created_at) > new Date(lastSeen) : false
               return (
                 <tr key={l.id} style={{ borderTop: `1px solid ${C.border}`, background: isNew ? '#EFF9FF' : i % 2 === 0 ? '#fff' : C.bg }}>
                   <td style={{ padding: '10px 10px 10px 14px', width: 10 }}>
-                    {isNew && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: C.accent, flexShrink: 0 }} />}
+                    {isNew && <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: C.accent }} />}
                   </td>
                   <td style={{ padding: '10px 14px', fontWeight: 700, color: C.navy, whiteSpace: 'nowrap' }}>{l.name}</td>
                   <td style={{ padding: '10px 14px' }}><a href={`mailto:${l.email}`} style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}>{l.email}</a></td>
                   <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}><a href={`tel:${l.phone}`} style={{ color: C.navy, textDecoration: 'none' }}>{l.phone}</a></td>
-                  <td style={{ padding: '10px 14px', color: C.dim, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{sourceLabel(l)}</td>
+                  <td style={{ padding: '10px 14px', color: C.dim, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{sourceLabel(l)}</td>
                   <td style={{ padding: '10px 14px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>
                     {l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                  </td>
+                  <td style={{ padding: '10px 10px', whiteSpace: 'nowrap' }}>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <button
+                        onClick={() => toggleContacted(l.id, l.contacted)}
+                        title={l.contacted ? 'Mark as new' : 'Mark as contacted'}
+                        style={{
+                          background: l.contacted ? '#D1FAE5' : '#F3F4F6',
+                          color: l.contacted ? '#065F46' : '#6B7280',
+                          border: 'none', borderRadius: 6, padding: '4px 8px',
+                          fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {l.contacted ? '✓ Contacted' : 'Mark Contacted'}
+                      </button>
+                      <button
+                        onClick={() => deleteLead(l.id)}
+                        title="Remove lead"
+                        style={{
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          color: '#D1D5DB', fontSize: 15, lineHeight: 1, padding: '2px 4px',
+                          borderRadius: 4,
+                        }}
+                      >✕</button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -392,6 +428,43 @@ function ClientsTab() {
           </tbody>
         </table>
       </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 14 }}>
+          {newLeads.length} new lead{newLeads.length !== 1 ? 's' : ''}
+          {contactedLeads.length > 0 && ` · ${contactedLeads.length} contacted`}
+        </div>
+        {newLeads.length === 0 ? (
+          <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, padding: '28px 20px', textAlign: 'center', color: C.muted, fontSize: 13 }}>
+            All leads have been contacted.
+          </div>
+        ) : (
+          <LeadTable rows={newLeads} />
+        )}
+      </div>
+
+      {contactedLeads.length > 0 && (
+        <div>
+          <button
+            onClick={() => setContactedOpen(o => !o)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 12, fontWeight: 700, color: C.muted,
+              textTransform: 'uppercase', letterSpacing: '0.07em',
+              padding: '0 0 10px',
+            }}
+          >
+            <span style={{ transform: contactedOpen ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block', transition: 'transform 0.15s', fontSize: 10 }}>▶</span>
+            Contacted ({contactedLeads.length})
+          </button>
+          {contactedOpen && <LeadTable rows={contactedLeads} dim />}
+        </div>
+      )}
     </div>
   )
 }
