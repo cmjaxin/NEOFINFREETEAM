@@ -209,13 +209,23 @@ export default function LeadCaptureModal({ address, advisorName, advisorEmail, b
             <div style={{ textAlign: 'center', padding: '12px 0 8px' }}>
               <div style={{ fontSize: 44, marginBottom: 12 }}>🎉</div>
               <div style={{ fontSize: 20, fontWeight: 800, color: '#0A2540', marginBottom: 8 }}>You&apos;re all set!</div>
-              <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: scheduleUrl ? 16 : 24 }}>
+              <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.6, marginBottom: 20 }}>
                 Thanks for your info. Your advisor will be in touch soon. Enjoy the full presentation!
               </div>
+              <button
+                onClick={handleDone}
+                style={{
+                  background: '#5BCBF5', color: '#0A2540', border: 'none',
+                  borderRadius: 10, padding: '13px 32px', fontSize: 15,
+                  fontWeight: 800, cursor: 'pointer', marginBottom: scheduleUrl ? 24 : 0,
+                }}
+              >
+                View Unlocked Presentation →
+              </button>
               {scheduleUrl && (
                 <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#0A2540', marginBottom: 10 }}>
-                    Want to pick a time now?
+                    Or pick a time to connect now:
                   </div>
                   <iframe
                     src={scheduleUrl.includes('?') ? scheduleUrl + '&noframe=true' : scheduleUrl + '?noframe=true'}
@@ -225,16 +235,6 @@ export default function LeadCaptureModal({ address, advisorName, advisorEmail, b
                   />
                 </div>
               )}
-              <button
-                onClick={handleDone}
-                style={{
-                  background: '#0A2540', color: '#fff', border: 'none',
-                  borderRadius: 10, padding: '13px 32px', fontSize: 15,
-                  fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                View Listing →
-              </button>
             </div>
           )}
         </div>
