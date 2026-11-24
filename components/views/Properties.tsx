@@ -406,7 +406,7 @@ function StatsTab() {
   const listingPages = ohPages.filter((p: any) => p.page_type !== 'sign_rider')
   const signRiders = ohPages
     .filter((p: any) => p.page_type === 'sign_rider')
-    .sort((a: any, b: any) => a.address.localeCompare(b.address))
+    .sort((a: any, b: any) => a.address.localeCompare(b.address, undefined, { numeric: true, sensitivity: 'base' }))
 
   const listingViews = listingPages.reduce((n: number, p: any) => n + (viewCounts[p.id] ?? 0), 0)
   const listingLeads = listingPages.reduce((n: number, p: any) => n + (leadCounts[p.id] ?? 0), 0)
