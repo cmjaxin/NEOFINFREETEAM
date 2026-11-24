@@ -38,6 +38,7 @@ type ConfirmState = {
 function fmt$(n: number) { return n ? '$' + Math.round(n).toLocaleString() : '' }
 function fmtNum(n: number) { return n ? n.toLocaleString() : '' }
 function addrKey(p: OHPage) { return [p.address, p.city, p.state].join('|').toLowerCase().trim() }
+function normAddr(s: string) { return s.toLowerCase().replace(/[^a-z0-9]/g, '') }
 
 function AssetTile({
   label, color, exists, count, slug, route, onAction, actionLabel, onDelete,
@@ -114,7 +115,7 @@ function PropertyRow({
   const hasOH = group.openHouses.length > 0
 
   const linkedRiders = allSignRiders.filter(
-    sr => sr.address.toLowerCase().trim() === group.address.toLowerCase().trim()
+    sr => normAddr(sr.address) === normAddr(group.address)
   )
   const hasRider = linkedRiders.length > 0
 
@@ -555,7 +556,7 @@ export default function Properties() {
 
   // Sign riders with no matching property address (orphaned)
   const unlinkedRiders = allSignRiders.filter(
-    sr => !groups.some(g => g.address.toLowerCase().trim() === sr.address.toLowerCase().trim())
+    sr => !groups.some(g => normAddr(g.address) === normAddr(sr.address))
   )
 
   const filtered = groups.filter(g => {
@@ -592,7 +593,7 @@ export default function Properties() {
     const ids = [
       group.listing?.id,
       ...group.openHouses.map(p => p.id),
-      ...allSignRiders.filter(sr => sr.address.toLowerCase().trim() === group.address.toLowerCase().trim()).map(sr => sr.id),
+      ...allSignRiders.filter(sr => normAddr(sr.address) === normAddr(group.address)).map(sr => sr.id),
     ].filter(Boolean) as string[]
     if (ids.length === 0) return
     await supabase.from('open_house_pages').update({ status: 'inactive' }).in('id', ids)
@@ -607,7 +608,7 @@ export default function Properties() {
   }
 
   function confirmDeleteGroup(group: PropertyGroup) {
-    const riderCount = allSignRiders.filter(sr => sr.address.toLowerCase().trim() === group.address.toLowerCase().trim()).length
+    const riderCount = allSignRiders.filter(sr => normAddr(sr.address) === normAddr(group.address)).length
     const parts = [
       group.listing ? 'listing page' : '',
       group.openHouses.length > 0 ? `${group.openHouses.length} open house(s)` : '',
