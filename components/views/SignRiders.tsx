@@ -62,7 +62,7 @@ function Field({ label, name, type = 'text', placeholder = '', half = false, not
 }
 
 // ─── Create / Edit Modal ──────────────────────────────────────────────────────
-export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | null; onClose: () => void; onSaved: () => void }) {
+export function CreateModal({ editing, prefill, onClose, onSaved }: { editing: SRPage | null; prefill?: Partial<SRPage> | null; onClose: () => void; onSaved: () => void }) {
   const { supabase, profile } = useApp()
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -100,7 +100,8 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | n
       })
   }, [profile?.email])
 
-  const init = editing ?? {} as Partial<SRPage>
+  // When creating new, seed from editing OR prefill (open house / listing source), whichever exists
+  const init = editing ?? prefill ?? {} as Partial<SRPage>
   const [form, setForm] = useState({
     address: init.address ?? '',
     city: init.city ?? '',
@@ -117,8 +118,10 @@ export function CreateModal({ editing, onClose, onSaved }: { editing: SRPage | n
     tca_url: (init as SRPage).tca_url ?? '',
     tca_screenshot: (init as SRPage).tca_screenshot ?? '',
     loom_url: (init as SRPage).loom_url ?? '',
-    callout_text: (init as SRPage).callout_text ?? '',
+    // callout_text intentionally blank when prefilling — user picks the rate scenario
+    callout_text: editing ? ((init as SRPage).callout_text ?? '') : '',
     interest_rate: (() => {
+      if (!editing) return '4.875'
       const ct = (init as SRPage).callout_text ?? ''
       const m = ct.match(/See how a ([\d.]+)%/)
       return m ? m[1] : '4.875'

@@ -28,6 +28,7 @@ type ModalState = {
   type: 'listing' | 'ohEvent' | 'signRider'
   editing: OHPage | null
   prefillAddress?: string
+  prefillPage?: OHPage
 } | null
 
 type ConfirmState = {
@@ -122,7 +123,7 @@ function PropertyRow({
 }: {
   group: PropertyGroup; allSignRiders: OHPage[]
   onEdit: (page: OHPage, type: 'listing' | 'ohEvent' | 'signRider') => void
-  onCreate: (type: 'listing' | 'ohEvent' | 'signRider', address?: string) => void
+  onCreate: (type: 'listing' | 'ohEvent' | 'signRider', address?: string, sourcePage?: OHPage) => void
   onDelete: (group: PropertyGroup) => void
   onDeletePage: (id: string) => void
 }) {
@@ -256,7 +257,7 @@ function PropertyRow({
               </div>
             ))}
             <button
-              onClick={() => onCreate('signRider', group.address)}
+              onClick={() => onCreate('signRider', group.address, group.openHouses[0] ?? group.listing ?? undefined)}
               style={{
                 padding: '5px 12px', border: `1px dashed ${C.yellow}66`, borderRadius: 8,
                 background: 'transparent', cursor: 'pointer', fontSize: 11.5, fontWeight: 700,
@@ -722,8 +723,8 @@ export default function Properties() {
     setModalState({ type, editing: page })
   }
 
-  function openCreate(type: 'listing' | 'ohEvent' | 'signRider', address?: string) {
-    setModalState({ type, editing: null, prefillAddress: address })
+  function openCreate(type: 'listing' | 'ohEvent' | 'signRider', address?: string, sourcePage?: OHPage) {
+    setModalState({ type, editing: null, prefillAddress: address, prefillPage: sourcePage })
   }
 
   function closeModal() { setModalState(null) }
@@ -959,6 +960,7 @@ export default function Properties() {
       {modalState?.type === 'signRider' && (
         <SignRiderModal
           editing={modalState.editing as Parameters<typeof SignRiderModal>[0]['editing']}
+          prefill={modalState.prefillPage as Parameters<typeof SignRiderModal>[0]['prefill']}
           onClose={closeModal}
           onSaved={handleSaved}
         />
