@@ -256,16 +256,18 @@ function PropertyRow({
                   title="Remove sign rider">×</button>
               </div>
             ))}
-            <button
-              onClick={() => onCreate('signRider', group.address, group.openHouses[0] ?? group.listing ?? undefined)}
-              style={{
-                padding: '5px 12px', border: `1px dashed ${C.yellow}66`, borderRadius: 8,
-                background: 'transparent', cursor: 'pointer', fontSize: 11.5, fontWeight: 700,
-                color: C.yellow,
-              }}
-            >
-              {hasRider ? '+ Add Another' : '+ Add Sign Rider'}
-            </button>
+            {!hasRider && (
+              <button
+                onClick={() => onCreate('signRider', group.address, group.openHouses[0] ?? group.listing ?? undefined)}
+                style={{
+                  padding: '5px 12px', border: `1px dashed ${C.yellow}66`, borderRadius: 8,
+                  background: 'transparent', cursor: 'pointer', fontSize: 11.5, fontWeight: 700,
+                  color: C.yellow,
+                }}
+              >
+                + Add Sign Rider
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -836,6 +838,11 @@ export default function Properties() {
     load()
   }
 
+  async function unassignRider(id: string) {
+    await fetch(`/api/sign-rider/${id}`, { method: 'PATCH' })
+    load()
+  }
+
   async function deleteGroup(group: PropertyGroup) {
     const ids = [
       group.listing?.id,
@@ -848,9 +855,13 @@ export default function Properties() {
   }
 
   function confirmDeletePage(id: string, label: string) {
+    const page = pages.find(p => p.id === id)
+    const isRider = page?.page_type === 'sign_rider'
     setConfirmState({
-      message: `Remove "${label}"? This will deactivate the live page. You can recreate it anytime.`,
-      onConfirm: () => deletePage(id),
+      message: isRider
+        ? `Unassign this sign rider from "${label}"? The slot will be freed up for another listing. The QR code URL stays active.`
+        : `Remove "${label}"? This will deactivate the live page.`,
+      onConfirm: isRider ? () => unassignRider(id) : () => deletePage(id),
     })
   }
 
