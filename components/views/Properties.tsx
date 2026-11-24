@@ -671,7 +671,7 @@ export default function Properties() {
             <StatCard label="Properties" value={groups.length} />
             <StatCard label="Listings" value={groups.filter(g => g.listing).length} color={C.green} />
             <StatCard label="Open Houses" value={groups.reduce((n, g) => n + g.openHouses.length, 0)} color={C.accent} />
-            <StatCard label="Sign Riders" value={allSignRiders.length} color={C.yellow} />
+            <StatCard label="Sign Riders" value={allSignRiders.length - unlinkedRiders.length} color={C.yellow} />
           </>
         )}
         <div style={{ flex: 1, minWidth: 220 }}>
