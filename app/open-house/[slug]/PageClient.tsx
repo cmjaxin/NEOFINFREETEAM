@@ -58,6 +58,10 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
 type Scenario = { label: string; down_pct: number; market_rate: number; buydown_rate: number; market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number; piti_schedule?: Array<{rate: number; pi: number; piti: number}> }
 
 // Returns deduplicated year blocks for display: 1 card for no-buydown, 2 for 1-0, 3 for 2-1, 4 for 3-2-1
+function cleanLabel(label: string): string {
+  return label.replace(/\bLender\s+/gi, '')
+}
+
 function getYearCards(s: any): Array<{ yearLabel: string; rate: number; pi: number; piti: number; isLast: boolean }> {
   const sched: Array<{ rate: number; pi: number; piti: number }> = s.piti_schedule ?? []
   if (sched.length === 0) {
@@ -604,99 +608,105 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                     </div>
                   </div>
                 ) : null}
-                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
                   {page.rate_scenarios.map((s: any, i: number) => {
                     const cards = getYearCards(s)
                     const hasBuydown = s.buydown_rate !== s.market_rate
                     const savings = s.market_payment - s.buydown_payment
                     const termYears = s.term_years || 30
                     const totalMonths = termYears * 12
-                    // Payment counts per year block
-                    const buydownYears = cards.length - 1 // number of buydown year blocks
-                    function paymentCount(ci: number) {
-                      if (!hasBuydown) return `${totalMonths} payments`
-                      if (ci < buydownYears) return '12 payments'
-                      const remaining = totalMonths - buydownYears * 12
-                      const startYear = buydownYears + 1
-                      const endYear = termYears
-                      return `${startYear === endYear ? `Year ${startYear}` : `Years ${startYear}–${endYear}`} · ${remaining} payments`
-                    }
+                    const buydownYears = cards.length - 1
                     return (
-                      <div key={i} style={{ borderTop: i > 0 ? `1px solid ${C.border}` : 'none', paddingTop: i > 0 ? 24 : 0 }}>
+                      <div key={i} style={{ borderTop: i > 0 ? `2px solid ${C.border}` : 'none' }}>
 
-                        {/* Buydown type label */}
-                        <div style={{ fontSize: 11, fontWeight: 800, color: C.navy, marginBottom: 12, letterSpacing: '-0.01em' }}>
-                          {hasBuydown ? s.label : 'Illustrative Comparison Rate'}
-                        </div>
-
-                        {/* Rate stats row */}
-                        {hasBuydown && (
-                          <div style={{ display: 'flex', gap: 24, marginBottom: 16, flexWrap: 'wrap' }}>
-                            <div>
-                              <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, marginBottom: 2 }}>Year 1 payment-equivalent*</div>
-                              <div style={{ fontSize: 24, fontWeight: 900, color: C.navy, lineHeight: 1 }}>{s.buydown_rate.toFixed(3)}%</div>
-                              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>First 12 payments</div>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, marginBottom: 2 }}>Permanent note rate</div>
-                              <div style={{ fontSize: 24, fontWeight: 900, color: C.navy, lineHeight: 1 }}>{s.market_rate.toFixed(3)}%</div>
-                              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>{totalMonths} months</div>
-                            </div>
-                            {s.apr > 0 && (
-                              <div>
-                                <div style={{ fontSize: 9, color: C.muted, fontWeight: 600, marginBottom: 2 }}>Annual percentage rate</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: C.navy, lineHeight: 1 }}>{s.apr.toFixed(3)}%</div>
-                                <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>APR</div>
-                              </div>
-                            )}
+                        {/* Navy header with scenario label + rate stats */}
+                        <div style={{ background: C.navy, padding: '20px 24px' }}>
+                          <div style={{ fontSize: 13, fontWeight: 800, color: C.accent, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: hasBuydown ? 20 : 0 }}>
+                            {hasBuydown ? cleanLabel(s.label) : 'Illustrative Comparison Rate'}
                           </div>
-                        )}
 
-                        {/* Year cards */}
-                        <div style={{ fontSize: 10, fontWeight: 700, color: C.text, marginBottom: 8 }}>Estimated total monthly housing</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(150px, 1fr))`, gap: 8 }}>
-                          {cards.map((card, ci) => {
-                            const isBuydownYear = !card.isLast && hasBuydown
-                            const hasPiti = card.piti > card.pi
-                            const pmt = hasPiti ? card.piti : card.pi
-                            const pmtCount = paymentCount(ci)
-                            return (
-                              <div key={ci} style={{
-                                background: isBuydownYear ? 'rgba(91,203,245,0.06)' : '#F8FAFC',
-                                borderRadius: 10, padding: '14px 16px',
-                                border: isBuydownYear ? '1.5px solid rgba(91,203,245,0.35)' : `1px solid ${C.border}`,
-                              }}>
-                                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: isBuydownYear ? C.accent : C.muted, marginBottom: 6 }}>
-                                  {card.yearLabel}
+                          {hasBuydown && (
+                            <div style={{ display: 'flex', gap: 0, flexWrap: 'wrap' }}>
+                              {/* Year 1 rate — featured */}
+                              <div style={{ flex: '1 1 140px', paddingRight: 28, borderRight: '1px solid rgba(255,255,255,0.12)', marginRight: 28 }}>
+                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontWeight: 600, marginBottom: 4 }}>Year 1 payment-equivalent*</div>
+                                <div style={{ fontSize: 48, fontWeight: 900, color: C.accent, lineHeight: 1, letterSpacing: '-0.03em' }}>{s.buydown_rate.toFixed(3)}%</div>
+                                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 4 }}>First 12 payments</div>
+                              </div>
+                              {/* Permanent rate + APR */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+                                <div>
+                                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 2 }}>Permanent note rate</div>
+                                  <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{s.market_rate.toFixed(3)}%</div>
+                                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{totalMonths} months</div>
                                 </div>
-                                <div style={{ fontSize: 22, fontWeight: 900, color: C.navy, lineHeight: 1, marginBottom: 4 }}>
-                                  ${pmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </div>
-                                <div style={{ fontSize: 10, color: C.muted }}>
-                                  Per month · {ci < buydownYears || !hasBuydown ? '12 payments' : `${totalMonths - buydownYears * 12} payments`}
-                                </div>
-                                {isBuydownYear && savings > 0 && ci === 0 && (
-                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#16A34A', marginTop: 6 }}>
-                                    ${savings.toLocaleString()}/mo less than market
+                                {s.apr > 0 && (
+                                  <div>
+                                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 2 }}>Annual percentage rate</div>
+                                    <div style={{ fontSize: 28, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{s.apr.toFixed(3)}%</div>
+                                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>APR</div>
                                   </div>
                                 )}
                               </div>
-                            )
-                          })}
+                            </div>
+                          )}
+
+                          {!hasBuydown && s.apr > 0 && (
+                            <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', marginTop: 4 }}>
+                              <div>
+                                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 2 }}>Rate</div>
+                                <div style={{ fontSize: 40, fontWeight: 900, color: '#fff', lineHeight: 1 }}>{s.market_rate.toFixed(3)}%</div>
+                              </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: 600, marginBottom: 2 }}>APR</div>
+                                <div style={{ fontSize: 24, fontWeight: 900, color: 'rgba(255,255,255,0.75)', lineHeight: 1 }}>{s.apr.toFixed(3)}%</div>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Footnote for no-buydown */}
-                        {!hasBuydown && s.apr > 0 && (
-                          <div style={{ fontSize: 9, color: C.muted, marginTop: 6 }}>
-                            {s.market_rate.toFixed(3)}% rate · APR {s.apr.toFixed(3)}%{s.down_pct > 0 ? ` · ${s.down_pct}% down` : ''}{s.loan_type ? ` · ${s.loan_type}` : ''}
+                        {/* Year payment cards */}
+                        <div style={{ padding: '20px 24px', background: '#fff' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Estimated total monthly housing</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+                            {cards.map((card, ci) => {
+                              const isBuydownYear = !card.isLast && hasBuydown
+                              const hasPiti = card.piti > card.pi
+                              const pmt = hasPiti ? card.piti : card.pi
+                              const pmtStr = pmt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                              const payCount = ci < buydownYears || !hasBuydown ? '12 payments' : `${totalMonths - buydownYears * 12} payments`
+                              return (
+                                <div key={ci} style={{
+                                  background: isBuydownYear ? C.navy : '#F4F6F8',
+                                  borderRadius: 12, padding: '18px 20px',
+                                  border: isBuydownYear ? 'none' : `1.5px solid ${C.border}`,
+                                }}>
+                                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: isBuydownYear ? C.accent : C.muted, marginBottom: 8 }}>
+                                    {card.yearLabel}
+                                  </div>
+                                  <div style={{ fontSize: 32, fontWeight: 900, color: isBuydownYear ? '#fff' : C.navy, lineHeight: 1, letterSpacing: '-0.02em', marginBottom: 6 }}>
+                                    ${pmtStr}
+                                  </div>
+                                  <div style={{ fontSize: 11, color: isBuydownYear ? 'rgba(255,255,255,0.55)' : C.muted }}>
+                                    Per month · {payCount}
+                                  </div>
+                                  {isBuydownYear && savings > 0 && ci === 0 && (
+                                    <div style={{ marginTop: 10, display: 'inline-block', background: '#16A34A', color: '#fff', fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 6 }}>
+                                      ${savings.toLocaleString()}/mo less than market
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
-                        )}
-                        {hasBuydown && (
-                          <div style={{ fontSize: 9, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
-                            * Not the mortgage interest rate — first 12 monthly payments. Includes estimated taxes, homeowners insurance, mortgage insurance and HOA when applicable.
-                            {savings > 0 && ` $${savings.toLocaleString()} lower per month in Year 1 than the estimated full note-rate payment.`}
-                          </div>
-                        )}
+
+                          {hasBuydown && (
+                            <div style={{ fontSize: 9, color: C.muted, marginTop: 12, lineHeight: 1.6 }}>
+                              * Not the mortgage interest rate — first 12 monthly payments. Includes estimated taxes, homeowners insurance, mortgage insurance and HOA when applicable.
+                              {savings > 0 && ` $${savings.toLocaleString()} lower per month in Year 1 than the estimated full note-rate payment.`}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )
                   })}

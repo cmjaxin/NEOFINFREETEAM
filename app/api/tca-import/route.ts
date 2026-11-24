@@ -125,8 +125,14 @@ ${pageText}`
       )
     }
 
+    // Normalize labels: strip "Lender " so "1 Year Lender Subsidy" → "1 Year Subsidy"
+    const scenarios = (parsed.scenarios as any[]).map(s => ({
+      ...s,
+      label: typeof s.label === 'string' ? s.label.replace(/\bLender\s+/gi, '') : s.label,
+    }))
+
     return NextResponse.json({
-      scenarios: parsed.scenarios,
+      scenarios,
       advisor_name: parsed.advisor_name ?? null,
       quote_date: parsed.quote_date ?? null,
     })
