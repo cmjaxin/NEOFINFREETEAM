@@ -1689,6 +1689,183 @@ function PageCard({ page, onEdit, onDelete }: { page: OHPage; onEdit: () => void
   )
 }
 
+// ─── Clients Tab ──────────────────────────────────────────────────────────────
+function ClientsTab() {
+  const { supabase, profile } = useApp()
+  const [leads, setLeads] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!profile?.id) return
+    supabase
+      .from('page_leads')
+      .select('*')
+      .eq('advisor_user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => { setLeads(data ?? []); setLoading(false) })
+  }, [profile?.id])
+
+  if (loading) return <div style={{ color: C.muted, padding: 40, textAlign: 'center' }}>Loading…</div>
+
+  if (!leads.length) return (
+    <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>📋</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No leads yet</div>
+      <div style={{ fontSize: 14, color: C.muted }}>When visitors fill out the form on your listing pages, they&apos;ll show up here.</div>
+    </div>
+  )
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>{leads.length} lead{leads.length !== 1 ? 's' : ''} total</div>
+      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ background: C.navy, color: '#fff' }}>
+              {['Name', 'Email', 'Phone', 'Listing', 'Source', 'Date'].map(h => (
+                <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {leads.map((l, i) => (
+              <tr key={l.id} style={{ borderTop: `1px solid ${C.border}`, background: i % 2 === 0 ? '#fff' : C.bg }}>
+                <td style={{ padding: '10px 14px', fontWeight: 700, color: C.navy }}>{l.name}</td>
+                <td style={{ padding: '10px 14px' }}><a href={`mailto:${l.email}`} style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}>{l.email}</a></td>
+                <td style={{ padding: '10px 14px' }}><a href={`tel:${l.phone}`} style={{ color: C.navy, textDecoration: 'none' }}>{l.phone}</a></td>
+                <td style={{ padding: '10px 14px', color: C.dim, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.address || '—'}</td>
+                <td style={{ padding: '10px 14px', color: C.muted, fontSize: 11 }}>{l.page_type || '—'}</td>
+                <td style={{ padding: '10px 14px', color: C.muted, fontSize: 11, whiteSpace: 'nowrap' }}>
+                  {l.created_at ? new Date(l.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── Stats Tab ─────────────────────────────────────────────────────────────────
+function StatsTab() {
+  const { supabase, profile } = useApp()
+  const [ohPages, setOhPages] = useState<any[]>([])
+  const [viewCounts, setViewCounts] = useState<Record<string, number>>({})
+  const [leadCounts, setLeadCounts] = useState<Record<string, number>>({})
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!profile?.id) return
+    async function load() {
+      const { data: pages } = await supabase
+        .from('open_house_pages')
+        .select('id, slug, address, city, state, list_price, photos, status, created_at')
+        .eq('created_by', profile!.id)
+        .eq('page_type', 'open_house')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+
+      setOhPages(pages ?? [])
+
+      if ((pages ?? []).length > 0) {
+        const slugs = (pages ?? []).map((p: any) => p.slug)
+        const ids = (pages ?? []).map((p: any) => p.id)
+
+        const [{ data: views }, { data: leads }] = await Promise.all([
+          supabase.from('page_views').select('slug').in('slug', slugs),
+          supabase.from('page_leads').select('page_id').in('page_id', ids),
+        ])
+
+        const vc: Record<string, number> = {}
+        for (const v of views ?? []) vc[v.slug] = (vc[v.slug] ?? 0) + 1
+        setViewCounts(vc)
+
+        const lc: Record<string, number> = {}
+        for (const l of leads ?? []) if (l.page_id) lc[l.page_id] = (lc[l.page_id] ?? 0) + 1
+        setLeadCounts(lc)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [profile?.id])
+
+  if (loading) return <div style={{ color: C.muted, padding: 40, textAlign: 'center' }}>Loading…</div>
+
+  if (!ohPages.length) return (
+    <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
+      <div style={{ fontSize: 48, marginBottom: 12 }}>📊</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No open house pages yet</div>
+      <div style={{ fontSize: 14, color: C.muted }}>Create open house pages and stats will appear here as people visit.</div>
+    </div>
+  )
+
+  const totalViews = Object.values(viewCounts).reduce((a, b) => a + b, 0)
+  const totalLeads = Object.values(leadCounts).reduce((a, b) => a + b, 0)
+
+  return (
+    <div>
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 24 }}>
+        {[
+          { label: 'Total Page Views', value: totalViews, icon: '👁️' },
+          { label: 'Total Leads', value: totalLeads, icon: '📋' },
+          { label: 'Active Listings', value: ohPages.length, icon: '🏡' },
+          { label: 'Conversion Rate', value: totalViews > 0 ? `${((totalLeads / totalViews) * 100).toFixed(1)}%` : '—', icon: '📈' },
+        ].map(s => (
+          <div key={s.label} style={{ background: C.white, borderRadius: 12, border: `1px solid ${C.border}`, padding: '16px 18px' }}>
+            <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.navy }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 3, fontWeight: 600 }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Per-listing breakdown */}
+      <div style={{ background: C.white, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+        <div style={{ padding: '12px 16px', background: C.navy, color: '#fff', fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          Per Listing
+        </div>
+        {ohPages.map((p: any, i: number) => {
+          const views = viewCounts[p.slug] ?? 0
+          const lcount = leadCounts[p.id] ?? 0
+          const cvr = views > 0 ? ((lcount / views) * 100).toFixed(1) + '%' : '—'
+          return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: i === 0 ? 'none' : `1px solid ${C.border}`, flexWrap: 'wrap' }}>
+              {p.photos?.[0]
+                ? <img src={p.photos[0]} alt={p.address} style={{ width: 48, height: 40, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />
+                : <div style={{ width: 48, height: 40, borderRadius: 6, background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🏡</div>
+              }
+              <div style={{ flex: 1, minWidth: 140 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: C.navy }}>{p.address}</div>
+                <div style={{ fontSize: 11, color: C.muted }}>{[p.city, p.state].filter(Boolean).join(', ')}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 20, flexShrink: 0 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: C.navy }}>{views}</div>
+                  <div style={{ fontSize: 10, color: C.muted, fontWeight: 600 }}>Views</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: C.navy }}>{lcount}</div>
+                  <div style={{ fontSize: 10, color: C.muted, fontWeight: 600 }}>Leads</div>
+                </div>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: lcount > 0 ? '#16a34a' : C.navy }}>{cvr}</div>
+                  <div style={{ fontSize: 10, color: C.muted, fontWeight: 600 }}>CVR</div>
+                </div>
+              </div>
+              <a href={`/open-house/${p.slug}`} target="_blank" rel="noopener noreferrer"
+                style={{ fontSize: 11, color: C.accent, fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>
+                View ↗
+              </a>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main View ────────────────────────────────────────────────────────────────
 export default function OpenHouseView() {
   const { supabase, profile, pendingEditId, pendingEditType, setPendingEdit } = useApp()
@@ -1696,6 +1873,7 @@ export default function OpenHouseView() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editingPage, setEditingPage] = useState<OHPage | null>(null)
+  const [activeTab, setActiveTab] = useState<'properties' | 'clients' | 'stats'>('properties')
 
   async function load() {
     if (!profile?.id) return
@@ -1724,38 +1902,63 @@ export default function OpenHouseView() {
     }
   }
 
+  const TABS = [
+    { id: 'properties', label: 'Properties' },
+    { id: 'clients', label: 'Clients' },
+    { id: 'stats', label: 'Stats' },
+  ] as const
+
   return (
     <div style={{ padding: '28px 36px', background: C.bg, minHeight: '100vh' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28, flexWrap: 'wrap', gap: 12 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Listing Presentations</div>
-          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Share the Seller Advantage PDF + TCA with listing agents</div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: C.navy }}>Properties</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 4 }}>Manage listings, track clients, and view page stats</div>
         </div>
-        <button onClick={() => setShowCreate(true)}
-          style={{ padding: '10px 20px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>+</span> New Listing Page
-        </button>
+        {activeTab === 'properties' && (
+          <button onClick={() => setShowCreate(true)}
+            style={{ padding: '10px 20px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18 }}>+</span> New Listing
+          </button>
+        )}
       </div>
 
-      {loading ? (
-        <div style={{ color: C.muted, padding: 32, textAlign: 'center' }}>Loading…</div>
-      ) : pages.length === 0 ? (
-        <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>🏡</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No listing pages yet</div>
-          <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>Create a listing presentation page to share with agents.</div>
-          <button onClick={() => setShowCreate(true)}
-            style={{ padding: '12px 28px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Create Your First Page
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: `2px solid ${C.border}`, marginBottom: 24 }}>
+        {TABS.map(t => (
+          <button key={t.id} onClick={() => setActiveTab(t.id)}
+            style={{ padding: '10px 20px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, fontWeight: activeTab === t.id ? 700 : 500, color: activeTab === t.id ? C.navy : C.muted, borderBottom: `2px solid ${activeTab === t.id ? C.navy : 'transparent'}`, marginBottom: -2 }}>
+            {t.label}
           </button>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-          {pages.map(p => (
-            <PageCard key={p.id} page={p} onEdit={() => setEditingPage(p)} onDelete={() => deletePage(p)} />
-          ))}
-        </div>
+        ))}
+      </div>
+
+      {/* Properties tab */}
+      {activeTab === 'properties' && (
+        loading ? (
+          <div style={{ color: C.muted, padding: 32, textAlign: 'center' }}>Loading…</div>
+        ) : pages.length === 0 ? (
+          <div style={{ background: C.white, borderRadius: 16, border: `1px solid ${C.border}`, padding: 56, textAlign: 'center' }}>
+            <div style={{ fontSize: 52, marginBottom: 16 }}>🏡</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: C.navy, marginBottom: 8 }}>No listing pages yet</div>
+            <div style={{ fontSize: 14, color: C.muted, marginBottom: 24 }}>Create a listing presentation page to share with agents.</div>
+            <button onClick={() => setShowCreate(true)}
+              style={{ padding: '12px 28px', background: C.navy, border: 'none', borderRadius: 10, color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              Create Your First Page
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+            {pages.map(p => (
+              <PageCard key={p.id} page={p} onEdit={() => setEditingPage(p)} onDelete={() => deletePage(p)} />
+            ))}
+          </div>
+        )
       )}
+
+      {activeTab === 'clients' && <ClientsTab />}
+      {activeTab === 'stats' && <StatsTab />}
 
       {(showCreate || editingPage) && (
         <CreateModal

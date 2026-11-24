@@ -319,6 +319,17 @@ export default function OpenHousePage({ slug }: { slug: string }) {
 
   useEffect(() => { setMounted(true) }, [])
 
+  // Page view beacon — fires once per real visit (skip preview mode)
+  useEffect(() => {
+    if (!page) return
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1') return
+    fetch('/api/page-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page_id: page.id, slug, page_type: 'open_house' }),
+    }).catch(() => {})
+  }, [page?.id])
+
   useEffect(() => {
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1') return
     try { if (sessionStorage.getItem('lp_lead_captured')) return } catch {}
@@ -404,6 +415,7 @@ export default function OpenHousePage({ slug }: { slug: string }) {
         <LeadCaptureModal
           address={page.address + (page.city ? ', ' + page.city : '')}
           advisorName={page.advisor_name}
+          advisorEmail={page.advisor_email}
           bntouchUserId={page.bntouch_user_id}
           onDismiss={() => setShowLead(false)}
           callout={page.callout_text}
