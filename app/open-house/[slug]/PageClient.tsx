@@ -55,7 +55,33 @@ function PhotoGallery({ photos, address }: { photos: string[]; address: string }
 }
 
 // ─── Scenario Chart (TCA fallback) ────────────────────────────────────────────
-type Scenario = { label: string; down_pct: number; market_rate: number; buydown_rate: number; market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number }
+type Scenario = { label: string; down_pct: number; market_rate: number; buydown_rate: number; market_payment: number; buydown_payment: number; loan_type: string; term_years: number; apr: number; piti_schedule?: Array<{rate: number; pi: number; piti: number}> }
+
+// Returns deduplicated year blocks for display: 1 card for no-buydown, 2 for 1-0, 3 for 2-1, 4 for 3-2-1
+function getYearCards(s: any): Array<{ yearLabel: string; rate: number; pi: number; piti: number; isLast: boolean }> {
+  const sched: Array<{ rate: number; pi: number; piti: number }> = s.piti_schedule ?? []
+  if (sched.length === 0) {
+    // Fallback: build from top-level fields
+    const hasBuydown = s.buydown_rate !== s.market_rate
+    if (!hasBuydown) return [{ yearLabel: 'Your Rate', rate: s.market_rate, pi: s.market_payment, piti: s.market_payment, isLast: true }]
+    return [
+      { yearLabel: 'Year 1', rate: s.buydown_rate, pi: s.buydown_payment, piti: s.buydown_payment, isLast: false },
+      { yearLabel: 'Year 2+', rate: s.market_rate, pi: s.market_payment, piti: s.market_payment, isLast: true },
+    ]
+  }
+  // Deduplicate consecutive same-rate entries (all 4 schedule slots → unique rate blocks)
+  const deduped: typeof sched = []
+  for (const entry of sched) {
+    if (deduped.length === 0 || Math.abs(entry.rate - deduped[deduped.length - 1].rate) > 0.0001) {
+      deduped.push(entry)
+    }
+  }
+  return deduped.map((entry, i) => {
+    const isLast = i === deduped.length - 1
+    const yearLabel = isLast ? (deduped.length === 1 ? 'Your Rate' : `Year ${i + 1}+`) : `Year ${i + 1}`
+    return { yearLabel, rate: entry.rate, pi: entry.pi, piti: entry.piti, isLast }
+  })
+}
 
 function ScenarioChart({ scenarios }: { scenarios: Scenario[] }) {
   const NEO = '#0A2540'; const CYAN = '#5BCBF5'
@@ -578,42 +604,69 @@ export default function OpenHousePage({ slug }: { slug: string }) {
                     </div>
                   </div>
                 ) : null}
-                <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {page.rate_scenarios.map((s, i) => {
+                    const cards = getYearCards(s)
                     const hasBuydown = s.buydown_rate !== s.market_rate
                     const savings = s.market_payment - s.buydown_payment
-                    const displayLabel = !hasBuydown ? 'Illustrative Comparison Rate' : s.label
                     return (
-                      <div key={i} style={{ background: '#F8FAFC', borderRadius: 10, padding: '14px 16px', border: `1px solid ${C.border}` }}>
-                        <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.navy, marginBottom: 8 }}>{displayLabel}</div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
-                          {hasBuydown && (
-                            <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>
-                          )}
-                          <span style={{ fontSize: 22, fontWeight: 900, color: C.navy }}>{s.buydown_rate.toFixed(3)}%</span>
+                      <div key={i}>
+                        {/* Scenario label */}
+                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.muted, marginBottom: 8 }}>
+                          {hasBuydown ? s.label : 'Illustrative Comparison Rate'}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
-                          {hasBuydown && (
-                            <span style={{ fontSize: 13, color: '#9CA3AF', textDecoration: 'line-through' }}>${s.market_payment.toLocaleString()}</span>
-                          )}
-                          <span style={{ fontSize: 26, fontWeight: 900, color: C.navy }}>${s.buydown_payment.toLocaleString()}<span style={{ fontSize: 13, fontWeight: 600 }}>/mo</span></span>
+                        {/* Year cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${cards.length}, minmax(0, 1fr))`, gap: 8 }}>
+                          {cards.map((card, ci) => {
+                            const isBuydownYear = !card.isLast && hasBuydown
+                            const hasPiti = card.piti > card.pi
+                            return (
+                              <div key={ci} style={{
+                                background: isBuydownYear ? 'rgba(91,203,245,0.07)' : '#F8FAFC',
+                                borderRadius: 10, padding: '12px 14px',
+                                border: isBuydownYear ? '1.5px solid rgba(91,203,245,0.4)' : `1px solid ${C.border}`,
+                              }}>
+                                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: isBuydownYear ? C.accent : C.muted, marginBottom: 6 }}>
+                                  {card.yearLabel}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 2 }}>
+                                  {card.isLast && hasBuydown && (
+                                    <span style={{ fontSize: 11, color: '#9CA3AF', textDecoration: 'line-through' }}>{s.market_rate.toFixed(3)}%</span>
+                                  )}
+                                  <span style={{ fontSize: 20, fontWeight: 900, color: C.navy }}>{card.rate.toFixed(3)}%</span>
+                                </div>
+                                <div style={{ fontSize: 22, fontWeight: 900, color: C.navy, lineHeight: 1 }}>
+                                  ${hasPiti ? card.piti.toLocaleString() : card.pi.toLocaleString()}
+                                  <span style={{ fontSize: 11, fontWeight: 600 }}>/mo</span>
+                                </div>
+                                {hasPiti && <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>PITI (incl. taxes &amp; ins.)</div>}
+                                {isBuydownYear && savings > 0 && ci === 0 && (
+                                  <div style={{ fontSize: 10, fontWeight: 700, color: '#16A34A', marginTop: 4 }}>
+                                    Save ${savings.toLocaleString()}/mo vs. market
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
-                        {hasBuydown && savings > 0 && (
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 700, color: '#16A34A' }}>Est. Payment Difference: ${savings.toLocaleString()}/mo</div>
-                            <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 3, lineHeight: 1.5 }}>vs. illustrative comparison at {s.market_rate.toFixed(3)}% ({s.market_payment > 0 ? `$${s.market_payment.toLocaleString()}/mo` : 'see TCA'})</div>
-                          </div>
-                        )}
                         {s.apr > 0 && (
-                          <div style={{ fontSize: 10, color: '#9CA3AF', marginTop: 4 }}>APR {s.apr.toFixed(3)}%</div>
+                          <div style={{ fontSize: 9, color: '#9CA3AF', marginTop: 4 }}>APR {s.apr.toFixed(3)}%{s.down_pct > 0 ? ` · ${s.down_pct}% down` : ''}{s.loan_type ? ` · ${s.loan_type}` : ''}</div>
                         )}
                       </div>
                     )
                   })}
                 </div>
-                <div style={{ padding: '10px 20px', borderTop: `1px solid ${C.border}` }}>
-                  <p style={{ fontSize: 9, color: '#9CA3AF', lineHeight: 1.6, margin: 0 }}>
-                    Rates and payments are estimates, not a commitment to lend. Based on {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} pricing. Actual rate, payment, and costs depend on credit, down payment, and property details at time of application.
+                <div style={{ padding: '12px 20px', borderTop: `1px solid ${C.border}` }}>
+                  <p style={{ fontSize: 9, color: '#9CA3AF', lineHeight: 1.7, margin: 0 }}>
+                    <strong style={{ color: '#6B7280' }}>Planning assumptions and required disclosures.</strong>{' '}
+                    Effective {new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}. Expires Dec 30, 2026.{' '}
+                    This is a planning illustration, not a commitment to lend. Rates, APR, costs, credits, payments, and program availability must be confirmed for the buyer and property.
+                    Property value and appreciation are assumptions, not guarantees. Taxes, insurance, mortgage insurance, HOA dues, and selling costs may change.
+                    Temporary buydown payments are funded from a closing deposit; the note rate and qualifying payment do not change, and the payment increases on schedule until it reaches the full note-rate payment.
+                    Owner-occupied primary residence. Credit, income, assets, property, and program eligibility remain subject to review. No values shown are an approval or a promise of future market conditions.
+                    Illustrated financing uses an assumed credit score of 780. Actual pricing and eligibility depend on the buyer, property, and current lender terms; this is not a credit approval.
+                    Rates, APRs, payments, fees, and other financing terms are illustrative and subject to current lender pricing, borrower and property eligibility, and final verification. This illustration is not a Loan Estimate, rate lock, loan approval, or commitment to lend.
+                    Equal Housing Opportunity.
                   </p>
                 </div>
               </div>

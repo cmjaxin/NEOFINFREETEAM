@@ -134,10 +134,15 @@ export default async function PartnerPortalPage({ params }: { params: Promise<{ 
           </div>
         )}
 
-        <div style={{ marginTop: 48, fontSize: 10, color: '#9CA3AF', lineHeight: 1.6, textAlign: 'center' }}>
-          Rates and payments shown are estimates for illustrative purposes only and are not a commitment to lend.
-          Actual rate, payment, and costs depend on your credit profile, down payment, and market conditions at time of application.
-          Financing through NEO Home Loans is optional; buyers may use any lender of their choice.
+        <div style={{ marginTop: 48, fontSize: 9, color: '#9CA3AF', lineHeight: 1.7, textAlign: 'center', maxWidth: 820, margin: '48px auto 0' }}>
+          <strong style={{ color: '#6B7280' }}>Planning assumptions and required disclosures.</strong>{' '}
+          This is a planning illustration, not a commitment to lend. Rates, APR, costs, credits, payments, and program availability must be confirmed for the buyer and property.
+          Property value and appreciation are assumptions, not guarantees. Taxes, insurance, mortgage insurance, HOA dues, and selling costs may change.
+          Temporary buydown payments are funded from a closing deposit; the note rate and qualifying payment do not change, and the payment increases on schedule until it reaches the full note-rate payment.
+          Owner-occupied primary residence. Credit, income, assets, property, and program eligibility remain subject to review. No values shown are an approval or a promise of future market conditions.
+          Illustrated financing uses an assumed credit score of 780. Actual pricing and eligibility depend on the buyer, property, and current lender terms; this is not a credit approval.
+          Rates, APRs, payments, fees, and other financing terms are illustrative and subject to current lender pricing, borrower and property eligibility, and final verification. This illustration is not a Loan Estimate, rate lock, loan approval, or commitment to lend.
+          Financing through NEO Home Loans is optional; buyers may use any lender of their choice. Equal Housing Opportunity.
         </div>
       </main>
     </div>

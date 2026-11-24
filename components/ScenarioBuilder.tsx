@@ -102,17 +102,46 @@ function ScenarioList({ scenarios, setScenarios }: {
   }
 
   function saveEdit(i: number) {
-    setScenarios(prev => prev.map((s, idx) => idx !== i ? s : {
-      ...s,
-      label: draft.label || s.label,
-      market_rate: parseFloat(draft.market_rate) || s.market_rate,
-      buydown_rate: parseFloat(draft.buydown_rate) || s.buydown_rate,
-      market_payment: parseFloat(draft.market_payment) || s.market_payment,
-      buydown_payment: parseFloat(draft.buydown_payment) || s.buydown_payment,
-      apr: parseFloat(draft.apr) || s.apr,
-      down_pct: parseFloat(draft.down_pct) || s.down_pct,
-      loan_type: draft.loan_type || s.loan_type,
-      total_subsidy: parseFloat(draft.total_subsidy) || s.total_subsidy,
+    setScenarios(prev => prev.map((s, idx) => {
+      if (idx !== i) return s
+      const newMarketRate = parseFloat(draft.market_rate) || s.market_rate
+      const newBuydownRate = parseFloat(draft.buydown_rate) || s.buydown_rate
+      const newMarketPayment = parseFloat(draft.market_payment) || s.market_payment
+      const newBuydownPayment = parseFloat(draft.buydown_payment) || s.buydown_payment
+      const origMarketRate = s.market_rate
+
+      // Rebuild piti_schedule: preserve structure (4 entries), update year-1 and market-rate entries
+      const newSchedule = (s.piti_schedule ?? []).map((entry: any, ei: number) => {
+        const taxIns = (entry.piti ?? 0) - (entry.pi ?? 0) // preserve tax+ins+hoa portion
+        if (ei === 0) {
+          return { ...entry, rate: newBuydownRate, pi: newBuydownPayment, piti: newBuydownPayment + taxIns }
+        }
+        if (Math.abs(entry.rate - origMarketRate) < 0.0001) {
+          return { ...entry, rate: newMarketRate, pi: newMarketPayment, piti: newMarketPayment + taxIns }
+        }
+        // Intermediate buydown years (2-1, 3-2-1): scale the spread proportionally
+        const origSpread = origMarketRate - entry.rate
+        const newSpread = newMarketRate - newBuydownRate
+        const origTotalSpread = origMarketRate - s.buydown_rate
+        const ratio = origTotalSpread > 0 ? origSpread / origTotalSpread : 0
+        const newRate = newMarketRate - ratio * newSpread
+        const pi = newMarketPayment * (newBuydownPayment / newMarketPayment) ** ratio
+        return { ...entry, rate: newRate, pi: Math.round(pi), piti: Math.round(pi) + taxIns }
+      })
+
+      return {
+        ...s,
+        label: draft.label || s.label,
+        market_rate: newMarketRate,
+        buydown_rate: newBuydownRate,
+        market_payment: newMarketPayment,
+        buydown_payment: newBuydownPayment,
+        apr: parseFloat(draft.apr) || s.apr,
+        down_pct: parseFloat(draft.down_pct) || s.down_pct,
+        loan_type: draft.loan_type || s.loan_type,
+        total_subsidy: parseFloat(draft.total_subsidy) || s.total_subsidy,
+        piti_schedule: newSchedule,
+      }
     }))
     setEditing(null)
     setDraft(null)
