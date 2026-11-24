@@ -115,19 +115,32 @@ export default function Partners() {
                   </div>
                 </div>
 
-                {/* Portal URL */}
-                <div style={{ flex: 2, minWidth: 220, background: C.bg, borderRadius: 8, padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ fontSize: 11, color: C.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{url}</div>
-                  <button
-                    onClick={() => copy(url, p.id)}
-                    style={{ background: copied === p.id ? '#16a34a' : C.navy, color: '#fff', border: 'none', borderRadius: 6, padding: '5px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
-                  >
-                    {copied === p.id ? '✓ Copied' : 'Copy Link'}
-                  </button>
-                  <a href={url} target="_blank" rel="noopener noreferrer"
-                    style={{ fontSize: 11, color: C.navy, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
-                    Preview ↗
-                  </a>
+                {/* Links */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 220 }}>
+                  {/* Client portal */}
+                  <div style={{ background: C.bg, borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontWeight: 700, color: C.navy }}>Client: </span>{url}
+                    </div>
+                    <button onClick={() => copy(url, `c-${p.id}`)}
+                      style={{ background: copied === `c-${p.id}` ? '#16a34a' : C.navy, color: '#fff', border: 'none', borderRadius: 5, padding: '4px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                      {copied === `c-${p.id}` ? '✓' : 'Copy'}
+                    </button>
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 10, color: C.navy, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>↗</a>
+                  </div>
+                  {/* Partner Hub */}
+                  <div style={{ background: 'rgba(91,203,245,0.08)', borderRadius: 8, padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 10, color: C.muted, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontWeight: 700, color: C.navy }}>Hub: </span>{url}/hub
+                    </div>
+                    <button onClick={() => copy(`${url}/hub`, `h-${p.id}`)}
+                      style={{ background: copied === `h-${p.id}` ? '#16a34a' : C.navy, color: '#fff', border: 'none', borderRadius: 5, padding: '4px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+                      {copied === `h-${p.id}` ? '✓' : 'Copy'}
+                    </button>
+                    <a href={`${url}/hub`} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 10, color: C.navy, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>↗</a>
+                  </div>
                 </div>
               </div>
             )
